@@ -224,8 +224,72 @@ volatile unsigned int : 0; // align to word boundary (saves significant amount o
 #endif
 
 
-#if !defined(__msp430_have_adc12) && !defined(__MSP430_HAS_ADC12__)
+#if !defined(__msp430_have_adc12) && !defined(__MSP430_HAS_ADC12__) && !defined(__MSP430_HAS_ADC12_PLUS__)
 #error Target msp430 device does not have ADC12 module
 #endif
+
+#ifdef __MSP430_HAS_ADC12_PLUS__
+/* Add bit structure declarations not present in TI-based headers */
+typedef struct {
+  volatile unsigned
+    adc12sc:1,
+    enc:1,
+    adc12tovie:1,
+    adc12ovie:1,
+    adc12on:1,
+    refon:1,
+    r2_5v:1,
+    msc:1,
+    sht0:4,
+    sht1:4;
+} __attribute__ ((packed)) adc12ctl0_t;
+
+typedef struct {
+  volatile unsigned
+    adc12busy:1,
+    conseq:2,
+    adc12ssel:2,
+    adc12div:3,
+    issh:1,
+    shp:1,
+    shs:2,
+    cstartadd:4;
+} __attribute__ ((packed)) adc12ctl1_t;
+
+typedef struct {
+  volatile unsigned
+    bit0:1,
+    bit1:1,
+    bit2:1,
+    bit3:1,
+    bit4:1,
+    bit5:1,
+    bit6:1,
+    bit7:1,
+    bit8:1,
+    bit9:1,
+    bit10:1,
+    bit11:1,
+    bit12:1,
+    bit13:1,
+    bit14:1,
+    bit15:1;
+} __attribute__ ((packed)) adc12xflg_t;
+
+/* The adc12 declaration itself */
+struct adc12_t {
+  adc12ctl0_t ctl0;
+  adc12ctl1_t ctl1;
+  adc12xflg_t ifg;
+  adc12xflg_t ie;
+  adc12xflg_t iv;
+};
+
+#define ENC ADC12ENC
+#define CONSEQ0 ADC12CONSEQ0
+#define CONSEQ1 ADC12CONSEQ1
+#define ADC_VECTOR ADC12_VECTOR
+
+#endif // __MSP430_HAS_ADC12_PLUS__
 
 #endif
