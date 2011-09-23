@@ -60,8 +60,25 @@ typedef struct {
 
 enum {
   IEEE154_BROADCAST_ADDR = 0xffff,
+  IEEE154_BROADCAST_PAN = 0xffff,
   IEEE154_LINK_MTU   = 127,
 };
+
+#ifndef DEFINED_TOS_IEEE154_PAN_ID
+// NB: Matches default ActiveMessage group
+#define DEFINED_TOS_IEEE154_PAN_ID 22
+#endif // DEFINED_TOS_IEEE154_PAN_ID
+
+#ifndef DEFINED_TOS_IEEE154_SHORT_ADDRESS
+// NB: Matches default ActiveMessage address
+#define DEFINED_TOS_IEEE154_SHORT_ADDRESS 1
+#endif // DEFINED_TOS_IEEE154_SHORT_ADDRESS
+
+enum {
+  TOS_IEEE154_SHORT_ADDRESS = DEFINED_TOS_IEEE154_SHORT_ADDRESS,
+  TOS_IEEE154_PAN_ID = DEFINED_TOS_IEEE154_PAN_ID,
+};
+
 
 struct ieee154_frame_addr {
   ieee154_addr_t ieee_src;
