@@ -111,6 +111,13 @@ configuration HplMsp430GeneralIOC
   provides interface HplMsp430GeneralIO as Port67;
 #endif
 
+#if defined (__msp430_have_portj) || defined(__MSP430_HAS_PORTJ__) || defined(__MSP430_HAS_PORTJ_R__)
+  provides interface HplMsp430GeneralIO as PortJ0;
+  provides interface HplMsp430GeneralIO as PortJ1;
+  provides interface HplMsp430GeneralIO as PortJ2;
+  provides interface HplMsp430GeneralIO as PortJ3;
+#endif
+
   // provides special ports explicitly 
   // this section of HplMsp430GeneralIOC supports the F14x series
 #ifdef __msp430x14x
@@ -432,6 +439,13 @@ implementation
     new HplMsp430GeneralIOP(P6IN_, P6OUT_, P6DIR_, P6SEL_, 7) as P67,
 #endif
 
+#if defined(__MSP430_HAS_PORTJ_R__)
+    new HplMsp430GeneralIORenDsP(PJIN_, PJOUT_, PJDIR_, PJREN_, PJDS_, 0) as PJ0,
+    new HplMsp430GeneralIORenDsP(PJIN_, PJOUT_, PJDIR_, PJREN_, PJDS_, 1) as PJ1,
+    new HplMsp430GeneralIORenDsP(PJIN_, PJOUT_, PJDIR_, PJREN_, PJDS_, 2) as PJ2,
+    new HplMsp430GeneralIORenDsP(PJIN_, PJOUT_, PJDIR_, PJREN_, PJDS_, 3) as PJ3,
+#endif
+
     PlatformC; // dummy to end unknown sequence
 
 #if defined(__msp430_have_port1) || defined(__MSP430_HAS_PORT1__) || defined(__MSP430_HAS_PORT1_R__)
@@ -498,6 +512,13 @@ implementation
   Port65 = P65;
   Port66 = P66;
   Port67 = P67;
+#endif
+
+#if defined(__msp430_have_portJ) || defined(__MSP430_HAS_PORTJ__) || defined(__MSP430_HAS_PORTJ_R__)
+  PortJ0 = PJ0;
+  PortJ1 = PJ1;
+  PortJ2 = PJ2;
+  PortJ3 = PJ3;
 #endif
 
 #ifdef __msp430x14x

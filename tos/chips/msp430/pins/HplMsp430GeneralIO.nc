@@ -116,5 +116,20 @@ interface HplMsp430GeneralIO
    */
   async command uint8_t getResistor();
 
+  /** 
+   * Set port drive strength.
+   * @param mode one of MSP430_PORT_DRIVE_STRENGTH_* values
+   * @return EINVAL if invalid mode or pin doesn't support drive
+   * strength config.
+   * FAIL if pin is not an output
+   * SUCCESS if pin supports it, is an output, and mode is valid
+   */
+  async command error_t setDriveStrength(uint8_t mode);
+
+  /**
+   * Get drive strength.
+   * @reutnr one of MSP430_PORT_DRIVE_STRENGTH_* values
+   */
+  async command uint8_t getDriveStrength(); 
 }
 

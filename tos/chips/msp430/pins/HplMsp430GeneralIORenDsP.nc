@@ -22,16 +22,17 @@
 /**
  * @author Joe Polastre
  * @author Peter A. Bigot <pab@peoplepowerco.com>
+ * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
 #include "msp430regtypes.h"
 
-generic module HplMsp430GeneralIORenP(
+generic module HplMsp430GeneralIORenDsP(
 				unsigned int port_in_addr,
 				unsigned int port_out_addr,
 				unsigned int port_dir_addr,
-				unsigned int port_sel_addr,
 				unsigned int port_ren_addr,
+				unsigned int port_ds_addr,
 				uint8_t pin
 				) @safe()
 {
@@ -42,8 +43,8 @@ implementation
   #define PORTxIN (*TCAST(volatile TYPE_PORT_IN* ONE, port_in_addr))
   #define PORTx (*TCAST(volatile TYPE_PORT_OUT* ONE, port_out_addr))
   #define PORTxDIR (*TCAST(volatile TYPE_PORT_DIR* ONE, port_dir_addr))
-  #define PORTxSEL (*TCAST(volatile TYPE_PORT_SEL* ONE, port_sel_addr))
   #define PORTxREN (*TCAST(volatile TYPE_PORT_REN* ONE, port_ren_addr))
+  #define PORTxDS (*TCAST(volatile TYPE_PORT_DS* ONE, port_ds_addr))
 
   async command void IO.set() { atomic PORTx |= (0x01 << pin); }
   async command void IO.clr() { atomic PORTx &= ~(0x01 << pin); }
@@ -54,10 +55,12 @@ implementation
   async command bool IO.isInput() { return (PORTxDIR & (0x01 << pin)) == 0; }
   async command void IO.makeOutput() { atomic PORTxDIR |= (0x01 << pin); }
   async command bool IO.isOutput() { return (PORTxDIR & (0x01 << pin)) != 0; }
-  async command void IO.selectModuleFunc() { atomic PORTxSEL |= (0x01 << pin); }
-  async command bool IO.isModuleFunc() { return (PORTxSEL & (0x01<<pin)) != 0; }
-  async command void IO.selectIOFunc() { atomic PORTxSEL &= ~(0x01 << pin); }
-  async command bool IO.isIOFunc() { return (PORTxSEL & (0x01<<pin)) == 0; }
+  //These are not valid selections (at least not for port J, which
+  //this was written for)
+  async command void IO.selectModuleFunc() { }
+  async command bool IO.isModuleFunc() { }
+  async command void IO.selectIOFunc() { }
+  async command bool IO.isIOFunc() { }
 
   async command error_t IO.setResistor(uint8_t mode) {
     error_t rc = FAIL;
@@ -98,6 +101,37 @@ implementation
     }
     return rc;
   }
-  async command error_t IO.setDriveStrength(uint8_t mode){ return EINVAL;}
-  async command uint8_t IO.getDriveStrength(){ return MSP430_PORT_DRIVE_STRENGTH_INVALID;}
+
+  async command error_t IO.setDriveStrength(uint8_t mode) {
+    error_t rc = FAIL;
+    atomic {
+      if (PORTxDIR & (0x01 << pin)) {
+        rc = SUCCESS;
+        if (MSP430_PORT_DRIVE_STRENGTH_REDUCED == mode) {
+          PORTxDS &= ~(0x01 << pin);
+        } else if (MSP430_PORT_DRIVE_STRENGTH_FULL == mode) {
+          PORTxDS |= (0x01 << pin);
+        } else {
+          rc = EINVAL;
+        }
+      }
+    }
+    return rc;
+  }
+
+  async command uint8_t IO.getDriveStrength()
+  {
+    uint8_t rc = MSP430_PORT_DRIVE_STRENGTH_INVALID;
+    atomic {
+      if (PORTxDIR & (0x01 << pin)) {
+        if (PORTxDS & (0x01 << pin)) {
+          rc = MSP430_PORT_DRIVE_STRENGTH_FULL;
+        } else {
+          rc = MSP430_PORT_DRIVE_STRENGTH_REDUCED;
+        }
+      }
+    }
+    return rc;
+  }
+
 }
