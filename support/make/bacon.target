@@ -1,0 +1,26 @@
+# Target definition for the People Power Company Sensor Ultra Radio Frequency
+# development board.
+
+# Unless otherwise specified, assume revision B2 of the SuRF board
+SURF_REV ?= B2
+HAS_FLASH ?= 1
+
+PLATFORM ?= bacon
+MSP_MCU = cc430x5137
+IAR_MCU_GROUP = cc430x513x
+IAR_LINKER_XCL = lnkcc430F5137.xcl
+PFLAGS += -DSURF_REV_$(SURF_REV) -DBACON -I$(TOS_ROOT)/tinyos/tos/platforms/bacon -I$(TOS_ROOT)/tinyos/tos/interfaces
+
+PFLAGS += -DPLATFORM_HAS_FLASH=$(HAS_FLASH)
+
+MSP_BSL ?= cc430-bsl
+MSP_BSL_FLAGS += --noadg715 -S 115200
+
+VOLUME_FILE = volumes-stm25p.xml
+VOLUME_ALLOCATOR ?= tos-storage-stm25p
+
+$(call TOSMake_include_platform,msp)
+$(call TOSMake_include_platform,bacon)
+
+bacon: $(BUILD_DEPS)
+        @:

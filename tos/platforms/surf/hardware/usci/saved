@@ -1,0 +1,89 @@
+diff --git a/tos/platforms/em430/hardware/usci/PlatformSerialC.nc b/tos/platforms/em430/hardware/usci/PlatformSerialC.nc
+index 1f12e2e..bd8d347 100644
+--- a/tos/platforms/em430/hardware/usci/PlatformSerialC.nc
++++ b/tos/platforms/em430/hardware/usci/PlatformSerialC.nc
+@@ -12,14 +12,15 @@ configuration PlatformSerialC {
+ 
+ implementation {
+   
+-  components new Msp430Uart0C() as UartC;
+-  UartStream = UartC;
+-  UartByte = UartC;
++  components Cc430UsciC;
++
++  UartStream = Cc430UsciC.USCI_A0_UartStream;
++  UartByte = Cc430UsciC.USCI_A0_UartByte;
+   
+   components PlatformSerialP;
+   StdControl = PlatformSerialP;
+-  PlatformSerialP.Resource -> UartC.Resource;
++  // PlatformSerialP.Resource -> UartC.Resource;
+   
+-  UartC.Msp430UartConfigure -> PlatformSerialP;
++  // UartC.Msp430UartConfigure -> PlatformSerialP;
+   
+ }
+diff --git a/tos/platforms/em430/hardware/usci/PlatformSerialP.nc b/tos/platforms/em430/hardware/usci/PlatformSerialP.nc
+index 793183e..fd38e5d 100644
+--- a/tos/platforms/em430/hardware/usci/PlatformSerialP.nc
++++ b/tos/platforms/em430/hardware/usci/PlatformSerialP.nc
+@@ -5,51 +5,29 @@
+ module PlatformSerialP {
+   provides {
+     interface StdControl;
+-    interface Msp430UartConfigure;
+   }
+   
+-  uses {
+-    interface Resource;
+-  }
++//  uses {
++//    interface Resource;
++//  }
+ }
+ 
+ implementation {
+   
+-  /* UBR_1048MHZ_115200?!?  I don't think so...we'll just use our own. */
+-  msp430_uart_union_config_t msp430_uart_config = { 
+-    {
+-      ubr: 9,                   /* SLAU259 Table 16-4 2^20Hz 115200: UBR=9, BRS=1, BRF=0 */
+-      umctl: UCBRF_0 + UCBRS_1,
+-      ucmode: 0,                /* UART mode */
+-      ucspb: 0,                 /* One stop bit */
+-      uc7bit: 0,                /* 8 bit data */
+-      // LSB first by default
+-      ucpar: 0,                 /* Unused */
+-      ucpen: 0,                 /* Parity disabled */
+-      ucrxeie: 1,               /* Accept erroneous characters(?!?) */
+-      ucssel: UCSSEL__SMCLK >> 6, /* SMCLK, shifted so somebody else can shift it back */
+-    } 
+-  };
+-
+   /***************** StdControl Commands ****************/
+   command error_t StdControl.start(){
+-    return call Resource.immediateRequest();
++//    return call Resource.immediateRequest();
++      return SUCCESS;
+   }
+   
+   command error_t StdControl.stop(){
+-    call Resource.release();
++//    call Resource.release();
+     return SUCCESS;
+   }
+   
+-  /***************** Msp430UartConfigure Commands ****************/
+-  async command msp430_uart_union_config_t* Msp430UartConfigure.getConfig() {
+-    return &msp430_uart_config;
+-  }
+-  
+-  
+   /***************** Resource Events ****************/
+-  event void Resource.granted() {
+-  }
++//  event void Resource.granted() {
++//  }
+   
+   
+ }
