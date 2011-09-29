@@ -1,0 +1,23 @@
+# Target definition for the People Power Company Sensor Ultra Radio Frequency
+# development board.
+
+# Unless otherwise specified, assume revision B2 of the SuRF board
+SURF_REV ?= B2
+HAS_FLASH ?= 1
+
+PLATFORM ?= toast
+MSP_MCU = msp430x235
+IAR_MCU_GROUP = msp430x23x
+#IAR_LINKER_XCL = lnkmsp430.xcl
+PFLAGS += -DPLATFORM_HAS_32KHZ_CRYSTAL
+
+
+MSP_BSL ?= $(OSIAN_ROOT)/tinyos/tools/platforms/msp430/msp430-bsl/msp430-bsl.py
+MSP_BSL_FLAGS += --invert-reset --invert-test
+
+
+$(call TOSMake_include_platform,msp)
+$(call TOSMake_include_platform,toast)
+
+toast: $(BUILD_DEPS)
+        @:
