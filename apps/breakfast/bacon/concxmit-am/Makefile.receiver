@@ -1,0 +1,12 @@
+COMPONENT=TestReceiverAppC
+
+#TODO: would be nice to dynamically generate set of configs similar to
+#  how storage volumes work
+PFLAGS += -I$(OSIAN_ROOT)/tinyos/tos/lib/rf1a-multi
+PFLAGS += -I$(OSIAN_ROOT)/tinyos/tos/lib/rf1a-multi/configs
+PFLAGS += -I$(OSIAN_ROOT)/tinyos/tos/lib/rf1a-multi/configs/includes
+PFLAGS += -I$(OSIAN_ROOT)/tinyos/tos/lib/rf1a-multi/configs/generated
+
+PFLAGS+=-DMSP430XV2_DCO_CONFIG=MSP430XV2_DCO_64MHz_RSEL7
+
+include $(MAKERULES)

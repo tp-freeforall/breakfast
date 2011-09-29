@@ -1,0 +1,17 @@
+COMPONENT=SenderC
+
+SEND_INTERVAL?=1024
+HGM_ENABLED?=0
+TX_POWER?=0
+
+CFLAGS += -DHGM_ENABLED=$(HGM_ENABLED)
+CFLAGS += -DTX_POWER=$(TX_POWER)
+CFLAGS += -DSEND_INTERVAL=$(SEND_INTERVAL)
+
+#in the future, this should be controlled with a separate platform
+# from bacon (e.g. bacon-router) which defines this
+ifdef HAS_CC1190
+CFLAGS += -DHAS_CC1190
+endif
+
+include $(MAKERULES)

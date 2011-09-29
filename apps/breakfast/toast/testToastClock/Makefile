@@ -1,0 +1,4 @@
+COMPONENT=TestAppC
+
+include $(MAKERULES)
+

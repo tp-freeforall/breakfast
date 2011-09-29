@@ -1,0 +1,12 @@
+COMPONENT=ReceiverC
+
+HGM_ENABLED?=0
+CFLAGS += -DHGM_ENABLED=$(HGM_ENABLED)
+
+#in the future, this should be controlled with a separate platform
+# from bacon (e.g. bacon-router) which defines this
+ifdef HAS_CC1190
+CFLAGS += -DHAS_CC1190
+endif
+
+include $(MAKERULES)

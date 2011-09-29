@@ -1,0 +1,3 @@
+COMPONENT=FormatFlashAppC
+
+include $(MAKERULES)

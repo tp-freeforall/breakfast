@@ -1,0 +1,35 @@
+To fix output power:
+set FREND0.PA_POWER to 0
+set PATABLE[0] to desired output power
+
+TODO: the antenna/cc1190 datasheets may or may not indicate the specific power
+settings which are supported.
+
+here's some c++ code that ostensibly does this
+
+void RF1A::WritePATable()
+{
+  unsigned char valueRead = 0;
+  while(valueRead != 0x51)
+  {
+    /* Write the power output to the PA_TABLE and verify the write operation.  */
+    unsigned char i = 0;
+
+    /* wait for radio to be ready for next instruction */
+    while( !(Registers()->RF1AIFCTL1 & RFINSTRIFG));
+    Registers()->RF1AINSTRW = 0x7E51; // PA Table write (burst) //and write first value see errata
+
+    /* wait for radio to be ready for next instruction */
+    while( !(Registers()->RF1AIFCTL1 & RFINSTRIFG));
+    Registers()->RF1AINSTR1W.high = RF_PATABRD;                 // -miguel read & write RF1AINSTR1B
+
+    // Traverse PATABLE pointers to read
+    for (i = 0; i < 7; i++)
+    {
+      while( !(Registers()->RF1AIFCTL1 & RFDOUTIFG));
+      valueRead  = Registers()->RF1ASTAT1W.low; //RF1ADOUT1B;
+    }
+    while( !(Registers()->RF1AIFCTL1 & RFDOUTIFG));
+    valueRead  = Registers()->RF1ASTAT0W.low; //RF1ADOUTB; ????????
+  }
+}

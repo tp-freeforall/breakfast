@@ -1,0 +1,14 @@
+COMPONENT=TestSenderAppC
+
+#TODO: would be nice to dynamically generate set of configs similar to
+#  how storage volumes work
+PFLAGS += -I$(TOSDIR)/lib/rf1a-multi
+PFLAGS += -I$(TOSDIR)/lib/rf1a-multi/configs
+PFLAGS += -I$(TOSDIR)/lib/rf1a-multi/configs/includes
+PFLAGS += -I$(TOSDIR)/lib/rf1a-multi/configs/generated
+
+PFLAGS += -I$(TOSDIR)/lib/printf
+
+PFLAGS+=-DMSP430XV2_DCO_CONFIG=MSP430XV2_DCO_64MHz_RSEL7
+
+include $(MAKERULES)
