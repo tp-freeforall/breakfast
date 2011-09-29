@@ -12,7 +12,7 @@ IAR_MCU_GROUP = msp430x23x
 PFLAGS += -DPLATFORM_HAS_32KHZ_CRYSTAL
 
 
-MSP_BSL ?= $(OSIAN_ROOT)/tinyos/tools/platforms/msp430/msp430-bsl/msp430-bsl.py
+MSP_BSL ?= $(TOSROOT)/tools/platforms/msp430/msp430-bsl/msp430-bsl.py
 MSP_BSL_FLAGS += --invert-reset --invert-test
 
 

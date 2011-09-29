@@ -1,0 +1,184 @@
+#!/usr/bin/env python
+import sys
+import getopt
+import subprocess 
+import hashlib
+
+IHEX_END_STR = ":040000030000800079\n:00000001FF"
+
+def usage():
+   sys.stderr.write("""USAGE: %s [options]
+
+Erase program memory, write 8-byte globally-unique ID and 2-byte node ID to
+INFOA.
+
+Options:
+
+  -n, --nodeId=NODE_ID        Write NODE_ID (2 bytes) to start of INFO_A
+                              (0x1980).  If this is not provided, it is
+                              generated from GLOBAL_ID via MAP_CMD
+
+  -g, --globalId=GLOBAL_ID    Write GLOBAL_ID (8 bytes) to 0x1982. 
+                              If not provided, this is the lot/wafer ID, 
+                              die X position, and die Y position 
+                              (found at 0x01A0A, see CC430 data sheet Table 57).
+
+  -u, --usedIds=ID_FILE       File containing a list of global id's/node 
+                              id's already in use. This script will exit with
+                              status 1 if it would result in writing a
+                              duplicate NODE_ID.
+
+  -m, --mappingCmd=MAP_CMD    Command used to map from global ids to node ids.
+                              This should accept a hex-encoded string
+                              representing 8 bytes of data as an input argument
+                              and write the corresponding 2-byte node-id as a
+                              hex-encoded string to stdout. By default, this
+                              performs an md5 hash of GLOBAL_ID (as capital hex
+                              string) and uses the 16 least-significant bits.
+
+   -s, --src=SRC              Specify a differnt destination from which the 
+                              device identification should be read. This
+                              defaults to 0x10A0A (Lot/Wafer ID location per
+                              cc430 datasheet).
+
+   -d, --destination=DEST     Specify a different destination for the ID record 
+                              to be written. Default is 0x1980 (start of INFO_A
+                              per CC430 datasheet)
+
+   -c, --comport=port         Specify communication port to use. Default 0
+"""%sys.argv[0])
+
+def getInt(s):
+    if '0x' in s:
+       return int(s, 16) 
+    else:
+        return int(s)
+
+class IDSetter(object):
+    def __str__(self):
+        return "%x,%x from %x -> %x via %s on %s with ID list %s"%(self.globalId, self.nodeId, self.src, self.dest, self.mappingCmd, self.comport, self.usedIds)
+
+    def __init__(self):
+        self.globalId = None
+        self.nodeId = None
+        self.usedIds = None
+        self.mappingCmd = None
+        self.comport = '/dev/ttyUSB0'
+        self.src = 0x01A0A
+        self.dest = 0x1980
+
+    def readGlobal(self):
+        if not self.globalId:
+           print "reading globalId"
+           proc = subprocess.Popen('cc430-bsl -c %s -S 9600 -u %s -s 8 -x'%(self.comport, hex(self.src)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) 
+           stdout, stderr = proc.communicate()
+           self.globalId = int(''.join(stdout.split()[1:]), 16)
+
+    def generateNodeId(self):
+        print "generating nodeId"
+        if self.mappingCmd:
+            proc = subprocess.Popen('%s %s'%(self.mappingCmd, hex(self.globalId)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            self.nodeId = int(stdout, 16)
+        else:
+            self.nodeId = int(hashlib.md5(('%X'%(self.globalId)).zfill(16)).hexdigest()[-4:], 16)
+
+    def checkIdCollision(self):
+        """Validate: 
+  - If half of (global id, node id) provided and already in use, the other half should match the record in used-ids file.
+        """
+        print "checking collision"
+        if self.nodeId and self.usedIds:
+            with open(self.usedIds, 'r') as f:
+                lines = [ l.strip() for l in f.readlines() if not l.startswith('#')]
+                ids = [ [int(v, 16) for v in l.split(',')] for l in lines]
+                conflicts = [ (g,n) for (g,n) in ids if (n == self.nodeId and g != self.globalId)\
+                    or (g == self.globalId and n != self.nodeId) ]
+                for (g,n) in conflicts:
+                    print >> sys.stderr, "Error: %x already mapped to %x"%(g, n)
+                return conflicts
+        else:
+            return False
+
+    def updateUsedIds(self):
+        #TODO: would be nice to avoid duplicate records
+        if self.usedIds:
+            print "updating",self.usedIds
+            with open(self.usedIds, 'a') as f:
+                f.write('%x,%x\n'%(self.globalId, self.nodeId))
+
+    def genIHex(self):
+        print "generating ihex from %X %X"%(self.globalId, self.nodeId)
+        addr = self.dest
+        globalS = ('%X'%self.globalId).zfill(16) #8 bytes
+        nodeS = ('%X'%self.nodeId).zfill(4) #2 bytes
+        s = ('%X'%self.dest).zfill(4) +'00' + globalS + nodeS
+        recordLen = len(globalS + nodeS)/2
+        s = ('%X'%recordLen).zfill(2) + s
+        bs = [ s[i:i+2] for i in range(len(s))[::2]]
+        bv = [ int(b, 16) for b in bs]
+        lsb = sum(bv) & 0xFF
+        checksum = 0x100 - lsb
+        checksum = ('%X'%(checksum)).zfill(2)
+        return ':%s%s\n%s'%(s, checksum, IHEX_END_STR)
+        
+
+    def writeIds(self):
+        print "writing ids"
+        ihex = self.genIHex()
+        proc = subprocess.Popen('cc430-bsl -c %s -e --infoerase'%self.comport, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) 
+        rc= proc.wait()
+        if rc:
+            print "error on erase:",rc
+            exit(rc)
+        #hack: write ihex to a file, give this as an argument. cc430-bsl is bad at using stdin if retries are needed.
+        tmpFileName='.cc430-setid.tmp'
+        f = open(tmpFileName, 'w')
+        f.write(ihex)
+        f.close()
+        proc = subprocess.Popen('cc430-bsl -c %s -S 9600 -I -p %s'%(self.comport,tmpFileName),  shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE) 
+        proc.communicate(ihex)
+        rc = proc.wait()
+        if rc:
+            print "error on write:",rc
+            exit(rc)
+        return True
+
+if __name__ == '__main__':
+    (options, args) = getopt.getopt(sys.argv[1:],'n:g:u:m:c:s:d:', ['help', 'nodeId=', 'globalId=','usedIds=', 'mappingCmd=', 'src=', 'dest=','comport='])
+
+    if not options:
+        usage()
+        exit(0)
+
+    ids = IDSetter()
+
+    for o, a in options:
+        if o in ('-h', '--help'):
+            usage()
+            exit(0)
+        elif o in ('-g', '--globalId'):
+            ids.globalId = getInt(a)
+        elif o in ('-n', '--nodeId'):
+            ids.nodeId = getInt(a)
+        elif o in ('-u', '--usedIds'):
+            ids.usedIds = a
+        elif o in ('-m', '--mappingCmd'):
+            ids.mappingCmd = a
+        elif o in ('-c', '--comport'):
+            comport = a
+        elif o in ('-s', '--src'):
+            ids.src = getInt(a)
+        elif o in ('-d', '--dest'):
+            ids.dest = getInt(a)
+    
+    if not ids.globalId:
+        ids.readGlobal()
+
+    if not ids.nodeId:
+        ids.generateNodeId()
+
+    if ids.checkIdCollision():
+        exit(1)
+
+    if ids.writeIds():
+        ids.updateUsedIds()
