@@ -23,12 +23,12 @@ Code Composer Studio distribution:
 
 Some characteristics of note:
 
-USCI A0/A1 offsets
-==================
+USCI A0/A1 offsets (UART/SPI)
+=============================
 Control registers
 -----------------
--0x03 UCA0ABCTL  (A0 only)
--0x02 UCA0IRTCTL (A0 only)
+-0x03 UCA0ABCTL  
+-0x02 UCA0IRTCTL 
 -0x01 UCAxIRRCTL
  0x00 UCAxCTL0
  0x01 UCAxCTL1
@@ -45,8 +45,8 @@ Interrupt Registers
  0x01 IFG (A0: IFG2, A1: UC1IFG)
 
 
-USCI B0/B1 offsets
-==================
+USCI B0/B1 offsets (SPI/I2C)
+===========================
 Control registers
 -----------------
  0x00 UCB0CTL0
@@ -63,3 +63,7 @@ Interrupt Registers
   0x00 IE  (B0: IE2, B1: UC1IE)
   0x01 IFG (B0: IFG2, B1: UC1IFG)
 
+I2C address registers
+---------------------
+  0x00 UCB0I2COA
+  0x02 UCB0I2CSA
