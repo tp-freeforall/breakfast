@@ -40,10 +40,10 @@
 generic configuration Msp430I2CC() {
   
   provides interface Resource;
-//  provides interface ResourceRequested;
+  provides interface ResourceRequested;
   provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr;
   
-//  uses interface Msp430UsciConfigure;
+  uses interface Msp430UsciConfigure;
   
 }
 
@@ -56,15 +56,15 @@ implementation {
   components Msp430I2C0P as I2CP;
   Resource = I2CP.Resource[ CLIENT_ID ];
   I2CBasicAddr = I2CP.I2CBasicAddr;
-//  Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
+  Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
 
-//  components Msp430UsciB0P as UsciC;
-//  I2CP.UsciResource -> UsciC.Resource;
-//  ResourceRequested = UsciC.ResourceRequested[CLIENT_ID];;
+  components Msp430UsciB0P as UsciC;
+  I2CP.UsciResource -> UsciC.Resource;
+  ResourceRequested = UsciC.ResourceRequested[CLIENT_ID];;
   
-//  UsciC.ResourceConfigure[CLIENT_ID] -> I2CP.ResourceConfigure[CLIENT_ID];
-//  I2CP.InterruptsRx -> UsciC.InterruptsRx;
-//  I2CP.InterruptsTx -> UsciC.InterruptsTx;
+  UsciC.ResourceConfigure[CLIENT_ID] -> I2CP.ResourceConfigure[CLIENT_ID];
+  I2CP.InterruptsRx -> UsciC.InterruptsRx;
+  I2CP.InterruptsTx -> UsciC.InterruptsTx;
 
 //  components new Msp430Usart0C() as UsartC;
 //  I2CP.UsartResource[ CLIENT_ID ] -> UsciC.Resource;

@@ -130,6 +130,7 @@ implementation {
       return;
     }
     call Usci.enterResetMode_();
+    //TODO: word vs. byte access
     UCmxCTLW0 = config->ctlw0 + UCSWRST;
     UCmxBRW = config->brw;
     UCmxMCTL = config->mctl;

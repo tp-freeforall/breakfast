@@ -8,7 +8,7 @@ module ToastC @safe()
     interface UartByte;
 
     interface Resource as I2CResource;
-//    interface ResourceRequested as I2CResourceRequested;
+    interface ResourceRequested as I2CResourceRequested;
     interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr;
   }
 
@@ -16,7 +16,14 @@ module ToastC @safe()
 }
 implementation
 {
-  msp430_usci_config_t msp430_i2c_config;
+  msp430_usci_config_t msp430_i2c_config_sm =
+  {
+      ctl0: UCMST | UCMODE_I2C | UCSYNC,//I2C single-master
+      ctl1: UCSSEL_SMCLK,               //smclk
+      br0:  8,                          //clk/8
+      br1:  0,
+      mctl: 0,                          //don't care
+  };
 
   uint8_t welcome_string[] = "I2C Test Application\n\r";
 
@@ -35,7 +42,7 @@ implementation
     call I2CResource.request();
 
     call I2CBasicAddr.setOwnAddress(0x0042);
-    call I2CBasicAddr.enableSlave();
+    //call I2CBasicAddr.enableSlave();
   }
 
   /***************************************************************************/
@@ -51,18 +58,18 @@ implementation
     call UartStream.send(str_resource_granted, 18);  
   }
 
-//  async event void I2CResourceRequested.requested() 
-//  {
-//    call UartStream.send(str_resource_requested, 20);  
-//  }
+  async event void I2CResourceRequested.requested() 
+  {
+    call UartStream.send(str_resource_requested, 20);  
+  }
 
-//  async event void I2CResourceRequested.immediateRequested() 
-//  {
-//    call UartStream.send(str_resource_requested_immediately, 32);  
-//  }
+  async event void I2CResourceRequested.immediateRequested() 
+  {
+    call UartStream.send(str_resource_requested_immediately, 32);  
+  }
 
   async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration() {
-    return &msp430_i2c_config;
+    return &msp430_i2c_config_sm;
   }
 
   /***************************************************************************/
