@@ -127,7 +127,11 @@ implementation {
   async command uint8_t Usci.getStat() { return UCA0STAT; }
   async command void Usci.setStat(uint8_t v) { UCA0STAT = v; }
   async command uint8_t Usci.getRxbuf() { return UCA0RXBUF; }
-  async command void Usci.setRxbuf(uint8_t v) { UCA0RXBUF = v; }
+  async command void Usci.setRxbuf(uint8_t v) { 
+    //DC: why does this even exist in the interface? This register is
+    //read-only.
+    //UCA0RXBUF = v; 
+  }
   async command uint8_t Usci.getTxbuf() { return UCA0TXBUF; }
   async command void Usci.setTxbuf(uint8_t v) { UCA0TXBUF = v; }
   async command uint8_t Usci.getAbctl() { return UCA0ABCTL; }

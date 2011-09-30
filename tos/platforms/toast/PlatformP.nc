@@ -44,10 +44,10 @@ module PlatformP {
 
 implementation {
   
-  void uwait(uint16_t u) { 
-    uint16_t t0 = TA0R;
-    while((TA0R - t0) <= u);
-  } 
+//  void uwait(uint16_t u) { 
+//    uint16_t t0 = TA0R;
+//    while((TA0R - t0) <= u);
+//  } 
   
   command error_t Init.init() {
     WDTCTL = WDTPW + WDTHOLD;             // Stop watchdog timer
