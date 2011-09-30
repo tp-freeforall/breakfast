@@ -62,7 +62,7 @@ implementation {
   
   command error_t Init.init() {
     WDTCTL = WDTPW + WDTHOLD;             // Stop watchdog timer
-    SFRRPCR1 = SYSRSTUP | SYSRSTRE; //pullup, enable
+    SFRRPCR = SYSRSTUP | SYSRSTRE; //pullup, enable
 
     call PlatformPins.init();
     call PlatformLed.init();

@@ -165,69 +165,6 @@ enum sampcon_id_enum
 #define ADCC_READ_STREAM_SERVICE "AdcC.ReadStream.Client"
 
 
-
-#ifdef __MSP430_TI_HEADERS__
-//#if __GNUC__ >= 4
-  
-// "The bitfield structures that overlay peripheral registers are not part of
-// mspgcc in the future; the recommended way of accessing those fields is to
-// use the masks defined in the TI headers."
-// (http://www.millennium.berkeley.edu/pipermail/tinyos-devel/2011-March/004804.html)
-//
-// Until the ADC driver is updated our temporary workaround is to re-define the
-// bitfield structures and continue using them when accessing peripheral
-// registers via the DEFINE_UNION_CAST (the same is done in the MSP430 Timer
-// and USART drivers). It has been verified that the definitions of the ADC12
-// flags has not changed over the different MSP430 chip variants that have an
-// ADC12, i.e. using common structs is safe (verified for the header files
-// installed via package msp430mcu-tinyos version 20110613-20110821).
-// (http://mail.millennium.berkeley.edu/pipermail/tinyos-2.0wg/2011-August/003861.html)
-
-typedef struct {
-  volatile unsigned
-    adc12sc:1,
-    enc:1,
-    adc12tovie:1,
-    adc12ovie:1,
-    adc12on:1,
-    refon:1,
-    r2_5v:1,
-    msc:1,
-    sht0:4,
-    sht1:4;
-volatile unsigned int : 0; // align to word boundary (saves significant amount of code)
-} __attribute__ ((packed)) adc12ctl0_t;
-
-typedef struct {
-  volatile unsigned
-    adc12busy:1,
-    conseq:2,
-    adc12ssel:2,
-    adc12div:3,
-    issh:1,
-    shp:1,
-    shs:2,
-    cstartadd:4;
-volatile unsigned int : 0; // align to word boundary (saves significant amount of code)
-} __attribute__ ((packed)) adc12ctl1_t;
-
-#else
-
-  /* Test for GCC bug (bitfield access) - only version 3.2.3 is known to be stable */
-  #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
-  #if GCC_VERSION == 332
-    #error "This msp430-gcc version (3.3.2) is known to contain a bug when accessing bitfield structs."
-  #elif GCC_VERSION != 323
-    #warning "This version of msp430-gcc might contain a bug when accessing bitfield structs (version 3.2.3 is safe - anything else is on your own risk)"
-  #endif  
-
-#endif
-
-
-#if !defined(__msp430_have_adc12) && !defined(__MSP430_HAS_ADC12__) && !defined(__MSP430_HAS_ADC12_PLUS__)
-#error Target msp430 device does not have ADC12 module
-#endif
-
 #ifdef __MSP430_HAS_ADC12_PLUS__
 /* Add bit structure declarations not present in TI-based headers */
 typedef struct {
@@ -290,6 +227,69 @@ struct adc12_t {
 #define CONSEQ1 ADC12CONSEQ1
 #define ADC_VECTOR ADC12_VECTOR
 
+#else // __MSP430_HAS_ADC12_PLUS__
+
+#ifdef __MSP430_TI_HEADERS__
+//#if __GNUC__ >= 4
+  
+// "The bitfield structures that overlay peripheral registers are not part of
+// mspgcc in the future; the recommended way of accessing those fields is to
+// use the masks defined in the TI headers."
+// (http://www.millennium.berkeley.edu/pipermail/tinyos-devel/2011-March/004804.html)
+//
+// Until the ADC driver is updated our temporary workaround is to re-define the
+// bitfield structures and continue using them when accessing peripheral
+// registers via the DEFINE_UNION_CAST (the same is done in the MSP430 Timer
+// and USART drivers). It has been verified that the definitions of the ADC12
+// flags has not changed over the different MSP430 chip variants that have an
+// ADC12, i.e. using common structs is safe (verified for the header files
+// installed via package msp430mcu-tinyos version 20110613-20110821).
+// (http://mail.millennium.berkeley.edu/pipermail/tinyos-2.0wg/2011-August/003861.html)
+
+typedef struct {
+  volatile unsigned
+    adc12sc:1,
+    enc:1,
+    adc12tovie:1,
+    adc12ovie:1,
+    adc12on:1,
+    refon:1,
+    r2_5v:1,
+    msc:1,
+    sht0:4,
+    sht1:4;
+volatile unsigned int : 0; // align to word boundary (saves significant amount of code)
+} __attribute__ ((packed)) adc12ctl0_t;
+
+typedef struct {
+  volatile unsigned
+    adc12busy:1,
+    conseq:2,
+    adc12ssel:2,
+    adc12div:3,
+    issh:1,
+    shp:1,
+    shs:2,
+    cstartadd:4;
+volatile unsigned int : 0; // align to word boundary (saves significant amount of code)
+} __attribute__ ((packed)) adc12ctl1_t;
+
+#else
+
+  /* Test for GCC bug (bitfield access) - only version 3.2.3 is known to be stable */
+  #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
+  #if GCC_VERSION == 332
+    #error "This msp430-gcc version (3.3.2) is known to contain a bug when accessing bitfield structs."
+  #elif GCC_VERSION != 323
+    #warning "This version of msp430-gcc might contain a bug when accessing bitfield structs (version 3.2.3 is safe - anything else is on your own risk)"
+  #endif  
+
+#endif
 #endif // __MSP430_HAS_ADC12_PLUS__
+
+#if !defined(__msp430_have_adc12) && !defined(__MSP430_HAS_ADC12__) && !defined(__MSP430_HAS_ADC12_PLUS__)
+#error Target msp430 device does not have ADC12 module
+#endif
+
 
 #endif
