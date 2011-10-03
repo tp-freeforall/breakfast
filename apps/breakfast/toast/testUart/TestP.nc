@@ -13,11 +13,11 @@ module TestP{
       P6OUT = 0x00;
     }
     P6OUT = 0x01;
-    //if (call StdControl.start() == SUCCESS){
-      P6OUT = 0x02;
-    //}else{
+    if (call StdControl.start() == SUCCESS){
       P6OUT = 0x03;
-    //}
+    }else{
+      P6OUT = 0x0f;
+    }
     call Timer.startPeriodic(20);
   }
   uint8_t message[] = "hi\n\r";
