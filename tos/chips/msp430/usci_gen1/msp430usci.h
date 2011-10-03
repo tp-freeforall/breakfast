@@ -30,6 +30,7 @@ typedef struct msp430_usci_config_t {
   uint8_t br0;
   uint8_t br1;
   uint8_t mctl;
+  uint16_t i2coa;
 } msp430_usci_config_t;
 
 #ifndef TOS_DEFAULT_BAUDRATE

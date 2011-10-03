@@ -1,3 +1,4 @@
+#include "I2C.h"
 module TestP{
   uses interface Boot;
   uses interface UartStream;
@@ -5,8 +6,8 @@ module TestP{
   uses interface StdControl;
   uses interface Timer<TMilli>;
 
-  //provides interface Msp430UsciConfigure as I2CConfigure;
-  //uses interface I2CPacket<I2BasicAddr> as I2CPacket;
+  provides interface Msp430UsciConfigure as I2CConfigure;
+  //uses interface I2CPacket<I2BasicAddr>;
 } implementation {
   uint8_t idleMsg[]    = ".";              //1
   uint8_t resetMsg[]   = "RESET\n\r";      //7
@@ -102,4 +103,16 @@ module TestP{
   async event void UartStream.receiveDone(uint8_t* buf, uint16_t len, error_t err){
   }
 
+  const msp430_usci_config_t i2c_cfg = {
+    ctl0: UCSYNC | UCMODE_3,
+    ctl1: UCTR,
+    br0:  8,
+    br1:  0,
+    mctl: 0,
+    i2coa: 0x42,
+  };
+
+  async command const msp430_usci_config_t* I2CConfigure.getConfiguration(){
+    return &i2c_cfg;
+  }
 }
