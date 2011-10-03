@@ -93,3 +93,18 @@ Msp430UsciUartA0P configuration would instantiate a generic
 Msp430UsciUartP module, giving it the set of USCI A0-specific flags
 that it needs.  The tradeoff is that masking operations couldn't be
 inlined (e.g. would have to look up instance-specific mask to apply)
+
+0 x2xxx compatibility
+  - msp430usci.h: switch to mode-union types
+  - Top-level "alias" configs
+    - Msp430Uart0C -> Msp430UsciUartA0C
+    - Msp430Uart1C -> Msp430UsciUartA1C
+    - Msp430I2C1C  -> Msp430UsciI2CB0C (?)
+    - Msp430I2C2C  -> Msp430UsciI2CB1C (new)
+    - Msp430SpiB0C -> Msp430UsciSpiB0C
+    - Msp430SpiB1C -> Msp430UsciSpiB1C (new)
+  - To match mode-specific config interfaces, change the type
+    of interface declared and return the mode-specific member of the
+    usci union type. e.g. instead of 
+      Msp430UsciConfigure.getConfiguration(){ return &cfg;}
+      Msp430UartConfigure.getConfiguration(){ return &(cfg.uartConfig);}

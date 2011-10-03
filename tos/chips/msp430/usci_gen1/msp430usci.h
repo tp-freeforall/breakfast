@@ -73,4 +73,49 @@ enum {
   MSP430_USCI_ERR_UCxySTAT = MSP430_USCI_ERR_Framing | MSP430_USCI_ERR_Overrun | MSP430_USCI_ERR_Parity,
 };
 
+/**
+ * TODO: unify with x2xxx usci top level.
+ * These typedefs should make it such that switching to the x2xxx
+ * config interfaces (Msp430UartConfiguration, Msp430I2CConfiguration,
+ * Msp430SpiConfiguration) can be done by simply dereferencing the
+ * relevant portion of the unified usci_config_t.
+ * 
+ * This wastes a little space, since UART requires 8 bytes for all its
+ * registers, while SPI only requires 4 and I2C only requires 6.
+
+      typedef struct {
+        uint8_t uctl0;
+        uint8_t uctl1;
+        uint16_t ubr;
+        uint8_t mctl;
+        uint8_t irtctl;
+        uint8_t irrctl;
+        uint8_t abctl;
+      } msp430_uart_registers_t;
+      //reorder/expand msp430_uart_config_t accordingly
+
+      typedef struct { 
+        uint8_t uctl0;
+        uint8_t uctl1;
+        uint16_t ubr;
+        uint8_t unused[4];
+      } msp430_spi_registers_t;
+      //reorder msp430_spi_config_t accordingly
+
+      typedef struct {
+        uint8_t uctl0;
+        uint8_t uctl1;
+        uint16_t ubr;
+        uint16_t i2coa;
+        uint8_t unused[2];
+      } msp430_i2c_registers_t;
+      //reorder/expand msp430_i2c_config_t accordingly
+
+      typedef union{
+        msp430_uart_union_config_t uartConfig;
+        msp430_spi_union_config_t spiConfig;
+        msp430_i2c_union_config_t i2cConfig;
+      } msp430_usci_config_t;
+
+**/
 #endif // _H_Msp430Usci_h
