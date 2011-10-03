@@ -66,6 +66,7 @@ implementation {
   UartByte = UartC;
   Msp430UsciError = UartC;
   PlatformSerialP.Resource -> UartC.Resource;
+  UartC.Msp430UsciConfigure -> PlatformSerialP;
   
   components LedsC;
   PlatformSerialP.Leds -> LedsC;

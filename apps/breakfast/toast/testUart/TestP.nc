@@ -17,7 +17,8 @@ module TestP{
   uint8_t message[] = "hi\n\r";
 
   event void Timer.fired(){
-    call UartStream.send(message, 4);
+    P6OUT ^=0xff;
+    //call UartStream.send(message, 4);
   }
 
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){

@@ -38,6 +38,7 @@
 module PlatformSerialP {
   provides {
     interface StdControl;
+    interface Msp430UsciConfigure;
   }
   
   uses {
@@ -47,7 +48,13 @@ module PlatformSerialP {
 }
 
 implementation {
-  
+  //9600 baud on a 4 mhz binary smclk
+  const msp430_usci_config_t cfg = {
+    ctlw0: UCSSEL_SMCLK,
+    brw: 436,
+    mctl: UCBRS_7,
+  };
+
   command error_t StdControl.start(){
     return call Resource.immediateRequest();
   }
@@ -57,4 +64,8 @@ implementation {
   }
   
   event void Resource.granted() { }
+
+  async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
+    return &cfg;
+  }
 }
