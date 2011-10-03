@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2009-2010 People Power Co.
+/**
+ * Copyright (c) 2010 People Power Co.
  * All rights reserved.
  *
  * This open source code was developed with funding from People Power Company
@@ -31,40 +31,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE
  */
 
-#include "msp430usci.h"
-
-/**
- * Core implementation for any USCI module present on an MSP430 chip.
- *
- * This module makes available the module-specific registers, along
- * with a small number of higher-level functions like generic USCI
- * chip configuration that are shared among the various modes of the
- * module.
- *
- * @author Peter A. Bigot <pab@peoplepowerco.com> 
- * @author Doug Carlson <carlson@cs.jhu.edu> 
- **/
-generic module HplMsp430UsciAP(
-  /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
-  unsigned int UCmxCTL0_
-) @safe() {
-  provides {
-    interface HplMsp430UsciA as UsciA;
-  }
-}
-implementation {
-#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
-  
-  async command uint8_t UsciA.getAbctl() { return UCmxABCTL; }
-  async command void UsciA.setAbctl(uint8_t v) { UCmxABCTL = v; }
-  async command uint8_t UsciA.getIrtctl() { return UCmxIRTCTL; }
-  async command void UsciA.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-  async command uint8_t UsciA.getIrrctl() { return UCmxIRRCTL; }
-  async command void UsciA.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
-
-#undef UCmxIRRCTL
-#undef UCmxIRTCTL
-#undef UCmxABCTL
+/** Support notification of errors detected in MSP430 USCI modules. */
+interface Msp430UsciError {
+  /** Signalled when the USCI infrastructure detects a hardware error.
+   *
+   * The passed parameter is a bit set comprising values defined in
+   * msp430usci.h; these generally map to bits in the USCI UCxySTAT
+   * register.  Note that this event is usually signalled from within
+   * an interrupt handler. */
+  async event void condition (unsigned int errors);
 }

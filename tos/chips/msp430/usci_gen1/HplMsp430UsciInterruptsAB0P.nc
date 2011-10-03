@@ -12,6 +12,7 @@ module HplMsp430UsciInterruptsAB0P {
   provides {
     interface HplMsp430UsciInterrupts as InterruptsUCA0Rx;
     interface HplMsp430UsciInterrupts as InterruptsUCA0Tx;
+    interface HplMsp430UsciInterrupts as InterruptsUCA0State;
     interface HplMsp430UsciInterrupts as InterruptsUCB0Rx;
     interface HplMsp430UsciInterrupts as InterruptsUCB0Tx;
     interface HplMsp430UsciInterrupts as InterruptsUCB0State;
@@ -62,5 +63,6 @@ module HplMsp430UsciInterruptsAB0P {
   default async event void InterruptsUCB0State.interrupted(uint8_t iv){}
   default async event void InterruptsUCA0Rx.interrupted(uint8_t iv){}
   default async event void InterruptsUCA0Tx.interrupted(uint8_t iv){}
+  default async event void InterruptsUCA0State.interrupted(uint8_t iv){}
 
 }

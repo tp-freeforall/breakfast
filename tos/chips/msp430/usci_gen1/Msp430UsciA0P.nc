@@ -19,10 +19,11 @@ configuration Msp430UsciA0P {
  }
 
 } implementation {
-
-  components new HplMsp430UsciAC(UCA0CTL0_, IE2, MSP430_USCI_A0_RESOURCE) as UsciC;
+  components new HplMsp430UsciAC(UCA0CTL0_, 
+    IE2_, 
+    MSP430_USCI_A0_RESOURCE) as UsciC;
   USCI  = UsciC;
-  USCIA = UsciC
+  USCIA = UsciC;
   Resource = UsciC;
   ResourceRequested = UsciC;
   ResourceDefaultOwner = UsciC;
@@ -34,10 +35,9 @@ configuration Msp430UsciA0P {
 
 
   components HplMsp430UsciInterruptsAB0P as IsrC;
-  UsciC.RawRXInterrupts -> IsrC.A0RXInterrupts;
-  UsciC.RawTXInterrupts -> IsrC.A0TXInterrupts;
-  UsciC.RawStateInterrupts -> IsrC.A0StateInterrupts;
-  IsrC.Usci -> UsciC;
+  UsciC.RawRXInterrupts -> IsrC.InterruptsUCA0Rx;
+  UsciC.RawTXInterrupts -> IsrC.InterruptsUCA0Tx;
+  UsciC.RawStateInterrupts -> IsrC.InterruptsUCA0State;
 
   //TODO: expose RX and TX pins
 }

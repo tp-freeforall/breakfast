@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2009-2010 People Power Co.
+/* Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
  * This open source code was developed with funding from People Power Company
@@ -29,42 +28,23 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
+ *
  */
 
-#include "msp430usci.h"
-
 /**
- * Core implementation for any USCI module present on an MSP430 chip.
+ * Interrupt events for an MSP430 USCI module.
  *
- * This module makes available the module-specific registers, along
- * with a small number of higher-level functions like generic USCI
- * chip configuration that are shared among the various modes of the
- * module.
- *
- * @author Peter A. Bigot <pab@peoplepowerco.com> 
- * @author Doug Carlson <carlson@cs.jhu.edu> 
- **/
-generic module HplMsp430UsciAP(
-  /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
-  unsigned int UCmxCTL0_
-) @safe() {
-  provides {
-    interface HplMsp430UsciA as UsciA;
-  }
-}
-implementation {
-#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
-  
-  async command uint8_t UsciA.getAbctl() { return UCmxABCTL; }
-  async command void UsciA.setAbctl(uint8_t v) { UCmxABCTL = v; }
-  async command uint8_t UsciA.getIrtctl() { return UCmxIRTCTL; }
-  async command void UsciA.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-  async command uint8_t UsciA.getIrrctl() { return UCmxIRRCTL; }
-  async command void UsciA.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
+ * @author Peter A. Bigot <pab@peoplepowerco.com>
+ */
 
-#undef UCmxIRRCTL
-#undef UCmxIRTCTL
-#undef UCmxABCTL
+interface HplMsp430UsciInterrupts {
+  /** The only event is the reception of the interrupt.  Notification
+   * includes the value of the interrupt vector register.
+   *
+   * @note Do not attempt to distinguish tx and rx interrupts here;
+   * delegate it to the mode-specific handler.  For example, a receive
+   * interrupt for UART and SPI modes is indicated by a UCmxIV value
+   * of 2 using constant USCI_UCRXIFG; in I2C mode, the value 2 means
+   * USCI_I2C_UCALIFG.  USCI_I2C_UCRXIFG has a value of 10. */
+  async event void interrupted(uint8_t iv);
 }

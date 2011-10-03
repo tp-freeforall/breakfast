@@ -19,7 +19,7 @@ for (split(/\n/, <<'EOText'
 
   %T/chips/msp430
   %T/chips/msp430/pins
-  %T/chips/msp430/msp430xv2/usci
+  %T/chips/msp430/usci_gen1
   %T/chips/msp430/timer
   %T/chips/msp430/adc12
   %T/chips/msp430/sensors

@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2009-2010 People Power Co.
+/* Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
  * This open source code was developed with funding from People Power Company
@@ -29,42 +28,18 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
+ *
+ */
+
+/**
+ * Obtain access to a client-specific USCI configuration.
  */
 
 #include "msp430usci.h"
 
-/**
- * Core implementation for any USCI module present on an MSP430 chip.
- *
- * This module makes available the module-specific registers, along
- * with a small number of higher-level functions like generic USCI
- * chip configuration that are shared among the various modes of the
- * module.
- *
- * @author Peter A. Bigot <pab@peoplepowerco.com> 
- * @author Doug Carlson <carlson@cs.jhu.edu> 
- **/
-generic module HplMsp430UsciAP(
-  /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
-  unsigned int UCmxCTL0_
-) @safe() {
-  provides {
-    interface HplMsp430UsciA as UsciA;
-  }
-}
-implementation {
-#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
-  
-  async command uint8_t UsciA.getAbctl() { return UCmxABCTL; }
-  async command void UsciA.setAbctl(uint8_t v) { UCmxABCTL = v; }
-  async command uint8_t UsciA.getIrtctl() { return UCmxIRTCTL; }
-  async command void UsciA.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-  async command uint8_t UsciA.getIrrctl() { return UCmxIRRCTL; }
-  async command void UsciA.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
-
-#undef UCmxIRRCTL
-#undef UCmxIRTCTL
-#undef UCmxABCTL
+interface Msp430UsciConfigure {
+  /**
+   * Return a pointer to the configuration that should be used for a
+   * particular USCI client. */
+  async command const msp430_usci_config_t* getConfiguration ();
 }

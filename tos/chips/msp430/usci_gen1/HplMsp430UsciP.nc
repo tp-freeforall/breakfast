@@ -50,7 +50,7 @@ generic module HplMsp430UsciP(
   /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
   unsigned int UCmxCTL0_,
   /** offset of interrupt-enable register**/
-  unsigned int IE_,
+  unsigned int IE_
 ) @safe() {
   provides {
     interface HplMsp430Usci as Usci;
@@ -109,8 +109,8 @@ implementation {
 
   async command void Usci.setBrw(uint16_t v)
   {
-    UCA0BR1 = (v >> 8);
-    UCA0BR0 = v;
+    UCmxBR1 = (v >> 8);
+    UCmxBR0 = v;
   }
 
 
