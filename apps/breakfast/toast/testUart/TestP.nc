@@ -12,10 +12,7 @@ module TestP{
       P6SEL = 0x00;
       P6OUT = 0x00;
     }
-    P6OUT = 0x01;
-    if (call StdControl.start() == SUCCESS){
-      P6OUT = 0x03;
-    }else{
+    if (call StdControl.start() != SUCCESS){
       P6OUT = 0x0f;
     }
     call Timer.startPeriodic(20);
@@ -23,9 +20,15 @@ module TestP{
   uint8_t message[] = "hi\n\r";
 
   event void Timer.fired(){
-    P6OUT = 0x04;
-    //call UartStream.send(message, 4);
-    P6OUT = 0x05;
+    P6DIR = 0xff;
+    P6OUT = 0x00;
+    P6OUT = 0x01;
+    //This call appears to not complete
+    if(call UartStream.send(message, 4) == SUCCESS){
+      P6OUT = 0x08;
+    }else{
+      P6OUT = 0x0f;
+    }
   }
 
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){

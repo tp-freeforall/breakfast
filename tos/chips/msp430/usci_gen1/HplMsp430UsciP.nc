@@ -121,7 +121,15 @@ implementation {
   async command uint8_t Usci.getTxbuf() { return UCmxTXBUF; }
   async command void Usci.setTxbuf(uint8_t v) { UCmxTXBUF = v; }
   async command uint8_t Usci.getIe() { return UCmxIE; }
-  async command void Usci.setIe(uint8_t v) { UCmxIE = v; }
+  async command void Usci.setIe(uint8_t v) { 
+    //This is the point where it fails. UCmxIE looks OK in app.c
+    //(0x001, which is IE2 in msp430f235.h)
+    // this succeeds the first time (when called by configure) not the
+    // second (when called by uartstream.send
+    //ok, looks like this is causing the interrupt to fire, but we're
+    //not clearing it. now we're getting somewhere.
+    UCmxIE = v; 
+  }
   async command uint8_t Usci.getIfg() { return UCmxIFG; }
   async command void Usci.setIfg(uint8_t v) { UCmxIFG = v; }
 
@@ -169,7 +177,9 @@ implementation {
    * the interrupt to the handler for the appropriate USCI mode. */
   async event void RawTXInterrupts.interrupted (uint8_t iv)
   {
+    P6OUT = 0x04;
     if (call ArbiterInfo.inUse()) {
+      P6OUT = 0x05;
       signal TXInterrupts.interrupted[ call Usci.currentMode() ](iv);
     }
   }
@@ -189,7 +199,9 @@ implementation {
   }
 
   default async event void RXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
-  default async event void TXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
+  default async event void TXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { 
+    P6OUT = 0x06;
+  }
   default async event void StateInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
 
 #undef UCmxIFG

@@ -40,10 +40,12 @@ module HplMsp430UsciInterruptsAB0P {
   }
 
   TOSH_SIGNAL(USCIAB0TX_VECTOR) 
-  {        
+  {
+    P6OUT = 0x02;
     //UCA0TXIFG -> A0Tx (IFG2)
     if ( (IFG2 & UCA0TXIFG) && (IE2 & UCA0TXIE) )
     {
+      P6OUT = 0x03;
       signal InterruptsUCA0Tx.interrupted(IFG2);
 
     //UCB0RXIFG -> B0Rx (IFG2)

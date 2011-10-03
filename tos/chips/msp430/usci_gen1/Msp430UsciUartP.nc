@@ -185,7 +185,6 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
     atomic {
       uint8_t ch = m_tx_buf[m_tx_pos++];
       bool last_char = (m_tx_pos == m_tx_len);
-
       if (last_char) {
         /* Disable interrupts and release hold on UART before we
          * transmit the character; this ensures that UCTXIFG remains
@@ -207,7 +206,8 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
 
   async command error_t UartStream.send[uint8_t client]( uint8_t* buf, uint16_t len )
   {
-    error_t rv = checkIsOwner(client);
+    error_t rv;
+    rv = checkIsOwner(client);
     if (SUCCESS != rv) {
       return rv;
     }
@@ -387,9 +387,14 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
 
   async event void TXInterrupts.interrupted(uint8_t iv){
     uint8_t current_client = call ArbiterInfo.userId();
+    P6OUT = 0x06;
+    //OK, this check is where we go all wrong: arbiter says that the
+    //resource isn't being used. why is this happening?
     if (0xFF == current_client) {
+      P6OUT = 0x08;
       return;
     }
+    P6OUT = 0x07;
     nextStreamTransmit(current_client);
   }
 

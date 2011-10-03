@@ -56,7 +56,6 @@ implementation {
   };
 
   command error_t StdControl.start(){
-    P6OUT = 0x02;
     return call Resource.immediateRequest();
   }
   
