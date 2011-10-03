@@ -68,8 +68,6 @@ implementation {
   event void Resource.granted() { }
 
   async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
-    P6OUT = 0x01;
-    P6OUT = 0x00;
     return &cfg;
   }
 }
