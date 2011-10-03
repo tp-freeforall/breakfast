@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2009-2010 People Power Co.
+/* Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
  * This open source code was developed with funding from People Power Company
@@ -29,43 +28,34 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
+ *
  */
 
 #include "msp430usci.h"
 
 /**
- * Core implementation for any USCI module present on an MSP430 chip.
- *
- * This module makes available the module-specific registers, along
- * with a small number of higher-level functions like generic USCI
- * chip configuration that are shared among the various modes of the
- * module.
- *
- * @author Peter A. Bigot <pab@peoplepowerco.com> 
- * @author Doug Carlson <carlson@cs.jhu.edu> 
- **/
-generic module HplMsp430UsciAP(
-  /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
-  unsigned int UCmxCTL0_
-) @safe() {
-  provides {
-    interface HplMsp430UsciA as UsciA;
-  }
-}
-implementation {
-#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
-  
-  async command uint8_t UsciA.getAbctl() { return UCmxABCTL; }
-  async command void UsciA.setAbctl(uint8_t v) { UCmxABCTL = v; }
+ * Generic configuration for a client that shares USCI_A0 in UART mode.
+ */
+generic configuration Msp430UsciUartA0C() {
+  provides interface Resource;
+  provides interface UartStream;
+  provides interface UartByte;
+  provides interface Msp430UsciError;
 
-  async command uint8_t UsciA.getIrtctl() { return UCmxIRTCTL; }
-  async command void UsciA.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-  async command uint8_t UsciA.getIrrctl() { return UCmxIRRCTL; }
-  async command void UsciA.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
+  uses interface Msp430UsciConfigure;
+} implementation {
+  enum {
+    CLIENT_ID = unique(MSP430_USCI_A0_RESOURCE),
+  };
 
-#undef UCmxIRRCTL
-#undef UCmxIRTCTL
-#undef UCmxABCTL
+  components Msp430UsciA0P as UsciC;
+  Resource = UsciC.Resource[CLIENT_ID];
+
+  components Msp430UsciUartA0P as UartP;
+  UartStream = UartP.UartStream[CLIENT_ID];
+  UartByte = UartP.UartByte[CLIENT_ID];
+  Msp430UsciError = UartP.Msp430UsciError[CLIENT_ID];
+  Msp430UsciConfigure = UartP.Msp430UsciConfigure[CLIENT_ID];
+  //not so sure about this one
+  UsciC.ResourceConfigure[CLIENT_ID] -> UartP.ResourceConfigure[CLIENT_ID];
 }

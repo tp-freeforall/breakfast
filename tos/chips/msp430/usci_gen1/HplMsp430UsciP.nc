@@ -67,16 +67,11 @@ generic module HplMsp430UsciP(
   }
 }
 implementation {
-//#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-//#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-//#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
-  
 #define UCmxCTL0 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x00)) 
 #define UCmxCTL1 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x01)) 
 #define UCmxBR0 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x02))
 #define UCmxBR1 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x03))
 #define UCmxMCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
-//#define UCmxI2CIE (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
 #define UCmxSTAT (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x05))
 #define UCmxRXBUF (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x06))
 #define UCmxTXBUF (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x07))
@@ -119,33 +114,16 @@ implementation {
   }
 
 
-//  async command uint8_t Usci.getMctl() { return UCmxMCTL; }
-//  async command void Usci.setMctl(uint8_t v) { UCmxMCTL = v; }
   async command uint8_t Usci.getStat() { return UCmxSTAT; }
   async command void Usci.setStat(uint8_t v) { UCmxSTAT = v; }
   async command uint8_t Usci.getRxbuf() { return UCmxRXBUF; }
   async command void Usci.setRxbuf(uint8_t v) { UCmxRXBUF = v; }
   async command uint8_t Usci.getTxbuf() { return UCmxTXBUF; }
   async command void Usci.setTxbuf(uint8_t v) { UCmxTXBUF = v; }
-//  async command uint8_t Usci.getAbctl() { return UCmxABCTL; }
-//  async command void Usci.setAbctl(uint8_t v) { UCmxABCTL = v; }
-//  async command uint16_t Usci.getI2coa() { return UCmxI2COA; }
-//  async command void Usci.setI2coa(uint16_t v) { UCmxI2COA = v; }
-//  async command uint16_t Usci.getIrctl() { return UCmxIRCTL; }
-//  async command void Usci.setIrctl(uint16_t v) { UCmxIRCTL = v; }
-//  async command uint8_t Usci.getIrtctl() { return UCmxIRTCTL; }
-//  async command void Usci.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-//  async command uint8_t Usci.getIrrctl() { return UCmxIRRCTL; }
-//  async command void Usci.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
-//  async command uint16_t Usci.getI2csa() { return UCmxI2CSA; }
-//  async command void Usci.setI2csa(uint16_t v) { UCmxI2CSA = v; }
-//  async command uint16_t Usci.getIctl() { return UCmxICTL; }
-//  async command uint16_t Usci.setIctl(uint16_t v) { UCmxICTL = v; }
   async command uint8_t Usci.getIe() { return UCmxIE; }
   async command void Usci.setIe(uint8_t v) { UCmxIE = v; }
   async command uint8_t Usci.getIfg() { return UCmxIFG; }
   async command void Usci.setIfg(uint8_t v) { UCmxIFG = v; }
-//  async command uint8_t Usci.getIv() { return UCmxIV; }
 
   async command void Usci.enterResetMode_ () {
     __asm__ __volatile__("bis %0, %1" : : "i" UCSWRST, "m" UCmxCTL1);

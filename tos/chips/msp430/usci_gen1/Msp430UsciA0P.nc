@@ -10,6 +10,9 @@ configuration Msp430UsciA0P {
     interface HplMsp430UsciInterrupts as RXInterrupts[uint8_t mode];
     interface HplMsp430UsciInterrupts as TXInterrupts[uint8_t mode];
     interface HplMsp430UsciInterrupts as StateInterrupts[uint8_t mode];
+    //TODO: expose the pins from here
+    //interface HplMsp430GeneralIO as URXD;
+    //interface HplMsp430GeneralIO as UTXD;
   }
   uses {
     interface ResourceConfigure[uint8_t client];
@@ -35,4 +38,6 @@ configuration Msp430UsciA0P {
   UsciC.RawTXInterrupts -> IsrC.A0TXInterrupts;
   UsciC.RawStateInterrupts -> IsrC.A0StateInterrupts;
   IsrC.Usci -> UsciC;
+
+  //TODO: expose RX and TX pins
 }
