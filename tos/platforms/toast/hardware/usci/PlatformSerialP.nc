@@ -50,8 +50,10 @@ module PlatformSerialP {
 implementation {
   //9600 baud on a 4 mhz binary smclk
   const msp430_usci_config_t cfg = {
-    ctlw0: UCSSEL_SMCLK,
-    brw: 436,
+    ctl0: 0,
+    ctl1: UCSSEL_SMCLK,
+    br1: 0x01,
+    br0: 0xb4, 
     mctl: UCBRS_7,
   };
 
@@ -66,6 +68,8 @@ implementation {
   event void Resource.granted() { }
 
   async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
+    P6OUT = 0x01;
+    P6OUT = 0x00;
     return &cfg;
   }
 }

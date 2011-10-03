@@ -20,14 +20,13 @@ module TestP{
   uint8_t message[] = "hi\n\r";
 
   event void Timer.fired(){
-    P6DIR = 0xff;
-    P6OUT = 0x00;
-    P6OUT = 0x01;
+    //P6OUT = 0x00;
+    //P6OUT = 0x01;
     //This call appears to not complete
     if(call UartStream.send(message, 4) == SUCCESS){
-      P6OUT = 0x08;
+      //P6OUT = 0x08;
     }else{
-      P6OUT = 0x0f;
+      //P6OUT = 0x0f;
     }
   }
 

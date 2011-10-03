@@ -47,7 +47,7 @@
 generic module HplMsp430UsciP(
   /** Identifier for this USCI module, unique across (type, instance) pairs */
   uint8_t USCI_ID,
-  /** Offset of UCmxCTLW0_ register for m=module_type and x=module_instance */
+  /** Offset of UCmxCTL0_ register for m=module_type and x=module_instance */
   unsigned int UCmxCTL0_,
   /** offset of interrupt-enable register**/
   unsigned int IE_
@@ -81,38 +81,17 @@ implementation {
 
   async command uint8_t Usci.getModuleIdentifier() { return USCI_ID; }
 
-  async command uint16_t Usci.getCtlw0()
-  {
-    uint16_t tmp;
+  async command void Usci.setCtl0(uint8_t v) { UCmxCTL0 = v;}
+  async command uint8_t Usci.getCtl0() { return UCmxCTL0;}
 
-    tmp = UCmxCTL1;
-    tmp = (tmp << 8) + UCmxCTL0;
+  async command void Usci.setCtl1(uint8_t v) { UCmxCTL1 = v; }
+  async command uint8_t Usci.getCtl1() { return UCmxCTL1; }
 
-    return tmp;
-  }
+  async command uint8_t Usci.getBr0() {return UCmxBR0; }
+  async command void Usci.setBr0(uint8_t v) { UCmxBR0 = v; }
 
-  async command void Usci.setCtlw0(uint16_t v)
-  {
-    UCmxCTL1 = (v >> 8);
-    UCmxCTL0 = v;
-  }
-
-  async command uint16_t Usci.getBrw()
-  {
-     uint16_t tmp;
-
-     tmp = UCmxBR1;
-     tmp = (tmp << 8) + UCmxBR0;
-
-     return tmp;
-   }
-
-  async command void Usci.setBrw(uint16_t v)
-  {
-    UCmxBR1 = (v >> 8);
-    UCmxBR0 = v;
-  }
-
+  async command uint8_t Usci.getBr1() {return UCmxBR1; }
+  async command void Usci.setBr1(uint8_t v) { UCmxBR1 = v; }
 
   async command uint8_t Usci.getStat() { return UCmxSTAT; }
   async command void Usci.setStat(uint8_t v) { UCmxSTAT = v; }
@@ -135,12 +114,12 @@ implementation {
 
   async command void Usci.enterResetMode_ () {
     __asm__ __volatile__("bis %0, %1" : : "i" UCSWRST, "m" UCmxCTL1);
-//    UCmxCTL1 |= UCSWRST;
+    //UCmxCTL1 |= UCSWRST;
   }
 
   async command void Usci.leaveResetMode_ () {
     __asm__ __volatile__("bic %0, %1" : : "i" UCSWRST, "m" UCmxCTL1);
-//    UCmxCTL1 &= ~UCSWRST;
+    //UCmxCTL1 &= ~UCSWRST;
   }
 
   async command void Usci.configure (const msp430_usci_config_t* config,
@@ -150,9 +129,11 @@ implementation {
       return;
     }
     call Usci.enterResetMode_();
-    call Usci.setCtlw0(config->ctlw0 + UCSWRST);
+    call Usci.setCtl0(config->ctl0);
+    call Usci.setCtl1(config->ctl1 | UCSWRST);
     //UCmxCTLW0 = config->ctlw0 + UCSWRST;
-    call Usci.setBrw(config->brw);
+    call Usci.setBr0(config->br0);
+    call Usci.setBr1(config->br1);
     //UCmxBRW = config->brw;
     UCmxMCTL = config->mctl;
     if (! leave_in_reset) {
@@ -177,9 +158,7 @@ implementation {
    * the interrupt to the handler for the appropriate USCI mode. */
   async event void RawTXInterrupts.interrupted (uint8_t iv)
   {
-    P6OUT = 0x04;
     if (call ArbiterInfo.inUse()) {
-      P6OUT = 0x05;
       signal TXInterrupts.interrupted[ call Usci.currentMode() ](iv);
     }
   }
@@ -199,9 +178,7 @@ implementation {
   }
 
   default async event void RXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
-  default async event void TXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { 
-    P6OUT = 0x06;
-  }
+  default async event void TXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
   default async event void StateInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
 
 #undef UCmxIFG

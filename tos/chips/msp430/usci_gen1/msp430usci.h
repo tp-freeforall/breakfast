@@ -25,8 +25,10 @@ enum {
  * These are specifically the registers common to all configurations.
  * Mode-specific configuration data should be provided elsewise. */
 typedef struct msp430_usci_config_t {
-  uint16_t ctlw0;
-  uint16_t brw;
+  uint8_t ctl0;
+  uint8_t ctl1;
+  uint8_t br0;
+  uint8_t br1;
   uint8_t mctl;
 } msp430_usci_config_t;
 
@@ -36,40 +38,22 @@ typedef struct msp430_usci_config_t {
 
 msp430_usci_config_t msp430_usci_uart_default_config = {
   /* N81 UART mode driven by SMCLK */
-  ctlw0 : (0 << 8) | UCSSEL_SMCLK,
+  ctl0 : 0,
+  ctl1 : UCSSEL_SMCLK,
 
-#if 9600 == TOS_DEFAULT_BAUDRATE
-  /* SLAU259 Table 16-4 2^20Hz 9600: UBR=109, BRS=2, BRF=0 */
-  brw : 109, // 9600
-  mctl : UCBRF_0 + UCBRS_2
-#elif 19200 == TOS_DEFAULT_BAUDRATE
-  /* SLAU259 Table 16-4 2^20Hz 19200: UBR=54, BRS=2, BRF=0 */
-  brw : 54, // 19200
-  mctl : UCBRF_0 + UCBRS_2
-#elif 38400 == TOS_DEFAULT_BAUDRATE
-  /* SLAU259 Table 16-4 2^20Hz 38400: UBR=27, BRS=2, BRF=0 */
-  brw : 27, // 38400
-  mctl : UCBRF_0 + UCBRS_2
-#elif 57600 == TOS_DEFAULT_BAUDRATE
-  /* SLAU259 Table 16-4 2^20Hz 57600: UBR=18, BRS=1, BRF=0 */
-  brw : 18, // 57600
-  mctl : UCBRF_0 + UCBRS_1
-#elif 115200 == TOS_DEFAULT_BAUDRATE
   /* SLAU259 Table 16-4 2^20Hz 115200: UBR=9, BRS=1, BRF=0 */
-  brw : 9, // 115200
+  br0 : 9, // 115200
+  br1 : 0,
   mctl : UCBRF_0 + UCBRS_1
-#else
-#warning Unrecognized value for TOS_DEFAULT_BAUDRATE, using 115200
-  brw : 9, // 115200
-  mctl : UCBRF_0 + UCBRS_1
-#endif
 };
 
 msp430_usci_config_t msp430_usci_spi_default_config = {
   /* Inactive high MSB-first 8-bit 3-pin master driven by SMCLK */
-  ctlw0 : ((UCCKPL + UCMSB + UCMST + UCSYNC) << 8) | UCSSEL_SMCLK,
+  ctl0 : UCSSEL_SMCLK,
+  ctl1 : UCCKPL | UCMSB | UCMST | UCSYNC,
   /* 2x Prescale */
-  brw : 2,
+  br0 : 2,
+  br1 : 0,
   mctl : 0                      /* Always 0 in SPI mode */
 };
 

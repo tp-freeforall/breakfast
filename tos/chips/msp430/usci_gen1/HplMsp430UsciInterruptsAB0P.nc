@@ -41,11 +41,9 @@ module HplMsp430UsciInterruptsAB0P {
 
   TOSH_SIGNAL(USCIAB0TX_VECTOR) 
   {
-    P6OUT = 0x02;
     //UCA0TXIFG -> A0Tx (IFG2)
     if ( (IFG2 & UCA0TXIFG) && (IE2 & UCA0TXIE) )
     {
-      P6OUT = 0x03;
       signal InterruptsUCA0Tx.interrupted(IFG2);
 
     //UCB0RXIFG -> B0Rx (IFG2)
@@ -61,10 +59,10 @@ module HplMsp430UsciInterruptsAB0P {
   }
 
   default async event void InterruptsUCB0Rx.interrupted(uint8_t iv){}
-  default async event void InterruptsUCB0Tx.interrupted(uint8_t iv){}
+  default async event void InterruptsUCB0Tx.interrupted(uint8_t iv){ }
   default async event void InterruptsUCB0State.interrupted(uint8_t iv){}
   default async event void InterruptsUCA0Rx.interrupted(uint8_t iv){}
-  default async event void InterruptsUCA0Tx.interrupted(uint8_t iv){}
+  default async event void InterruptsUCA0Tx.interrupted(uint8_t iv){ }
   default async event void InterruptsUCA0State.interrupted(uint8_t iv){}
 
 }

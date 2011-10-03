@@ -387,14 +387,9 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
 
   async event void TXInterrupts.interrupted(uint8_t iv){
     uint8_t current_client = call ArbiterInfo.userId();
-    P6OUT = 0x06;
-    //OK, this check is where we go all wrong: arbiter says that the
-    //resource isn't being used. why is this happening?
     if (0xFF == current_client) {
-      P6OUT = 0x08;
       return;
     }
-    P6OUT = 0x07;
     nextStreamTransmit(current_client);
   }
 
