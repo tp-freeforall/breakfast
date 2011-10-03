@@ -67,16 +67,16 @@ generic module HplMsp430UsciP(
   }
 }
 implementation {
-#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
-#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
-#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
+//#define UCmxABCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x03))
+//#define UCmxIRTCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x02))
+//#define UCmxIRRCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ - 0x01))
   
 #define UCmxCTL0 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x00)) 
 #define UCmxCTL1 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x01)) 
 #define UCmxBR0 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x02))
 #define UCmxBR1 (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x03))
 #define UCmxMCTL (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
-#define UCmxI2CIE (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
+//#define UCmxI2CIE (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
 #define UCmxSTAT (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x05))
 #define UCmxRXBUF (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x06))
 #define UCmxTXBUF (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x07))
@@ -85,34 +85,67 @@ implementation {
 #define UCmxIFG (*TCAST(volatile uint8_t* ONE, IE_ + 0x01))
 
   async command uint8_t Usci.getModuleIdentifier() { return USCI_ID; }
-  
-  async command uint8_t Usci.getMctl() { return UCmxMCTL; }
-  async command void Usci.setMctl(uint8_t v) { UCmxMCTL = v; }
+
+  async command uint16_t Usci.getCtlw0()
+  {
+    uint16_t tmp;
+
+    tmp = UCmxCTL1;
+    tmp = (tmp << 8) + UCmxCTL0;
+
+    return tmp;
+  }
+
+  async command void Usci.setCtlw0(uint16_t v)
+  {
+    UCmxCTL1 = (v >> 8);
+    UCmxCTL0 = v;
+  }
+
+  async command uint16_t Usci.getBrw()
+  {
+     uint16_t tmp;
+
+     tmp = UCmxBR1;
+     tmp = (tmp << 8) + UCmxBR0;
+
+     return tmp;
+   }
+
+  async command void Usci.setBrw(uint16_t v)
+  {
+    UCA0BR1 = (v >> 8);
+    UCA0BR0 = v;
+  }
+
+
+//  async command uint8_t Usci.getMctl() { return UCmxMCTL; }
+//  async command void Usci.setMctl(uint8_t v) { UCmxMCTL = v; }
   async command uint8_t Usci.getStat() { return UCmxSTAT; }
   async command void Usci.setStat(uint8_t v) { UCmxSTAT = v; }
   async command uint8_t Usci.getRxbuf() { return UCmxRXBUF; }
   async command void Usci.setRxbuf(uint8_t v) { UCmxRXBUF = v; }
   async command uint8_t Usci.getTxbuf() { return UCmxTXBUF; }
   async command void Usci.setTxbuf(uint8_t v) { UCmxTXBUF = v; }
-  async command uint8_t Usci.getAbctl() { return UCmxABCTL; }
-  async command void Usci.setAbctl(uint8_t v) { UCmxABCTL = v; }
-  async command uint16_t Usci.getI2coa() { return UCmxI2COA; }
-  async command void Usci.setI2coa(uint16_t v) { UCmxI2COA = v; }
-  async command uint16_t Usci.getIrctl() { return UCmxIRCTL; }
-  async command void Usci.setIrctl(uint16_t v) { UCmxIRCTL = v; }
-  async command uint8_t Usci.getIrtctl() { return UCmxIRTCTL; }
-  async command void Usci.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
-  async command uint8_t Usci.getIrrctl() { return UCmxIRRCTL; }
-  async command void Usci.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
-  async command uint16_t Usci.getI2csa() { return UCmxI2CSA; }
-  async command void Usci.setI2csa(uint16_t v) { UCmxI2CSA = v; }
-  async command uint16_t Usci.getIctl() { return UCmxICTL; }
-  async command uint16_t Usci.setIctl(uint16_t v) { UCmxICTL = v; }
+//  async command uint8_t Usci.getAbctl() { return UCmxABCTL; }
+//  async command void Usci.setAbctl(uint8_t v) { UCmxABCTL = v; }
+//  async command uint16_t Usci.getI2coa() { return UCmxI2COA; }
+//  async command void Usci.setI2coa(uint16_t v) { UCmxI2COA = v; }
+//  async command uint16_t Usci.getIrctl() { return UCmxIRCTL; }
+//  async command void Usci.setIrctl(uint16_t v) { UCmxIRCTL = v; }
+//  async command uint8_t Usci.getIrtctl() { return UCmxIRTCTL; }
+//  async command void Usci.setIrtctl(uint8_t v) { UCmxIRTCTL = v; }
+//  async command uint8_t Usci.getIrrctl() { return UCmxIRRCTL; }
+//  async command void Usci.setIrrctl(uint8_t v) { UCmxIRRCTL = v; }
+//  async command uint16_t Usci.getI2csa() { return UCmxI2CSA; }
+//  async command void Usci.setI2csa(uint16_t v) { UCmxI2CSA = v; }
+//  async command uint16_t Usci.getIctl() { return UCmxICTL; }
+//  async command uint16_t Usci.setIctl(uint16_t v) { UCmxICTL = v; }
   async command uint8_t Usci.getIe() { return UCmxIE; }
   async command void Usci.setIe(uint8_t v) { UCmxIE = v; }
   async command uint8_t Usci.getIfg() { return UCmxIFG; }
   async command void Usci.setIfg(uint8_t v) { UCmxIFG = v; }
-  async command uint8_t Usci.getIv() { return UCmxIV; }
+//  async command uint8_t Usci.getIv() { return UCmxIV; }
 
   async command void Usci.enterResetMode_ () {
     __asm__ __volatile__("bis %0, %1" : : "i" UCSWRST, "m" UCmxCTL1);
@@ -131,9 +164,10 @@ implementation {
       return;
     }
     call Usci.enterResetMode_();
-    //TODO: word vs. byte access
-    UCmxCTLW0 = config->ctlw0 + UCSWRST;
-    UCmxBRW = config->brw;
+    call Usci.setCtlw0(config->ctlw0 + UCSWRST);
+    //UCmxCTLW0 = config->ctlw0 + UCSWRST;
+    call Usci.setBrw(config->brw);
+    //UCmxBRW = config->brw;
     UCmxMCTL = config->mctl;
     if (! leave_in_reset) {
       call Usci.leaveResetMode_();
@@ -155,33 +189,40 @@ implementation {
 
   /* Upon receipt of an interrupt, if the USCI is active then demux
    * the interrupt to the handler for the appropriate USCI mode. */
-  async event void RawInterrupts.interrupted (uint8_t iv)
+  async event void RawTXInterrupts.interrupted (uint8_t iv)
   {
     if (call ArbiterInfo.inUse()) {
-      signal Interrupts.interrupted[ call Usci.currentMode() ](iv);
+      signal TXInterrupts.interrupted[ call Usci.currentMode() ](iv);
     }
   }
-  //TODO: RX, TX, State interrupts
 
-  default async event void Interrupts.interrupted[uint8_t mode] (uint8_t iv) { }
+  async event void RawRXInterrupts.interrupted (uint8_t iv)
+  {
+    if (call ArbiterInfo.inUse()) {
+      signal RXInterrupts.interrupted[ call Usci.currentMode() ](iv);
+    }
+  }
 
-#undef UCmxIV
+  async event void RawStateInterrupts.interrupted (uint8_t iv)
+  {
+    if (call ArbiterInfo.inUse()) {
+      signal StateInterrupts.interrupted[ call Usci.currentMode() ](iv);
+    }
+  }
+
+  default async event void RXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
+  default async event void TXInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
+  default async event void StateInterrupts.interrupted[uint8_t mode] (uint8_t iv) { }
+
 #undef UCmxIFG
 #undef UCmxIE
-#undef UCmxICTL
-#undef UCmxI2CSA
-#undef UCmxIRRCTL
-#undef UCmxIRTCTL
-#undef UCmxIRCTL
-#undef UCmxI2COA
-#undef UCmxABCTL
 #undef UCmxTXBUF
 #undef UCmxRXBUF
 #undef UCmxSTAT
 #undef UCmxMCTL
-#undef UCmxBRW
-#undef UCmxCTL0
+#undef UCmxBR1
+#undef UCmxBR0
 #undef UCmxCTL1
-#undef UCmxCTLW0
+#undef UCmxCTL0
  
 }

@@ -67,3 +67,29 @@ I2C address registers
 ---------------------
   0x00 UCB0I2COA
   0x02 UCB0I2CSA
+
+Notes:
+----
+@marcus: maybe you got the info about handling the RX interrupt
+clearing the RX flag from peter's notes in the cc430's implementation.
+I don't see where he got that info from, but he's normally right about
+this sort of thing...
+
+tinyos core impl pushes checks for interrupt-pending all the way down
+(osian = apply mask to Usci.getIfg).  This is totally generic on
+osian because only a single set of masks is defined in the headers
+(and used across the modules). e.g. UCTXIFG vs. UCA0TXIFG + UCA1TXIFG.
+If we follow the core impl, then the bottom-level usci component can't
+be totally generic (c.f. HplMsp430UsciA0P.Usci.isTxIntrPending
+HplMsp430UsciA1P.Usci.isTxIntrPending). This will double the ROM
+consumption at the bottom for devices with 2 usci A modules, for
+instance.
+We can't exactly follow the osian approach using JUST the TI headers
+(even though they are the same value, we probably shouldn't assume
+that you can use UCA0TXIFG and UCA1TXIFG interchangeably).
+Encapsulating the differences by using parameters to the generic
+module is the way to address this, I think. The non-generic
+Msp430UsciUartA0P configuration would instantiate a generic
+Msp430UsciUartP module, giving it the set of USCI A0-specific flags
+that it needs.  The tradeoff is that masking operations couldn't be
+inlined (e.g. would have to look up instance-specific mask to apply)
