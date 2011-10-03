@@ -7,7 +7,8 @@ module TestP{
   uses interface Timer<TMilli>;
 
   provides interface Msp430UsciConfigure as I2CConfigure;
-  //uses interface I2CPacket<I2BasicAddr>;
+  uses interface I2CPacket<TI2CBasicAddr>;
+  uses interface Resource as I2CResource;
 } implementation {
   uint8_t idleMsg[]    = ".";              //1
   uint8_t resetMsg[]   = "RESET\n\r";      //7
@@ -111,8 +112,11 @@ module TestP{
     mctl: 0,
     i2coa: 0x42,
   };
-
+  event void I2CResource.granted(){
+  }
   async command const msp430_usci_config_t* I2CConfigure.getConfiguration(){
     return &i2c_cfg;
   }
+  async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
+  async event void I2CPacket.writeDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
 }

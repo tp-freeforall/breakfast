@@ -41,7 +41,7 @@ generic configuration Msp430UsciI2CMasterB0C() {
   
   provides interface Resource;
   provides interface ResourceRequested;
-  provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr;
+  provides interface I2CPacket<TI2CBasicAddr>;
   
   uses interface Msp430UsciConfigure;
   
@@ -53,12 +53,12 @@ implementation {
     CLIENT_ID = unique( MSP430_USCI_B0_RESOURCE ),
   };
   
-  components Msp430UsciI2CMasterB0P as UsciC;
+  components Msp430UsciB0P as UsciC;
   Resource = UsciC.Resource[CLIENT_ID];
   ResourceRequested = UsciC.ResourceRequested[CLIENT_ID];
 
   components Msp430UsciI2CMasterB0P as I2CP;
-  I2CBasicAddr = I2CP.I2CBasicAddr[CLIENT_ID];
+  I2CPacket = I2CP.I2CPacket[CLIENT_ID];
   Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
 
   //TODO: move these down into Msp430UsciB0P

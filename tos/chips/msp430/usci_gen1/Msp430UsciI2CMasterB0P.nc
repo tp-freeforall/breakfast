@@ -7,8 +7,8 @@ configuration Msp430UsciI2CMasterB0P {
   uses {
     interface Msp430UsciConfigure[ uint8_t client ];
     //TODO: should these not come from the Usci instance?
-    interface HplMsp430GeneralIO as URXD;
-    interface HplMsp430GeneralIO as UTXD;
+    interface HplMsp430GeneralIO as USCL;
+    interface HplMsp430GeneralIO as USDA;
   }
 } implementation {
 
@@ -26,12 +26,12 @@ configuration Msp430UsciI2CMasterB0P {
 
   Msp430UsciConfigure = I2CC;
   ResourceConfigure = I2CC;
-  I2CPacket = I2CC;
+  I2CPacket = I2CC.I2CBasicAddr;
   Msp430UsciError = I2CC;
-  URXD = I2CC.URXD;
-  UTXD = I2CC.UTXD;
+  USCL = I2CC.SCL;
+  USDA = I2CC.SDA;
 
   components LocalTimeMilliC;
-  UartC.LocalTime_bms -> LocalTimeMilliC;
+  I2CC.LocalTime_bms -> LocalTimeMilliC;
 
 }
