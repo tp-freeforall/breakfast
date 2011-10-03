@@ -5,6 +5,12 @@ module TestP{
   uses interface StdControl;
   uses interface Timer<TMilli>;
 } implementation {
+  uint8_t message[] = "hi\n\r";
+  uint8_t rxByte;
+
+  task void restartTimer(){
+    call Timer.startOneShot(5120);
+  }
   
   event void Boot.booted(){
     atomic{
@@ -15,29 +21,32 @@ module TestP{
     if (call StdControl.start() != SUCCESS){
       P6OUT = 0x0f;
     }
-    call Timer.startPeriodic(20);
+    post restartTimer();
   }
-  uint8_t message[] = "hi\n\r";
+
 
   event void Timer.fired(){
-    //P6OUT = 0x00;
-    //P6OUT = 0x01;
-    //This call appears to not complete
-    if(call UartStream.send(message, 4) == SUCCESS){
-      //P6OUT = 0x08;
-    }else{
-      //P6OUT = 0x0f;
+    if(call UartStream.send(message, 4) != SUCCESS){
+      P6OUT = 0x0f;
     }
   }
 
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){
+    post restartTimer();
+  }
+
+  task void echoTask(){
+    call UartStream.send(&rxByte, 1);
   }
 
   async event void UartStream.receivedByte(uint8_t byte){
+    atomic{
+      rxByte = byte;
+    }
+    post echoTask();
   }
 
-  async event void UartStream.receiveDone(uint8_t* buf, uint16_t len, error_t
-  err){
+  async event void UartStream.receiveDone(uint8_t* buf, uint16_t len, error_t err){
   }
 
 }
