@@ -282,9 +282,10 @@ implementation {
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
-    if ( call Usci.getStat() & UCBBUSY ){
+
+    if ( call Usci.getStat() & UCBBUSY )
       return EBUSY;
-    }
+      
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -293,33 +294,39 @@ implementation {
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
-      //it shouldn't be necessary to enter reset mode for this.
-      //call Usci.enterResetMode_();
-      /* set slave address */
+      //sequence as described in 17.3.4.2.1 of slau144h is:
+      // - set sa
+      // - set UCTR
+      // - set UCTXSTT
+      // (start/address written, then we get an interrupt)
+      // no reset should be necessary for this process. however, when
+      // I did it in a different sequence, the first write worked OK
+      // but the second one began with the UCSTPIFG set, and the first
+      // character was dropped. I have no explanation for why this
+      // would be the case.
+
+      // set slave address 
       call UsciB.setI2csa(addr);
-      //UCB0I2CIE = UCNACKIE | UCALIE;
-      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      //IE2 |= UCB0RXIE | UCB0TXIE;
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-     
-      /* UCTR - set transmit */
-      /* UCTXSTT - generate START condition */
+      // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
-      //call Usci.leaveResetMode_();
+      //enable relevant state interrupts
+      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
+      //enable tx/rx interrupts 
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
     {
-      //TODO: test
-      /* set slave address */
+      // set slave address 
       call UsciB.setI2csa(addr);
 
       /* UCTR - set transmit */
       /* UCTXSTT - generate START condition */
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
-    } else{
-      //TODO: test
-      /* continue writing next byte */
+      //do we not need to enable any interrupts here?
+    }
+    else{
+      // continue writing next byte 
       nextWrite();
     }
     return SUCCESS;    
@@ -329,21 +336,18 @@ implementation {
   void nextWrite()
   {
     uint16_t counter = 0xFFFF;
-    
+    P6OUT = m_pos;
     /* all bytes sent */
     if ( m_pos == m_len ) {
-      P6OUT = 0x05;
       /* not setting STOP bit allows restarting transfer */
       if ( m_flags & I2C_STOP )
       {
-        P6OUT = 0x06;
         /* set stop bit */
         call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
         /* wait until STOP bit has been transmitted */
         while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
           counter--;
-          P6OUT ^= 0x06;
         }
         //TODO: when write is done, should we put module back into
         //  reset?  I think not, the application should release the
@@ -357,10 +361,8 @@ implementation {
       call Usci.setIe(call Usci.getIe() & ~(TXIE_MASK | RXIE_MASK));
       /* fail gracefully */      
       if (counter > 0x01){
-        P6OUT = 0x01;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
       } else{
-        P6OUT = 0x02;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa(), m_len, m_buf );
       }
     } else{
@@ -424,7 +426,6 @@ implementation {
       //another master addressed us as a slave. However, this should
       //manifest as an AL interrupt, not a NACK interrupt.
       if (call Usci.getCtl1() & UCTR){
-        P6OUT = 0x03;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
@@ -434,7 +435,6 @@ implementation {
     else if (UCB0STAT & UCALIFG) 
     {
       resetUCB0();
-      P6OUT = 0x04;
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
     }
     /* STOP condition */

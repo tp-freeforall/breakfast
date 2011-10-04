@@ -48,13 +48,12 @@ module PlatformSerialP {
 }
 
 implementation {
-  //9600 baud on a 4 mhz binary smclk
+  //115200 baud on a 4 mhz binary smclk
   const msp430_usci_config_t cfg = {
     ctl0: 0,
     ctl1: UCSSEL_SMCLK,
-    br1: 0x01,
-    br0: 0xb4, 
-    mctl: UCBRS_7,
+    br0: 0x02, 
+    mctl: UCBRF_4 + UCBRS_3 + UCOS16,
   };
 
   command error_t StdControl.start(){
