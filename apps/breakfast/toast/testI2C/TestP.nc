@@ -91,7 +91,7 @@ module TestP{
 
   uint8_t cmd[] = {0xdc};
   // 10010 00
-  uint16_t slaveAddr = 0x0048;
+  uint16_t slaveAddr = 0x0042;
   task void doWrite(){
     //P6OUT = 0x00;
     //P6OUT = 0x01;
