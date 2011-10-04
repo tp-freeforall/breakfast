@@ -95,7 +95,8 @@ module TestP{
   task void doWrite(){
     //P6OUT = 0x00;
     //P6OUT = 0x01;
-    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, 0x48, 1, cmd)){
+    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP,
+    slaveAddr, 1, cmd)){
       //P6OUT = 0x02;
       setState(S_WRITING);
     }else{

@@ -320,6 +320,7 @@ implementation {
     } else{
       //TODO: test
       /* continue writing next byte */
+      P6OUT = 0x05;
       nextWrite();
     }
     return SUCCESS;    
@@ -329,7 +330,6 @@ implementation {
   void nextWrite()
   {
     uint8_t counter = 0xFF;
-    //TODO: test
     
     /* all bytes sent */
     if ( m_pos == m_len ) {
@@ -351,6 +351,9 @@ implementation {
         //resetUCB0();
       }
 
+      //disable tx interrupt, we're DONE 
+      //TODO: other interrupts?
+      call Usci.setIe(call Usci.getIe() & ~(TXIE_MASK | RXIE_MASK));
       /* fail gracefully */      
       if (counter > 0x01){
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
@@ -371,6 +374,7 @@ implementation {
     //TODO: no need to check master mode
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
+      P6OUT = 0x06;
       nextWrite();
     } else {
       //TODO: move to slave code
@@ -399,11 +403,9 @@ implementation {
     uint8_t counter = 0xFF;
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
-    P6OUT = 0x01;
     /* no acknowledgement */
     if (call Usci.getStat() & UCNACKIFG) {
       //This occurs during write and read when no ack is received.
-      P6OUT = 0x02;
       /* set stop bit */
       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
@@ -420,6 +422,7 @@ implementation {
       //another master addressed us as a slave. However, this should
       //manifest as an AL interrupt, not a NACK interrupt.
       if (call Usci.getCtl1() & UCTR){
+        P6OUT = 0x03;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
@@ -428,14 +431,13 @@ implementation {
     /* arbitration lost */
     else if (UCB0STAT & UCALIFG) 
     {
-      P6OUT = 0x03;
       resetUCB0();
+      P6OUT = 0x04;
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
     }
     /* STOP condition */
     else if (UCB0STAT & UCSTPIFG) 
     {
-      P6OUT = 0x04;
       //TODO: I think this is slave-specific, so move
       /* disable STOP interrupt, enable START interrupt */
       UCB0I2CIE &= ~UCSTPIE;
@@ -446,7 +448,6 @@ implementation {
     /* START condition */
     else if (UCB0STAT & UCSTTIFG) 
     {
-      P6OUT = 0x05;
       //TODO: i think this is slave-specific, so move
       /* disable START interrupt, enable STOP interrupt */
       UCB0I2CIE &= ~UCSTTIE;
