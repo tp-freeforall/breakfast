@@ -144,6 +144,7 @@ implementation {
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) )
       {
+        //this logic seems to work fine
         /* wait until START bit has been transmitted */
         while ((call Usci.getCtl1() & UCTXSTT) && (counter > 0x01)){
           counter--;
@@ -185,7 +186,7 @@ implementation {
 
   void nextRead()
   {
-    uint8_t counter = 0xFF;
+    uint16_t counter = 0xFFFF;
     //TODO: replace with module-independent calls
     
     /* read byte from RX buffer */
@@ -196,6 +197,8 @@ implementation {
 
       /* single byte exception, STOP bit sent during address transmission */
       if ( m_len > 1 ) {
+        //is this just taking too long to run? if we lower the scl
+        //rate, what happens?
         /* set STOP bit */
         UCB0CTL1 |= UCTXSTP;
 
