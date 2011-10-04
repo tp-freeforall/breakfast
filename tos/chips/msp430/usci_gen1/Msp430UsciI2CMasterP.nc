@@ -130,57 +130,16 @@ implementation {
 
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START) {
-//      /**************************************************************/
-//      UCB0CTL1 = UCSWRST; // enter reset mode
-//
-//      /*
-//       * UCB0CTL0
-//       * UCSLA10    - 10bit slave address (~7bit slave address)
-//       * UCMM       - MultiMaster mode (~single master mode)
-//       * UCMST      - Master (~slave)
-//       * UCMODE_I2C - I2C mode
-//       * UCSYNC     - I2C mode
-//       *
-//       * UCSSEL_SMCLK - SMCLK clock source
-//       * UCTR         - transmit (~receive)
-//       *
-//       */
-//      UCB0CTL0 = UCMM | UCMST | UCMODE_I2C | UCSYNC;
-//      UCB0CTL1 = UCSSEL_SMCLK | UCSWRST;
-//
-//      /* clock prescaler, minimum value is 8 */
-//      UCB0BR0 = 0x28; // 100 kHz
-//  //    UCB0BR0 = 0x0A; // 400 kHz
-//      UCB0BR1 = 0x00;
 
-      //clear TR bit
-      call Usci.setCtl1( call Usci.getCtl1()&(~UCTR));
-
-//      call SDA.makeOutput();
-//      call SDA.selectModuleFunc();
-//      call SCL.makeOutput();
-//      call SCL.selectModuleFunc();
-
-//      UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-      //UCB0I2CIE = UCNACKIE | UCALIE;
-      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      //IE2 |= UCB0RXIE | UCB0TXIE;
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-
-      /**************************************************************/
-
-      /* set own address - necessary in multi-master mode */
-      //should not be needed: part of usci_config already.
-      //UCB0I2COA = m_ownaddress;
-
-      /* set slave address */
-      //UCB0I2CSA = addr;
+      // set slave address 
       call UsciB.setI2csa(addr);
+      //clear TR bit, set start condition
+      call Usci.setCtl1( (call Usci.getCtl1()&(~UCTR))  | UCTXSTT);
 
-      /* UCTXSTT - generate START condition */
-      //UCB0CTL1 |= UCTXSTT;
-      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTT);
+
+      //enable i2c arbitration interrupts, rx, tx 
+      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) )
