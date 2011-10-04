@@ -119,7 +119,7 @@ implementation {
   {
     uint8_t counter = 0xFF;
     //TODO: replace with module independent calls
-    if ( UCB0STAT & UCBBUSY )
+    if ( call Usci.getStat() & UCBBUSY )
       return EBUSY;
     
     m_buf = buf;
@@ -129,91 +129,100 @@ implementation {
 
 
     /* check if this is a new connection or a continuation */
-    if (m_flags & I2C_START)
-    {
-      /**************************************************************/
-      UCB0CTL1 = UCSWRST; // enter reset mode
+    if (m_flags & I2C_START) {
+//      /**************************************************************/
+//      UCB0CTL1 = UCSWRST; // enter reset mode
+//
+//      /*
+//       * UCB0CTL0
+//       * UCSLA10    - 10bit slave address (~7bit slave address)
+//       * UCMM       - MultiMaster mode (~single master mode)
+//       * UCMST      - Master (~slave)
+//       * UCMODE_I2C - I2C mode
+//       * UCSYNC     - I2C mode
+//       *
+//       * UCSSEL_SMCLK - SMCLK clock source
+//       * UCTR         - transmit (~receive)
+//       *
+//       */
+//      UCB0CTL0 = UCMM | UCMST | UCMODE_I2C | UCSYNC;
+//      UCB0CTL1 = UCSSEL_SMCLK | UCSWRST;
+//
+//      /* clock prescaler, minimum value is 8 */
+//      UCB0BR0 = 0x28; // 100 kHz
+//  //    UCB0BR0 = 0x0A; // 400 kHz
+//      UCB0BR1 = 0x00;
 
-      /*
-       * UCB0CTL0
-       * UCSLA10    - 10bit slave address (~7bit slave address)
-       * UCMM       - MultiMaster mode (~single master mode)
-       * UCMST      - Master (~slave)
-       * UCMODE_I2C - I2C mode
-       * UCSYNC     - I2C mode
-       *
-       * UCSSEL_SMCLK - SMCLK clock source
-       * UCTR         - transmit (~receive)
-       *
-       */
-      UCB0CTL0 = UCMM | UCMST | UCMODE_I2C | UCSYNC;
-      UCB0CTL1 = UCSSEL_SMCLK | UCSWRST;
+      //clear TR bit
+      call Usci.setCtl1( call Usci.getCtl1()&(~UCTR));
 
-      /* clock prescaler, minimum value is 8 */
-      UCB0BR0 = 0x28; // 100 kHz
-  //    UCB0BR0 = 0x0A; // 400 kHz
-      UCB0BR1 = 0x00;
+//      call SDA.makeOutput();
+//      call SDA.selectModuleFunc();
+//      call SCL.makeOutput();
+//      call SCL.selectModuleFunc();
 
-      call SDA.makeOutput();
-      call SDA.selectModuleFunc();
-      call SCL.makeOutput();
-      call SCL.selectModuleFunc();
+//      UCB0CTL1 &= ~UCSWRST; // exit reset mode
 
-      UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-      UCB0I2CIE = UCNACKIE | UCALIE;
-      IE2 |= UCB0RXIE | UCB0TXIE;
+      //UCB0I2CIE = UCNACKIE | UCALIE;
+      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
+      //IE2 |= UCB0RXIE | UCB0TXIE;
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
 
       /**************************************************************/
 
       /* set own address - necessary in multi-master mode */
-      UCB0I2COA = m_ownaddress;
+      //should not be needed: part of usci_config already.
+      //UCB0I2COA = m_ownaddress;
 
       /* set slave address */
-      UCB0I2CSA = addr;
+      //UCB0I2CSA = addr;
+      call UsciB.setI2csa(addr);
 
       /* UCTXSTT - generate START condition */
-      UCB0CTL1 |= UCTXSTT;
+      //UCB0CTL1 |= UCTXSTT;
+      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTT);
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) )
       {
         /* wait until START bit has been transmitted */
-        while ((UCB0CTL1 & UCTXSTT) && (counter > 0x01))
+        while ((call Usci.getCtl1() & UCTXSTT) && (counter > 0x01)){
           counter--;
-
+        }
         /* set stop bit */
-        UCB0CTL1 |= UCTXSTP;
+        //UCB0CTL1 |= UCTXSTP;
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
       }
-    }
-    else if (m_flags & I2C_RESTART)
-    {
+    } else if (m_flags & I2C_RESTART) {
+      //TODO: test
       /* set slave address */
-      UCB0I2CSA = addr;
+      //UCB0I2CSA = addr;
+      call UsciB.setI2csa(addr);
 
       /* UCTXSTT - generate START condition */
-      UCB0CTL1 |= UCTXSTT;
+      //UCB0CTL1 |= UCTXSTT;
+      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTT);
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
-      if ( (m_len == 1) && (m_flags & I2C_STOP) )
-      {
+      if ( (m_len == 1) && (m_flags & I2C_STOP) ) {
         /* wait until START bit has been transmitted */
-        while ((UCB0CTL1 & UCTXSTT) && (counter > 0x01))
+        while ((call Usci.getCtl1() & UCTXSTT) && (counter > 0x01)){
           counter--;
-
+        }
         /* set stop bit */
-        UCB0CTL1 |= UCTXSTP;
+        //UCB0CTL1 |= UCTXSTP;
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
       }
-    }
-    else
+    } else {
+      //TODO: test
       nextRead();
-
-    if (counter > 0x01)
+    }
+    if (counter > 0x01){
       return SUCCESS;    
-    else
+    } else {
       return FAIL;
+    }
   }
-
 
   void nextRead()
   {
@@ -301,6 +310,7 @@ implementation {
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
     {
+      //TODO: test
       /* set slave address */
       call UsciB.setI2csa(addr);
 
@@ -308,6 +318,7 @@ implementation {
       /* UCTXSTT - generate START condition */
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
     } else{
+      //TODO: test
       /* continue writing next byte */
       nextWrite();
     }
@@ -390,14 +401,14 @@ implementation {
     //TODO: replace with module-independent calls
     P6OUT = 0x01;
     /* no acknowledgement */
-    if (UCB0STAT & UCNACKIFG) {
+    if (call Usci.getStat() & UCNACKIFG) {
       //This occurs during write and read when no ack is received.
       P6OUT = 0x02;
       /* set stop bit */
-      UCB0CTL1 |= UCTXSTP;
+      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
       /* wait until STOP bit has been transmitted */
-      while ((UCB0CTL1 & UCTXSTP) && (counter > 0x01)){
+      while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
         counter--;
       }
       call Usci.enterResetMode_();
@@ -408,10 +419,10 @@ implementation {
       //Note that TR will be cleared if we lost MM arbitration because
       //another master addressed us as a slave. However, this should
       //manifest as an AL interrupt, not a NACK interrupt.
-      if (UCB0CTL1 & UCTR){
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, UCB0I2CSA, m_len, m_buf );
+      if (call Usci.getCtl1() & UCTR){
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }else {
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, UCB0I2CSA, m_len, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }
     } 
     /* arbitration lost */
