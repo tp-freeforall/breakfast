@@ -1,4 +1,4 @@
-#include "msp430usci.h"
+
 configuration ToastAppC{}
 implementation {
   components MainC, ToastC;
