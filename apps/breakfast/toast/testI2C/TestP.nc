@@ -17,6 +17,9 @@ module TestP{
   uint8_t writeDoneMsg[] = "WRITE DONE\n\r"; //12
   uint8_t writeDoneFailMsg[] = "WRITE DONE FAIL\n\r"; //17
   uint8_t writeFailMsg[] = "WRITE FAIL\n\r"; //12
+  uint8_t readingMsg[] = "READING\n\r";    //9
+  uint8_t readFailMsg[] = "READ FAIL\n\r";    //11
+  uint8_t readDoneFailMsg[] = "READ DONE FAIL\n\r";    //16
   uint8_t resourceGrantedMsg[] = "RESOURCE GRANTED\n\r"; //18
   uint8_t nl[] = "\n\r";                   //2
 
@@ -36,6 +39,11 @@ module TestP{
     S_RESOURCE_REQUESTED = 0x09,
     S_RESOURCE_REQUEST_FAIL = 0x0a,
     S_RESOURCE_GRANTED = 0x0b,
+    S_READ_START = 0x0c,
+    S_READING = 0x0d,
+    S_READDONE = 0x0e,
+    S_READDONE_FAIL = 0x0f,
+    S_READ_FAIL = 0x10,
   };
 
   void setState(uint8_t s){
@@ -96,6 +104,18 @@ module TestP{
     }
   }
 
+  uint8_t i2c_buf[] = {0xdc}; 
+
+  task void doRead(){
+    if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
+          0x42, 1, i2c_buf)){
+      setState(S_READING);
+    } else{
+      setState(S_READ_FAIL);
+      call UartStream.send(readFailMsg, 11);
+    }
+  }
+
   //OK
   task void getResource(){
     if(SUCCESS == call I2CResource.request()){
@@ -121,6 +141,12 @@ module TestP{
     } else if (checkState(S_WRITEDONE_FAIL)){
       setState(S_IDLE);
     } else if (checkState(S_RESOURCE_GRANTED)){
+      setState(S_IDLE);
+    } else if (checkState(S_READ_START)){
+      post doRead();
+    } else if (checkState(S_READDONE)){
+      setState(S_IDLE);
+    } else if (checkState(S_READ_FAIL)){
       setState(S_IDLE);
     }
     post restartTimer();
@@ -150,6 +176,10 @@ module TestP{
       case 'w':
         setState(S_WRITE_START);
         call UartStream.send(writingMsg, 9);
+        break;
+      case 'r':
+        setState(S_READ_START);
+        call UartStream.send(readingMsg, 9);
         break;
       default:
         setState(S_ECHOING);
@@ -188,5 +218,14 @@ module TestP{
   async command const msp430_usci_config_t* I2CConfigure.getConfiguration(){
     return &i2c_cfg;
   }
-  async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
+
+  async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
+    if (error == SUCCESS){
+      setState(S_READDONE);
+      call UartStream.send(i2c_buf, 1);
+    }else{
+      setState(S_READDONE_FAIL);
+      call UartStream.send(readDoneFailMsg, 16);
+    }
+  }
 }
