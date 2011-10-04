@@ -328,20 +328,22 @@ implementation {
 
   void nextWrite()
   {
-    uint8_t counter = 0xFF;
+    uint16_t counter = 0xFFFF;
     
     /* all bytes sent */
     if ( m_pos == m_len ) {
-
+      P6OUT = 0x05;
       /* not setting STOP bit allows restarting transfer */
       if ( m_flags & I2C_STOP )
       {
+        P6OUT = 0x06;
         /* set stop bit */
         call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
         /* wait until STOP bit has been transmitted */
         while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
           counter--;
+          P6OUT ^= 0x06;
         }
         //TODO: when write is done, should we put module back into
         //  reset?  I think not, the application should release the
@@ -355,8 +357,10 @@ implementation {
       call Usci.setIe(call Usci.getIe() & ~(TXIE_MASK | RXIE_MASK));
       /* fail gracefully */      
       if (counter > 0x01){
+        P6OUT = 0x01;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
       } else{
+        P6OUT = 0x02;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa(), m_len, m_buf );
       }
     } else{
@@ -420,6 +424,7 @@ implementation {
       //another master addressed us as a slave. However, this should
       //manifest as an AL interrupt, not a NACK interrupt.
       if (call Usci.getCtl1() & UCTR){
+        P6OUT = 0x03;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
@@ -429,6 +434,7 @@ implementation {
     else if (UCB0STAT & UCALIFG) 
     {
       resetUCB0();
+      P6OUT = 0x04;
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
     }
     /* STOP condition */
