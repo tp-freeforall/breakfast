@@ -131,7 +131,7 @@ implementation
     return SUCCESS;
   }
 
-  uint8_t counter;
+  uint8_t counter='a';
 
   async event uint8_t I2CBasicAddr.slaveTransmit()
   {
@@ -177,7 +177,7 @@ implementation
     
 
       case 'w':  
-                  i2c_length = 1;
+                  i2c_length = 4;
                   i2c_buffer[0] = 0x00;
                   i2c_buffer[1] = 0x01;
                   i2c_buffer[2] = 0x02;
@@ -192,7 +192,7 @@ implementation
                   break;
 
       case 'r':  
-                  i2c_length = 1;
+                  i2c_length = 4;
                   call I2CBasicAddr.read(I2C_START|I2C_STOP, 0x42, i2c_length, i2c_buffer);
                   break;
 
