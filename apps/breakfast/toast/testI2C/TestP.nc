@@ -146,6 +146,8 @@ module TestP{
       post doRead();
     } else if (checkState(S_READDONE)){
       setState(S_IDLE);
+    } else if (checkState(S_READDONE_FAIL)){
+      setState(S_IDLE);
     } else if (checkState(S_READ_FAIL)){
       setState(S_IDLE);
     }
