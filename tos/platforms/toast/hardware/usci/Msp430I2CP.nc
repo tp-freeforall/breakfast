@@ -480,8 +480,13 @@ implementation {
       while ((UCB0CTL1 & UCTXSTP) && (counter > 0x01))
         counter--;
 
+      if(UCB0CTL1 & UCTR){
       resetUCB0();
-      signal I2CBasicAddr.writeDone( ENOACK, UCB0I2CSA, m_len, m_buf );
+        signal I2CBasicAddr.writeDone( ENOACK, UCB0I2CSA, m_len, m_buf );
+      } else{
+      resetUCB0();
+        signal I2CBasicAddr.readDone( ENOACK, UCB0I2CSA, m_len, m_buf );
+      }
     } 
     /* arbitration lost */
     else if (UCB0STAT & UCALIFG) 
