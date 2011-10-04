@@ -373,7 +373,8 @@ implementation {
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
-      call Usci.enterResetMode_();
+      //it shouldn't be necessary to enter reset mode for this.
+      //call Usci.enterResetMode_();
       /* set slave address */
       call UsciB.setI2csa(addr);
       //UCB0I2CIE = UCNACKIE | UCALIE;
@@ -383,11 +384,8 @@ implementation {
      
       /* UCTR - set transmit */
       /* UCTXSTT - generate START condition */
-      //does this have to be done with it reset?
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
-      call Usci.leaveResetMode_();
-      //no interrupt is getting generated.
-      //showRegisters();
+      //call Usci.leaveResetMode_();
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
@@ -493,7 +491,9 @@ implementation {
       while ((UCB0CTL1 & UCTXSTP) && (counter > 0x01))
         counter--;
 
-      resetUCB0();
+      //resetUCB0();
+      call Usci.enterResetMode_();
+      call Usci.leaveResetMode_();
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, UCB0I2CSA, m_len, m_buf );
     } 
     /* arbitration lost */
