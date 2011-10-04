@@ -43,8 +43,9 @@ msp430_usci_config_t msp430_usci_uart_default_config = {
 #if 9600 == TOS_DEFAULT_BAUDRATE
   /* SLAU259 Table 16-4 2^20Hz 9600: UBR=109, BRS=2, BRF=0 */
   // brw : 109, // 9600
-  br0 : 0x6D,
-  mctl : UCBRF_0 + UCBRS_2
+  br1 : 0x01,
+  br0 : 0xb4,
+  mctl : UCBRS_7,
 #elif 19200 == TOS_DEFAULT_BAUDRATE
   /* SLAU259 Table 16-4 2^20Hz 19200: UBR=54, BRS=2, BRF=0 */
   // brw : 54, // 19200

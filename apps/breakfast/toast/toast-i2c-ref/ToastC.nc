@@ -177,7 +177,7 @@ implementation
     
 
       case 'w':  
-                  i2c_length = 10;
+                  i2c_length = 1;
                   i2c_buffer[0] = 0x00;
                   i2c_buffer[1] = 0x01;
                   i2c_buffer[2] = 0x02;
@@ -192,7 +192,7 @@ implementation
                   break;
 
       case 'r':  
-                  i2c_length = 10;
+                  i2c_length = 1;
                   call I2CBasicAddr.read(I2C_START|I2C_STOP, 0x42, i2c_length, i2c_buffer);
                   break;
 
@@ -201,7 +201,10 @@ implementation
                   str[1] = '\r';
                   call UartStream.send(str,2);
                   break;
-                  
+      case 'q':
+                  //reset
+                  WDTCTL = 0x00;
+                  break;
       default:    
                   call UartStream.send(str,1);
                   break;
