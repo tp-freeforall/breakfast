@@ -89,14 +89,15 @@ module TestP{
       call Timer.startOneShot(256);
   }
 
-  uint8_t cmd[] = {0xdc};
+  uint8_t cmd[] = {0xde,0xad,0xbe,0xef};
+  uint8_t cmd_len = 4;
   // 10010 00
   uint16_t slaveAddr = 0x0042;
   task void doWrite(){
     //P6OUT = 0x00;
     //P6OUT = 0x01;
     if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP,
-    slaveAddr, 1, cmd)){
+    slaveAddr, cmd_len, cmd)){
       //P6OUT = 0x02;
       setState(S_WRITING);
     }else{
@@ -106,11 +107,12 @@ module TestP{
     }
   }
 
-  uint8_t i2c_buf[] = {0xdc}; 
+  uint8_t i2c_buf[] = {0x00, 0x00, 0x00, 0x00}; 
+  uint8_t i2c_len = 4;
 
   task void doRead(){
     if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
-          slaveAddr, 1, i2c_buf)){
+          slaveAddr, i2c_len, i2c_buf)){
       setState(S_READING);
     } else{
       setState(S_READ_FAIL);

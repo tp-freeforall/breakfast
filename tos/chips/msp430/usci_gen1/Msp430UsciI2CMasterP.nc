@@ -320,7 +320,6 @@ implementation {
     } else{
       //TODO: test
       /* continue writing next byte */
-      P6OUT = 0x05;
       nextWrite();
     }
     return SUCCESS;    
@@ -374,7 +373,6 @@ implementation {
     //TODO: no need to check master mode
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
-      P6OUT = 0x06;
       nextWrite();
     } else {
       //TODO: move to slave code
@@ -422,7 +420,6 @@ implementation {
       //another master addressed us as a slave. However, this should
       //manifest as an AL interrupt, not a NACK interrupt.
       if (call Usci.getCtl1() & UCTR){
-        P6OUT = 0x03;
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
       }else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
@@ -432,7 +429,6 @@ implementation {
     else if (UCB0STAT & UCALIFG) 
     {
       resetUCB0();
-      P6OUT = 0x04;
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
     }
     /* STOP condition */
