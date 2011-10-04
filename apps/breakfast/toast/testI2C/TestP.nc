@@ -13,23 +13,35 @@ module TestP{
   uint8_t idleMsg[]    = ".";              //1
   uint8_t resetMsg[]   = "RESET\n\r";      //7
   uint8_t welcomeMsg[] = "\n\rI2C Test\n\r";   //12
-
+  uint8_t writingMsg[] = "WRITING\n\r";    //9
+  uint8_t writeDoneMsg[] = "WRITE DONE\n\r"; //12
+  uint8_t writeDoneFailMsg[] = "WRITE DONE FAIL\n\r"; //17
+  uint8_t writeFailMsg[] = "WRITE FAIL\n\r"; //12
+  uint8_t resourceGrantedMsg[] = "RESOURCE GRANTED\n\r"; //18
   uint8_t nl[] = "\n\r";                   //2
 
   uint8_t rxByte;
   uint8_t state;
 
   enum{
-    S_INIT,
-    S_IDLE,
-    S_ECHOING,
-    S_RESETTING,
+    S_INIT = 0x01,
+    S_IDLE = 0x00,
+    S_ECHOING = 0x02,
+    S_RESETTING = 0x03,
+    S_WRITE_START = 0x04,
+    S_WRITE_FAIL = 0x05,
+    S_WRITING = 0x06,
+    S_WRITEDONE = 0x07,
+    S_WRITEDONE_FAIL = 0x08,
+    S_RESOURCE_REQUESTED = 0x09,
+    S_RESOURCE_REQUEST_FAIL = 0x0a,
+    S_RESOURCE_GRANTED = 0x0b,
   };
 
   void setState(uint8_t s){
     atomic{
       state = s;
-      P6OUT = state;
+      //P6OUT = state;
     }
   }
 
@@ -46,10 +58,11 @@ module TestP{
       P6DIR = 0xff;
       P6SEL = 0x00;
       P6OUT = 0x00;
+      //P6DIR = 0x00;
     }
     if (call StdControl.start() == SUCCESS){
       setState(S_INIT);
-      call Timer.startOneShot(1);
+      call Timer.startOneShot(256);
     }
   }
 
@@ -64,12 +77,50 @@ module TestP{
     }
   }
 
+  task void shortTimer(){
+      call Timer.startOneShot(256);
+  }
+
+  uint8_t cmd[] = {0xdc};
+
+  task void doWrite(){
+    //P6OUT = 0x00;
+    //P6OUT = 0x01;
+    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, 0x42, 1, cmd)){
+      //P6OUT = 0x02;
+      setState(S_WRITING);
+    }else{
+      //P6OUT = 0x03;
+      setState(S_WRITE_FAIL);
+      call UartStream.send(writeFailMsg, 12);
+    }
+  }
+
+  //OK
+  task void getResource(){
+    if(SUCCESS == call I2CResource.request()){
+      setState(S_RESOURCE_REQUESTED);
+    } else {
+      setState(S_RESOURCE_REQUEST_FAIL);
+    }
+  }
+
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){
     if(checkState(S_RESETTING)){
-      call Timer.startOneShot(1);
+      post shortTimer();
     } else if (checkState(S_ECHOING)){
       setState(S_IDLE);
     } else if (checkState(S_INIT)){
+      post getResource();
+    } else if (checkState(S_WRITE_START)){
+      post doWrite();
+    } else if (checkState(S_WRITEDONE)){
+      setState(S_IDLE);
+    } else if (checkState(S_WRITE_FAIL)){
+      setState(S_IDLE);
+    } else if (checkState(S_WRITEDONE_FAIL)){
+      setState(S_IDLE);
+    } else if (checkState(S_RESOURCE_GRANTED)){
       setState(S_IDLE);
     }
     post restartTimer();
@@ -78,6 +129,7 @@ module TestP{
   task void echoTask(){
     call UartStream.send(&rxByte, 1);
   }
+
   task void nlTask(){
     call UartStream.send(nl, 2);
   }
@@ -95,9 +147,28 @@ module TestP{
         setState(S_ECHOING);
         post nlTask();
         break;
+      case 'w':
+        setState(S_WRITE_START);
+        call UartStream.send(writingMsg, 9);
+        break;
       default:
         setState(S_ECHOING);
         post echoTask();
+    }
+  }
+
+  event void I2CResource.granted(){
+    setState(S_RESOURCE_GRANTED);
+    call UartStream.send(resourceGrantedMsg, 18);
+  }
+
+  async event void I2CPacket.writeDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
+    if(error == SUCCESS){
+      setState(S_WRITEDONE);
+      call UartStream.send(writeDoneMsg, 12);
+    } else{
+      setState(S_WRITEDONE_FAIL);
+      call UartStream.send(writeDoneFailMsg, 17);
     }
   }
 
@@ -105,18 +176,17 @@ module TestP{
   }
 
   const msp430_usci_config_t i2c_cfg = {
-    ctl0: UCSYNC | UCMODE_3,
-    ctl1: UCTR,
+    ctl0: UCSYNC | UCMODE_3| UCMST,
+    ctl1: UCSSEL_2 | UCTR,
     br0:  8,
     br1:  0,
     mctl: 0,
     i2coa: 0x42,
   };
-  event void I2CResource.granted(){
-  }
+
+
   async command const msp430_usci_config_t* I2CConfigure.getConfiguration(){
     return &i2c_cfg;
   }
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
-  async event void I2CPacket.writeDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
 }

@@ -78,13 +78,24 @@ implementation {
   void signalDone( error_t error );
   
   error_t configure_(const msp430_usci_config_t* config){
-    //TODO: null-check
-    //TODO: usci.configure (leave in reset)
-    //TODO: set pin function
-    //TODO: uscib/i2c-specific setup
-    //TODO: leave reset mode
-    return FAIL;
+    if(! config){
+      return FAIL;
+    }
+    //basic config (leave in reset)
+    call Usci.configure(config, TRUE);
+
+    //direction is don't-care in datasheet
+    call SCL.selectModuleFunc();
+    call SDA.selectModuleFunc();
+
+    //i2c-specific config
+    call UsciB.setI2coa(config->i2coa);
+    call Usci.leaveResetMode_();
+
+    //No interrupts enabled when in master mode/idle
+    return SUCCESS;
   }
+
   error_t unconfigure_(){
     //TODO: wait until idle
     //TODO: disable interrupts
@@ -233,14 +244,127 @@ implementation {
     }
   }
   
+  void showRegisters(){
+    atomic{
+      P6OUT = 0x00;
+      P6OUT = 0xff;
+      P6OUT = UCB0CTL0;
+      P6OUT = 0xff;
+      P6OUT = UCB0CTL1;
+      P6OUT = 0xff;
+      P6OUT = UCB0BR0;
+      P6OUT = 0xff;
+      P6OUT = UCB0BR1;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2CIE;
+      P6OUT = 0xff;
+      P6OUT = UCB0STAT;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2COA;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2CSA;
+      P6OUT = 0xff;
+      P6OUT = IE2;
+      P6OUT = 0xff;
+      P6OUT = 0x00;
+    }
+  }
+//
+//  async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
+//					    uint16_t addr, uint8_t len,
+//					    uint8_t* buf ) {
+//    P6OUT = 0x00;
+//    P6OUT = 0xff;
+//    P6OUT = 0x00;
+//    //TODO: replace with module-agnostic version
+//    if ( call Usci.getStat() & UCBBUSY ){
+//      P6OUT = 0x01;
+//      return EBUSY;
+//    }
+//    P6OUT = 0x02;
+//    m_buf = buf;
+//    m_len = len;
+//    m_flags = flags;
+//    m_pos = 0;
+//
+//    /* check if this is a new connection or a continuation */
+//    if (m_flags & I2C_START)
+//    {
+//      P6OUT = 0x03;
+//      /**************************************************************/
+//      //UCB0CTL1 = UCSWRST; // enter reset mode
+//      call Usci.enterResetMode_();
+//
+//      /*
+//       * UCB0CTL0
+//       * UCSLA10    - 10bit slave address (~7bit slave address)
+//       * UCMM       - MultiMaster mode (~single master mode)
+//       * UCMST      - Master (~slave)
+//       * UCMODE_I2C - I2C mode
+//       * UCSYNC     - I2C mode
+//       *
+//       * UCSSEL_SMCLK - SMCLK clock source
+//       * UCTR         - transmit (~receive)
+//       *
+//       */
+//      call Usci.setCtl0(UCMM | UCMST| UCMODE_I2C | UCSYNC);
+//      //UCB0CTL0 = UCMM | UCMST | UCMODE_I2C | UCSYNC;
+//      UCB0CTL1 = UCSSEL_SMCLK | UCSWRST;
+//
+//      /* clock prescaler, minimum value is 8 */
+//      UCB0BR0 = 0x28; // 100 kHz
+//  //    UCB0BR0 = 0x0A; // 400 kHz
+//      UCB0BR1 = 0x00;
+//
+//      call SDA.makeOutput();
+//      call SDA.selectModuleFunc();
+//      call SCL.makeOutput();
+//      call SCL.selectModuleFunc();
+//
+//      UCB0CTL1 &= ~UCSWRST; // exit reset mode
+//
+//      UCB0I2CIE = UCNACKIE | UCALIE;
+//      IE2 |= UCB0RXIE | UCB0TXIE;
+//
+//      /**************************************************************/
+//
+//      /* set own address - necessary in multi-master mode */
+//      UCB0I2COA = m_ownaddress;
+//
+//      /* set slave address */
+//      UCB0I2CSA = addr;
+//     
+//      /* UCTXSTT - generate START condition */
+//      UCB0CTL1 |= UCTR | UCTXSTT;
+//    } 
+//    /* is this a restart or a direct continuation */
+//    else if (m_flags & I2C_RESTART)
+//    {
+//      P6OUT = 0x04;
+//      /* set slave address */
+//      UCB0I2CSA = addr;
+//
+//      /* UCTR - set transmit */
+//      /* UCTXSTT - generate START condition */
+//      UCB0CTL1 |= UCTR | UCTXSTT;
+//    }
+//    else{
+//      P6OUT = 0x05;
+//      /* contiune writing next byte */
+//      nextWrite();
+//    }
+//    return SUCCESS;    
+//  }
+//
+
+
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
-    //TODO: replace with module-independent calls
-    if ( UCB0STAT & UCBBUSY ){
+    if ( call Usci.getStat() & UCBBUSY ){
       return EBUSY;
     }
-      
+    //showRegisters();  
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -249,64 +373,35 @@ implementation {
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
-      /**************************************************************/
-      UCB0CTL1 = UCSWRST; // enter reset mode
-
-      /*
-       * UCB0CTL0
-       * UCSLA10    - 10bit slave address (~7bit slave address)
-       * UCMM       - MultiMaster mode (~single master mode)
-       * UCMST      - Master (~slave)
-       * UCMODE_I2C - I2C mode
-       * UCSYNC     - I2C mode
-       *
-       * UCSSEL_SMCLK - SMCLK clock source
-       * UCTR         - transmit (~receive)
-       *
-       */
-      UCB0CTL0 = UCMM | UCMST | UCMODE_I2C | UCSYNC;
-      UCB0CTL1 = UCSSEL_SMCLK | UCSWRST;
-
-      /* clock prescaler, minimum value is 8 */
-      UCB0BR0 = 0x28; // 100 kHz
-  //    UCB0BR0 = 0x0A; // 400 kHz
-      UCB0BR1 = 0x00;
-
-      call SDA.makeOutput();
-      call SDA.selectModuleFunc();
-      call SCL.makeOutput();
-      call SCL.selectModuleFunc();
-
-      UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-      UCB0I2CIE = UCNACKIE | UCALIE;
-      IE2 |= UCB0RXIE | UCB0TXIE;
-
-      /**************************************************************/
-
-      /* set own address - necessary in multi-master mode */
-      UCB0I2COA = m_ownaddress;
-
+      call Usci.enterResetMode_();
       /* set slave address */
-      UCB0I2CSA = addr;
+      call UsciB.setI2csa(addr);
+      //UCB0I2CIE = UCNACKIE | UCALIE;
+      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
+      //IE2 |= UCB0RXIE | UCB0TXIE;
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
      
+      /* UCTR - set transmit */
       /* UCTXSTT - generate START condition */
-      UCB0CTL1 |= UCTR | UCTXSTT;
+      //does this have to be done with it reset?
+      call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
+      call Usci.leaveResetMode_();
+      //no interrupt is getting generated.
+      //showRegisters();
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
     {
       /* set slave address */
-      UCB0I2CSA = addr;
+      call UsciB.setI2csa(addr);
 
       /* UCTR - set transmit */
       /* UCTXSTT - generate START condition */
-      UCB0CTL1 |= UCTR | UCTXSTT;
-    }
-    else
-      /* contiune writing next byte */
+      call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
+    } else{
+      /* continue writing next byte */
       nextWrite();
-    
+    }
     return SUCCESS;    
   }
 
@@ -314,7 +409,7 @@ implementation {
   void nextWrite()
   {
     uint8_t counter = 0xFF;
-    //TODO: replace with module-independent calls
+    //TODO: test
     
     /* all bytes sent */
     if ( m_pos == m_len ) {
@@ -323,35 +418,40 @@ implementation {
       if ( m_flags & I2C_STOP )
       {
         /* set stop bit */
-        UCB0CTL1 |= UCTXSTP;
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
         /* wait until STOP bit has been transmitted */
-        while ((UCB0CTL1 & UCTXSTP) && (counter > 0x01))
+        while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
           counter--;
-
-        resetUCB0();
+        }
+        //TODO: when write is done, should we put module back into
+        //  reset?  I think not, the application should release the
+        //  resource and then it will deconfigure when it's not in
+        //  use.
+        //resetUCB0();
       }
 
       /* fail gracefully */      
-      if (counter > 0x01)
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_len, m_buf );
-      else
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_len, m_buf );
+      if (counter > 0x01){
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
+      } else{
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa(), m_len, m_buf );
+      }
+    } else{
+      //send the next char
+      call Usci.setTxbuf(m_buf[ m_pos++ ]);
     }
-    else
-      UCB0TXBUF = m_buf[ m_pos++ ];
   }
 
   /***************************************************************************/
 
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
-    //TODO: no need to check master mode
+    P6OUT = 0x06;
     //TODO: check for current client/ownership
-    //TODO: replace with module-independent calls
-
+    //TODO: no need to check master mode
     /* if master mode */
-    if (UCB0CTL0 & UCMST){
+    if (call Usci.getCtl0() & UCMST){
       nextWrite();
     } else {
       //TODO: move to slave code
@@ -361,6 +461,7 @@ implementation {
   
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
+    P6OUT = 0x0f;
     //TODO: no need to check master mode
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
@@ -378,6 +479,7 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
+    P6OUT = 0x07;
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
     

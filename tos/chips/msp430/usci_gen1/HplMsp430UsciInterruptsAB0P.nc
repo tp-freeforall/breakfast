@@ -21,6 +21,9 @@ module HplMsp430UsciInterruptsAB0P {
 
   TOSH_SIGNAL(USCIAB0RX_VECTOR) 
   {
+    P6OUT ^= 0x40;
+    P6OUT ^= 0x40;
+    P6OUT = 0x06;
     //UCA0RXIFG -> A0Rx (IFG2)
     if ((IFG2 & UCA0RXIFG) && (IE2 & UCA0RXIE) )
     {
@@ -28,19 +31,25 @@ module HplMsp430UsciInterruptsAB0P {
 
     //UCB0RXIFG -> B0Rx (IFG2)
     } else if((IFG2 & UCB0RXIFG) && (IE2 & UCB0RXIE)){
+      P6OUT = 0x07;
       signal InterruptsUCB0Rx.interrupted(IFG2);
 
     //UCALIFG, UCNACKIFG, UCSTTIFG, UCSTPIFG 
     //  -> B0State(UCB0STAT)
     }else if(UCB0I2CIE & UCB0STAT ){
+      P6OUT = 0x08;
       signal InterruptsUCB0State.interrupted(UCB0STAT);  
     }else {
+      P6OUT = 0x09;
       //should not happen
     }
   }
 
   TOSH_SIGNAL(USCIAB0TX_VECTOR) 
   {
+    P6OUT ^= 0x80;
+    P6OUT ^= 0x80;
+    P6OUT = 0x0a;
     //UCA0TXIFG -> A0Tx (IFG2)
     if ( (IFG2 & UCA0TXIFG) && (IE2 & UCA0TXIE) )
     {
@@ -48,12 +57,15 @@ module HplMsp430UsciInterruptsAB0P {
 
     //UCB0RXIFG -> B0Rx (IFG2)
     } else if ( (IFG2 & UCB0RXIFG) && (IE2 & UCB0RXIE) ) {
+      P6OUT = 0x0b;
       signal InterruptsUCB0Rx.interrupted(IFG2);  
 
     //UCB0TXIFG -> B0Tx (IFG2)
     }else if ( (IFG2 & UCB0TXIFG) && (IE2 & UCB0TXIE) ) {
+      P6OUT = 0x0c;
       signal InterruptsUCB0Tx.interrupted(IFG2);  
     }else{
+      P6OUT = 0x0d;
       //should not happen
     }
   }
