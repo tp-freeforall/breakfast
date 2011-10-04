@@ -397,43 +397,6 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
     //NA
   }
 
-  //TODO: separate by type
-//  async event void Interrupts.interrupted (uint8_t iv) {
-//    uint8_t current_client = call ArbiterInfo.userId();
-//    if (0xFF == current_client) {
-//      return;
-//    }
-//    //TODO: UCA0RXIFG
-//    if (USCI_UCRXIFG == iv) {
-//      uint8_t stat = call Usci.getStat();
-//      uint8_t data = call Usci.getRxbuf();
-//      //TODO: verify
-//      /* SLAU259 16.3.6: Errors are cleared by reading UCAxRXD.  Grab
-//       * the old errors, read the incoming data, then read the errors
-//       * again in case an overrun occurred between reading STATx and
-//       * RXD.  Mask off the bits we don't care about, and if there are
-//       * any left on notify somebody. */
-//      stat = MSP430_USCI_ERR_UCxySTAT & (stat | (call Usci.getStat()));
-//      if (stat) {
-//        signal Msp430UsciError.condition[current_client](stat);
-//      }
-//      if (m_rx_buf) {
-//        m_rx_buf[m_rx_pos++] = data;
-//        if (m_rx_len == m_rx_pos) {
-//          uint8_t* rx_buf = m_rx_buf;
-//          uint16_t rx_len = m_rx_len;
-//          m_rx_buf = 0;
-//          signal UartStream.receiveDone[current_client](rx_buf, rx_len, SUCCESS);
-//        }
-//      } else {
-//        signal UartStream.receivedByte[current_client](data);
-//      }
-//      //TODO: UCA0TXIFG
-//    } else if (USCI_UCTXIFG == iv) {
-//      nextStreamTransmit(current_client);
-//    }
-//  }
-
   default async command const msp430_usci_config_t*
   Msp430UsciConfigure.getConfiguration[uint8_t client] ()
   {

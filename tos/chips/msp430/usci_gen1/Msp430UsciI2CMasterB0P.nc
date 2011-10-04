@@ -6,7 +6,6 @@ configuration Msp430UsciI2CMasterB0P {
   }
   uses {
     interface Msp430UsciConfigure[ uint8_t client ];
-    //TODO: should these not come from the Usci instance?
     interface HplMsp430GeneralIO as USCL;
     interface HplMsp430GeneralIO as USDA;
   }
@@ -19,6 +18,8 @@ configuration Msp430UsciI2CMasterB0P {
 
   I2CC.Usci -> UsciC;
   I2CC.UsciB -> UsciC;
+  //TODO: may need to separate these into USCI_I2C_MASTER 
+  // and USCI_I2C_SLAVE
   I2CC.RXInterrupts -> UsciC.RXInterrupts[MSP430_USCI_I2C];
   I2CC.TXInterrupts -> UsciC.TXInterrupts[MSP430_USCI_I2C];
   I2CC.StateInterrupts -> UsciC.StateInterrupts[MSP430_USCI_I2C];

@@ -7,7 +7,6 @@ configuration Msp430UsciUartA0P {
   }
   uses {
     interface Msp430UsciConfigure[ uint8_t client ];
-    //TODO: should these not come from the Usci instance?
     interface HplMsp430GeneralIO as URXD;
     interface HplMsp430GeneralIO as UTXD;
   }

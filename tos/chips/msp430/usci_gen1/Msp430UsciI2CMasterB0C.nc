@@ -61,9 +61,6 @@ implementation {
   I2CPacket = I2CP.I2CPacket[CLIENT_ID];
   Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
 
-  //TODO: move these down into Msp430UsciB0P
-  //I2CP.InterruptsRx -> UsciC.InterruptsRx;
-  //I2CP.InterruptsTx -> UsciC.InterruptsTx;
   UsciC.ResourceConfigure[CLIENT_ID] -> I2CP.ResourceConfigure[CLIENT_ID];
   
 }

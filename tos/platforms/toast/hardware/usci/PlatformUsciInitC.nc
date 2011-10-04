@@ -45,6 +45,10 @@ configuration PlatformUsciInitC {
   UartA0C.URXD -> GIO.UCA0RXD;
   UartA0C.UTXD -> GIO.UCA0TXD;
 
+  components Msp430UsciI2CMasterB0P as I2CB0C;
+  I2CB0C.USCL -> GIO.UCB0SCL;
+  I2CB0C.USDA -> GIO.UCB0SDA;
+
 //  components Msp430UsciSpiB0P as SpiB0C;
 //  SpiB0C.SIMO -> GIO.UCB0SIMO;
 //  SpiB0C.SOMI -> GIO.UCB0SOMI;
