@@ -90,11 +90,12 @@ module TestP{
   }
 
   uint8_t cmd[] = {0xdc};
-
+  // 10010 00
+  uint16_t slaveAddr = 0x0048;
   task void doWrite(){
     //P6OUT = 0x00;
     //P6OUT = 0x01;
-    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, 0x42, 1, cmd)){
+    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, 0x48, 1, cmd)){
       //P6OUT = 0x02;
       setState(S_WRITING);
     }else{
@@ -108,7 +109,7 @@ module TestP{
 
   task void doRead(){
     if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
-          0x42, 1, i2c_buf)){
+          slaveAddr, 1, i2c_buf)){
       setState(S_READING);
     } else{
       setState(S_READ_FAIL);
