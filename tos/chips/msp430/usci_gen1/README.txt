@@ -1,7 +1,7 @@
 This directory contains the USCI implementation for the first
 generation USCI module (from Peter Bigot/People Power's explanation):
 
-@TODO@ There are at least three USCI implementations supported over the
+There are at least three USCI implementations supported over the
 MSP430 family.  The implementations are distinguished by the functional
 presence preproprocessor macro as defined in the TI standard headers from
 Code Composer Studio distribution:
