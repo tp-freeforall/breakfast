@@ -38,7 +38,6 @@
 
 #include <I2C.h>
 
-//TODO: may not be a comprehensive set of masks
 generic module Msp430UsciI2CMasterP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIFG_MASK, uint8_t RXIFG_MASK) {
   
   provides interface ResourceConfigure[ uint8_t client ];
@@ -70,9 +69,8 @@ implementation {
   norace uint8_t m_len;
   norace uint8_t m_pos;
   norace i2c_flags_t m_flags;
-  norace uint16_t m_ownaddress = 0x0000;
+  //norace uint16_t m_ownaddress = 0x0000;
   
-  void resetUCB0();
   void nextRead();
   void nextWrite();
   void signalDone( error_t error );
@@ -151,7 +149,8 @@ implementation {
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
       call Usci.setIe( call Usci.getIe() | RXIE_MASK );
 
-      /* if only reading 1 byte, STOP bit must be set right after START bit */
+      /* if only reading 1 byte, STOP bit must be set right after
+       * START condition is triggered */
       if ( (m_len == 1) && (m_flags & I2C_STOP) )
       {
         //this logic seems to work fine
@@ -335,7 +334,6 @@ implementation {
         //  reset?  I think not, the application should release the
         //  resource and then it will deconfigure when it's not in
         //  use.
-        //resetUCB0();
       }
 
       //disable tx interrupt, we're DONE 
@@ -372,7 +370,6 @@ implementation {
   
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
-//       pdbg(6);
     //TODO: no need to check master mode
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
@@ -390,7 +387,6 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-//    pdbg(7);
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
     /* no acknowledgement */
@@ -420,7 +416,8 @@ implementation {
     /* arbitration lost */
     else if (UCB0STAT & UCALIFG) 
     {
-      resetUCB0();
+      call Usci.enterResetMode_();
+      call Usci.leaveResetMode_();
       signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
     }
     /* STOP condition */
@@ -445,27 +442,6 @@ implementation {
     }
 
   }
-
-  //TODO: remove entirely
-  void resetUCB0()
-  {
-    /* reset default values. 
-     * I2C stops
-     * SDL and SDA are high impedance
-     * UCB0I2CSTAT, bits 0-6 are cleared
-     * UCB0TXIE and UCB0RXIE are cleared
-     * UCB0TXIFG and UCB0RXIFG are cleared
-     */
-    UCB0CTL1 = UCSWRST; // enter reset mode
-/*
-    UCB0CTL0 = UCSYNC;
-    UCB0BR0 = 0x00; 
-    UCB0BR1 = 0x00;
-    UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-    UCB0I2CIE = 0x00;
-*/
-  }  
 
   //defaults
   default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
