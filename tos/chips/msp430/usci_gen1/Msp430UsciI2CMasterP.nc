@@ -192,26 +192,27 @@ implementation {
     /* read byte from RX buffer */
     m_buf[ m_pos++ ] = UCB0RXBUF;
 
-    /* last byte received */    
-    if ( m_pos == m_len ) {
+    //should set stop condition *as we are receiving* last byte, not
+    //  after it's been received.
+    //By reading the n-1th byte from RXBUF, we stop holding the clock
+    //  and allow the slave to send the nth byte. Setting stop
+    //  condition at this point means that we will send the NACK+STP
+    //  after the last data byte as specified.
+    if ( (m_pos == (m_len - 1)) && m_len > 1){
+       UCB0CTL1 |= UCTXSTP;
 
-      /* single byte exception, STOP bit sent during address transmission */
-      if ( m_len > 1 ) {
-        //is this just taking too long to run? if we lower the scl
-        //rate, what happens?
-        /* set STOP bit */
-        UCB0CTL1 |= UCTXSTP;
-
-        /* wait until STOP bit has been transmitted */
-        while ((UCB0CTL1 & UCTXSTP) && (counter > 0x01))
-          counter--;
+      //when we receive the last byte, wait until STP condition is
+      //cleared, then return
+    } else if (m_pos == m_len){
+      while( (UCB0CTL1 & UCTXSTP) && (counter > 0x01)){
+        counter --;
       }
-      
       resetUCB0();
-      if (counter > 0x01)
+      if (counter > 0x01){
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_len, m_buf );
-      else
+      } else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_len, m_buf );
+      }
     }
   }
   
