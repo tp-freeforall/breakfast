@@ -8,6 +8,7 @@ module TestP{
 
   provides interface Msp430UsciConfigure as I2CConfigure;
   uses interface I2CPacket<TI2CBasicAddr>;
+  uses interface I2CSlave;
   uses interface Resource as I2CResource;
 } implementation {
   uint8_t idleMsg[]    = ".";              //1
@@ -234,5 +235,14 @@ module TestP{
       setState(S_READDONE_FAIL);
       call UartStream.send(readDoneFailMsg, 16);
     }
+  }
+
+  async event error_t I2CSlave.slaveReceive(uint8_t data){
+  }
+  async event uint8_t I2CSlave.slaveTransmit(){
+  }
+  async event void I2CSlave.slaveStart(){
+  }
+  async event void I2CSlave.slaveStop(){
   }
 }

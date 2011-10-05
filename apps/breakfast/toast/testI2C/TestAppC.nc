@@ -11,6 +11,7 @@ configuration TestAppC{
   I2CMaster.Msp430UsciConfigure -> TestP.I2CConfigure;
   TestP.I2CResource -> I2CMaster.Resource;
   TestP.I2CPacket -> I2CMaster.I2CPacket;
+  TestP.I2CSlave -> I2CMaster.I2CSlave;
 
   components PlatformSerialC;
   TestP.UartStream -> PlatformSerialC;

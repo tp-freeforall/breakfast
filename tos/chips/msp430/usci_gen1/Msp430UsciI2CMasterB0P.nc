@@ -1,6 +1,7 @@
 configuration Msp430UsciI2CMasterB0P {
   provides {
     interface I2CPacket<TI2CBasicAddr>[uint8_t client];
+    interface I2CSlave[uint8_t client];
     interface ResourceConfigure[uint8_t client];
     interface Msp430UsciError[uint8_t client];
   }
@@ -18,8 +19,7 @@ configuration Msp430UsciI2CMasterB0P {
 
   I2CC.Usci -> UsciC;
   I2CC.UsciB -> UsciC;
-  //TODO: may need to separate these into USCI_I2C_MASTER 
-  // and USCI_I2C_SLAVE
+
   I2CC.RXInterrupts -> UsciC.RXInterrupts[MSP430_USCI_I2C];
   I2CC.TXInterrupts -> UsciC.TXInterrupts[MSP430_USCI_I2C];
   I2CC.StateInterrupts -> UsciC.StateInterrupts[MSP430_USCI_I2C];
@@ -28,6 +28,7 @@ configuration Msp430UsciI2CMasterB0P {
   Msp430UsciConfigure = I2CC;
   ResourceConfigure = I2CC;
   I2CPacket = I2CC.I2CBasicAddr;
+  I2CSlave = I2CC.I2CSlave;
   Msp430UsciError = I2CC;
   USCL = I2CC.SCL;
   USDA = I2CC.SDA;
