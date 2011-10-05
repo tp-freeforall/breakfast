@@ -149,6 +149,7 @@ module TestP{
     } else if (checkState(S_READ_START)){
       post doRead();
     } else if (checkState(S_READDONE)){
+      memset(i2c_buf, 0xff, i2c_len);
       setState(S_IDLE);
     } else if (checkState(S_READDONE_FAIL)){
       setState(S_IDLE);
