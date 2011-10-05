@@ -137,9 +137,9 @@ implementation {
       call Usci.setCtl1( (call Usci.getCtl1()&(~UCTR))  | UCTXSTT);
 
 
-      //enable i2c arbitration interrupts, rx, tx 
+      //enable i2c arbitration interrupts, rx 
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK );
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) )
@@ -188,30 +188,33 @@ implementation {
   {
     uint16_t counter = 0xFFFF;
     //TODO: replace with module-independent calls
-    
+    //debug: show position, then byte received
     /* read byte from RX buffer */
     m_buf[ m_pos++ ] = UCB0RXBUF;
-
     //should set stop condition *as we are receiving* last byte, not
     //  after it's been received.
     //By reading the n-1th byte from RXBUF, we stop holding the clock
     //  and allow the slave to send the nth byte. Setting stop
     //  condition at this point means that we will send the NACK+STP
     //  after the last data byte as specified.
-    if ( (m_pos == (m_len - 1)) && m_len > 1){
+
+    //TODO: this should check m_flags: if RESTART flag is present
+    //rather than STOP, we should end with UCTXSTT, not UCTXSTP
+    if ( (m_pos == (m_len)) && m_len > 1){
        UCB0CTL1 |= UCTXSTP;
 
       //when we receive the last byte, wait until STP condition is
       //cleared, then return
-    } else if (m_pos == m_len){
+    }
+    if (m_pos == m_len){
       while( (UCB0CTL1 & UCTXSTP) && (counter > 0x01)){
         counter --;
       }
       resetUCB0();
       if (counter > 0x01){
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_len, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_pos, m_buf );
       } else {
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_len, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_pos, m_buf );
       }
     }
   }
@@ -274,8 +277,8 @@ implementation {
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
       //enable relevant state interrupts
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      //enable tx/rx interrupts 
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK | TXIE_MASK);
+      //enable tx interrupts 
+      call Usci.setIe( call Usci.getIe() | TXIE_MASK);
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
@@ -299,7 +302,6 @@ implementation {
   void nextWrite()
   {
     uint16_t counter = 0xFFFF;
-    P6OUT = m_pos;
     /* all bytes sent */
     if ( m_pos == m_len ) {
       /* not setting STOP bit allows restarting transfer */
@@ -330,6 +332,8 @@ implementation {
       }
     } else{
       //send the next char
+    //It appears that this is happening during the slave read, which
+    //it shouldn't
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
     }
   }

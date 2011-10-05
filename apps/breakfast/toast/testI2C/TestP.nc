@@ -89,7 +89,7 @@ module TestP{
       call Timer.startOneShot(256);
   }
 
-  uint8_t cmd[] = "test";
+  uint8_t cmd[] = "doug";
   uint8_t cmd_len = 4;
   // 10010 00
   uint16_t slaveAddr = 0x0042;
@@ -107,7 +107,7 @@ module TestP{
     }
   }
 
-  uint8_t i2c_buf[] = {0x00, 0x00, 0x00, 0x00}; 
+  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff};
   uint8_t i2c_len = 4;
 
   task void doRead(){
@@ -226,9 +226,18 @@ module TestP{
   }
 
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
+    uint8_t i;
     if (error == SUCCESS){
       setState(S_READDONE);
-      call UartStream.send(i2c_buf, i2c_len);
+      P6OUT = 0xff;
+      P6OUT = 0x00;
+      P6OUT = 0xff;
+      P6OUT = 0x00;
+      for ( i = 0; i < length; i++){
+        P6OUT = data[i];
+      }
+      P6OUT = 0x00;
+      call UartStream.send(data, length);
     }else{
       setState(S_READDONE_FAIL);
       call UartStream.send(readDoneFailMsg, 16);
