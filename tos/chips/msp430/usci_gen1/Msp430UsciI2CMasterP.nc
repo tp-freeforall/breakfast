@@ -200,6 +200,13 @@ implementation {
     //TODO: replace with module-independent calls
     //debug: show position, then byte received
     /* read byte from RX buffer */
+
+    if ((m_pos == (m_len - 2)) && m_len > 1)
+    {
+      //if we're about to read the last byte, and this was not the
+      //special case of a one-byte read, set UCTXSTP
+      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
+    }
     m_buf[ m_pos++ ] = call Usci.getRxbuf();
 
 
@@ -214,12 +221,13 @@ implementation {
 
     //TODO: this should check m_flags: if RESTART flag is present
     //rather than STOP, we should end with UCTXSTT, not UCTXSTP
-    if ( (m_pos == (m_len)) && m_len > 1){
-       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
+//    if ( (m_pos == (m_len)) && m_len > 1){
+//       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
+//
+//      //when we receive the last byte, wait until STP condition is
+//      //cleared, then return
+//    }
 
-      //when we receive the last byte, wait until STP condition is
-      //cleared, then return
-    }
     if (m_pos == m_len){
 //       pdbg(4);
 

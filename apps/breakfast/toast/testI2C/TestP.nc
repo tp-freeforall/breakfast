@@ -107,12 +107,12 @@ module TestP{
     }
   }
 
-  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff};
-  uint8_t i2c_len = 4;
+  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
+  uint8_t i2c_len = 6;
 
   task void doRead(){
     if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
-          slaveAddr, i2c_len, i2c_buf)){
+          slaveAddr, cmd_len, i2c_buf)){
       setState(S_READING);
     } else{
       setState(S_READ_FAIL);
