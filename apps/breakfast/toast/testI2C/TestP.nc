@@ -132,28 +132,16 @@ module TestP{
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){
     if(checkState(S_RESETTING)){
       post shortTimer();
-    } else if (checkState(S_ECHOING)){
-      setState(S_IDLE);
     } else if (checkState(S_INIT)){
       post getResource();
     } else if (checkState(S_WRITE_START)){
       post doWrite();
-    } else if (checkState(S_WRITEDONE)){
-      setState(S_IDLE);
-    } else if (checkState(S_WRITE_FAIL)){
-      setState(S_IDLE);
-    } else if (checkState(S_WRITEDONE_FAIL)){
-      setState(S_IDLE);
-    } else if (checkState(S_RESOURCE_GRANTED)){
-      setState(S_IDLE);
     } else if (checkState(S_READ_START)){
       post doRead();
     } else if (checkState(S_READDONE)){
       memset(i2c_buf, 0xff, i2c_len);
       setState(S_IDLE);
-    } else if (checkState(S_READDONE_FAIL)){
-      setState(S_IDLE);
-    } else if (checkState(S_READ_FAIL)){
+    } else {
       setState(S_IDLE);
     }
     post restartTimer();
@@ -227,17 +215,20 @@ module TestP{
   }
 
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
-    uint8_t i;
     if (error == SUCCESS){
       setState(S_READDONE);
-      P6OUT = 0xff;
-      P6OUT = 0x00;
-      P6OUT = 0xff;
-      P6OUT = 0x00;
-      for ( i = 0; i < length; i++){
-        P6OUT = data[i];
-      }
-      P6OUT = 0x00;
+//      atomic{
+//        uint8_t i;
+//        P6OUT = 0xff;
+//        P6OUT = 0x00;
+//        P6OUT = 0xff;
+//        P6OUT = 0x00;
+//        
+//        for ( i = 0; i < length; i++){
+//          P6OUT = data[i];
+//        }
+//        P6OUT = 0x00;
+//      }
       call UartStream.send(data, length);
     }else{
       setState(S_READDONE_FAIL);

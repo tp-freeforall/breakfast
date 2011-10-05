@@ -123,11 +123,9 @@ implementation {
   {
     uint8_t counter = 0xFF;
     uint8_t garbage;
-//    pdbg(1);
-    //TODO: replace with module independent calls
-    if ( call Usci.getStat() & UCBBUSY )
+    if ( call Usci.getStat() & UCBBUSY ){
       return EBUSY;
-//    pdbg(8);
+    }
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -142,7 +140,7 @@ implementation {
       //previous read (slave might supply another byte before it gets
       //the stop condition, which might still be kicking around the
       //RXBUF)
-      garbage = UCB0RXBUF;
+      garbage = call Usci.getRxbuf();
       // set slave address 
       call UsciB.setI2csa(addr);
       //clear TR bit, set start condition
@@ -199,41 +197,41 @@ implementation {
   void nextRead()
   {
     uint16_t counter = 0xFFFF;
-//    pdbg(2);
     //TODO: replace with module-independent calls
     //debug: show position, then byte received
     /* read byte from RX buffer */
-    m_buf[ m_pos++ ] = UCB0RXBUF;
+    m_buf[ m_pos++ ] = call Usci.getRxbuf();
+
+
     //should set stop condition *as we are receiving* last byte, not
     //  after it's been received.
     //By reading the n-1th byte from RXBUF, we stop holding the clock
     //  and allow the slave to send the nth byte. Setting stop
     //  condition at this point means that we will send the NACK+STP
     //  after the last data byte as specified.
+    //I don't know why this doesn't work: current impl works OK as
+    //long as slave sends the extra byte (which is discarded).
 
     //TODO: this should check m_flags: if RESTART flag is present
     //rather than STOP, we should end with UCTXSTT, not UCTXSTP
     if ( (m_pos == (m_len)) && m_len > 1){
-//       pdbg(3);
-       UCB0CTL1 |= UCTXSTP;
+       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
 
       //when we receive the last byte, wait until STP condition is
       //cleared, then return
     }
     if (m_pos == m_len){
 //       pdbg(4);
-      while( (UCB0CTL1 & UCTXSTP) && (counter > 0x01)){
+
+      while( (call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
         counter --;
       }
-      //don't reset it, idiot
-      //resetUCB0();
       //disable the rx interrupt 
       call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
       if (counter > 0x01){
-//       pdbg(5);
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_pos, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_pos, m_buf );
       } else {
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_pos, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa() , m_pos, m_buf );
       }
     }
   }
