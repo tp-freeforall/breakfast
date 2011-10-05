@@ -203,34 +203,26 @@ implementation {
 
     if ((m_pos == (m_len - 2)) && m_len > 1)
     {
-      //if we're about to read the last byte, and this was not the
-      //special case of a one-byte read, set UCTXSTP
+      //we want to send NACK + STOP in response to the last byte.
+      //if m_pos == m_len-2 and we get the RX interrupt, that means
+      //  that the slave has already written the next-to-last byte
+      //  and we have acknowledged it--BUT we have not yet read it.
+      //By setting the stop condition here, we say "send STOP after
+      //the next byte," which will actually be the last byte.
+      //
+      //it is more intuitive to say "read the next-to-last byte and
+      //set the STOP condition real quick before the last byte gets
+      //sent so that we can NACK+STOP it". Maybe this would work if
+      //you slowed down the I2C clock enough?
       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
     }
     m_buf[ m_pos++ ] = call Usci.getRxbuf();
 
-
-    //should set stop condition *as we are receiving* last byte, not
-    //  after it's been received.
-    //By reading the n-1th byte from RXBUF, we stop holding the clock
-    //  and allow the slave to send the nth byte. Setting stop
-    //  condition at this point means that we will send the NACK+STP
-    //  after the last data byte as specified.
-    //I don't know why this doesn't work: current impl works OK as
-    //long as slave sends the extra byte (which is discarded).
-
     //TODO: this should check m_flags: if RESTART flag is present
-    //rather than STOP, we should end with UCTXSTT, not UCTXSTP
-//    if ( (m_pos == (m_len)) && m_len > 1){
-//       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
-//
-//      //when we receive the last byte, wait until STP condition is
-//      //cleared, then return
-//    }
-
     if (m_pos == m_len){
-//       pdbg(4);
 
+      //when we receive the last byte, wait until STP condition is
+      //cleared, then return.
       while( (call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
         counter --;
       }

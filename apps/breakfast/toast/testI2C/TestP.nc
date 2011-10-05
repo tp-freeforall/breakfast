@@ -90,7 +90,7 @@ module TestP{
   }
 
   uint8_t cmd[] = "doug";
-  uint8_t cmd_len = 1;
+  uint8_t cmd_len = 4;
   // 10010 00
   uint16_t slaveAddr = 0x0042;
   task void doWrite(){
