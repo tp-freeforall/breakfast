@@ -22,6 +22,8 @@ module TestP{
   uint8_t readFailMsg[] = "READ FAIL\n\r";    //11
   uint8_t readDoneFailMsg[] = "READ DONE FAIL\n\r";    //16
   uint8_t resourceGrantedMsg[] = "RESOURCE GRANTED\n\r"; //18
+  uint8_t enableSlaveMsg[] = "SLAVE ENABLE\n\r";   //14
+  uint8_t enableSlaveFailMsg[] = "SLAVE ENABLE FAIL\n\r";//19
   uint8_t nl[] = "\n\r";                   //2
 
   uint8_t rxByte;
@@ -45,6 +47,7 @@ module TestP{
     S_READDONE = 0x0e,
     S_READDONE_FAIL = 0x0f,
     S_READ_FAIL = 0x10,
+    S_ENABLE_SLAVE_START = 0x11,
   };
 
   void setState(uint8_t s){
@@ -129,6 +132,15 @@ module TestP{
       setState(S_RESOURCE_REQUEST_FAIL);
     }
   }
+  
+  task void enableSlave(){
+    if(SUCCESS == call I2CSlave.enableSlave()){
+      call UartStream.send(enableSlaveMsg, 14);
+    } else {
+      call UartStream.send(enableSlaveFailMsg, 19 );
+    }
+    setState(S_IDLE);
+  }
 
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){
     if(checkState(S_RESETTING)){
@@ -176,6 +188,10 @@ module TestP{
       case 'r':
         setState(S_READ_START);
         call UartStream.send(readingMsg, 9);
+        break;
+      case 's':
+        setState(S_ENABLE_SLAVE_START);
+        post enableSlave();
         break;
       default:
         setState(S_ECHOING);

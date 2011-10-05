@@ -485,16 +485,17 @@ implementation {
     IE2 |= UCB0RXIE | UCB0TXIE;
 
     /**************************************************************/
-
-    if (m_ownaddress != 0x0000)
-    {
-      /* set own address */
-      UCB0I2COA = m_ownaddress;
+    if (m_ownaddress == 0x0000){
+      //if we haven't set an address, then try to get it from the
+      //configuration.
+      m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
+      call UsciB.setI2coa(m_ownaddress);
 
       return SUCCESS;
     }
-    else
+    else{
       return FAIL;
+    }
   }
 
 
