@@ -214,8 +214,8 @@ module TestP{
   const msp430_usci_config_t i2c_cfg = {
     ctl0: UCSYNC | UCMODE_3| UCMST,
     ctl1: UCSSEL_2 | UCTR,
-    br0:  0x00,
-    br1:  0x80,
+    br0:  0x08,
+    br1:  0x00,
     mctl: 0,
     i2coa: 0x42,
   };
