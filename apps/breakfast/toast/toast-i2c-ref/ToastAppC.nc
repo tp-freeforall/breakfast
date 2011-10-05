@@ -4,6 +4,7 @@ implementation {
   components MainC, ToastC;
 
   MainC.Boot <- ToastC;
+  components new TimerMilliC();
 
   components new Msp430I2CC() as I2CC;
   ToastC.I2CResource -> I2CC;
@@ -16,5 +17,6 @@ implementation {
   ToastC.UartControl -> PlatformSerialC;
   ToastC.UartStream -> PlatformSerialC;
   ToastC.UartByte -> PlatformSerialC;
+  ToastC.Timer -> TimerMilliC;
 }
 

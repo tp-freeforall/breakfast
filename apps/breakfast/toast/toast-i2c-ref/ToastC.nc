@@ -11,6 +11,7 @@ module ToastC @safe()
     interface Resource as I2CResource;
 //    interface ResourceRequested as I2CResourceRequested;
     interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr;
+    interface Timer<TMilli>;
   }
 
   provides interface Msp430UsciConfigure;
@@ -123,26 +124,36 @@ implementation
     call UartStream.send(str_i2c_slave_stop_nl,17);  
   }
 
+  uint8_t counter;
+  event void Timer.fired(){
+    call UartStream.send(i2c_buffer, counter);
+  }
+
   async event error_t I2CBasicAddr.slaveReceive(uint8_t data)
   {
-    call UartStream.send(&data,1);  
-
-    post slaveReceiveTask();
+    //store received data into i2c_buffer
+    //after a timeout, print contents
+    //call UartStream.send(&data,1);  
+    i2c_buffer[counter++] = data;
+    call Timer.startOneShot(1024);
     
     return SUCCESS;
   }
 
-  uint8_t counter;
 
   async event uint8_t I2CBasicAddr.slaveTransmit()
   {
-    post slaveTransmitTask();
+    //echo back from buffer
+    //post slaveTransmitTask();
     
-    return counter++;
+    return i2c_buffer[counter++];
   }
 
+
+  //go back to start of i2c_buffer
   async event void I2CBasicAddr.slaveStart() 
   { 
+    counter = 0;
     post slaveStartTask();
   }
   
