@@ -372,10 +372,25 @@ implementation {
   
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
+    uint16_t nackTimeout = 0xffff;
     //TODO: check for current client/ownership
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
+    } else {
+      if( SUCCESS != signal I2CSlave.slaveReceive[call ArbiterInfo.userId()](call Usci.getRxbuf())){
+        //How to deal with this? set NACK? Is it not too late to send
+        //NACK if we just read from the buffer?
+        call Usci.setCtl1(call Usci.getCtl1()|UCTXNACK);
+        while ( nackTimeout > 1 && (call Usci.getCtl1() & UCTXNACK)){
+          nackTimeout --;
+          //wait until NACK is sent
+        }
+        //should maybe signal to indicate whether the nack made it or
+        //not.
+        //TODO: reset?
+        signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
+      }
     }
   }
   

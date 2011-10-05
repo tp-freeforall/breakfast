@@ -29,6 +29,16 @@ module TestP{
   uint8_t rxByte;
   uint8_t state;
 
+  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
+  uint8_t i2c_len = 6;
+  uint8_t i2c_index;
+
+  uint8_t cmd[] = "doug";
+  uint8_t cmd_len = 4;
+
+  // 10010 00
+  uint16_t slaveAddr = 0x0042;
+
   enum{
     S_INIT = 0x01,
     S_IDLE = 0x00,
@@ -48,6 +58,9 @@ module TestP{
     S_READDONE_FAIL = 0x0f,
     S_READ_FAIL = 0x10,
     S_ENABLE_SLAVE_START = 0x11,
+    S_SLAVE_RECEIVE = 0x12,
+    S_SLAVE_START = 0x13,
+    S_SLAVE_STOP = 0x14,
   };
 
   void setState(uint8_t s){
@@ -83,6 +96,8 @@ module TestP{
       call UartStream.send(idleMsg, 1);
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
+    }else if(checkState(S_SLAVE_RECEIVE)){
+      call UartStream.send(i2c_buf, i2c_index);
     }else if(checkState(S_RESETTING)){
       //trigger reset
       WDTCTL = 0x00;
@@ -93,10 +108,6 @@ module TestP{
       call Timer.startOneShot(256);
   }
 
-  uint8_t cmd[] = "doug";
-  uint8_t cmd_len = 4;
-  // 10010 00
-  uint16_t slaveAddr = 0x0042;
   task void doWrite(){
     //P6OUT = 0x00;
     //P6OUT = 0x01;
@@ -111,8 +122,6 @@ module TestP{
     }
   }
 
-  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
-  uint8_t i2c_len = 6;
 
   task void doRead(){
     if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
@@ -254,11 +263,21 @@ module TestP{
   }
 
   async event error_t I2CSlave.slaveReceive(uint8_t data){
+    setState(S_SLAVE_RECEIVE);
+    i2c_buf[i2c_index++] = data;
+    call Timer.startOneShot(128);
+    return SUCCESS;
   }
+
   async event uint8_t I2CSlave.slaveTransmit(){
   }
+
   async event void I2CSlave.slaveStart(){
+    i2c_index = 0;
+    setState(S_SLAVE_START);
   }
+
   async event void I2CSlave.slaveStop(){
+    setState(S_SLAVE_STOP);
   }
 }
