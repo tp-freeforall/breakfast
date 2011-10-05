@@ -382,60 +382,62 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-    //TODO: check for current client/ownership
-    //TODO: replace with module-independent calls
-    /* no acknowledgement */
-    if (call Usci.getStat() & UCNACKIFG) {
-      //This occurs during write and read when no ack is received.
-      /* set stop bit */
-      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
-
-      /* wait until STOP bit has been transmitted */
-      while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
-        counter--;
+    if (call Usci.getCtl0() & UCMST){
+      //TODO: check for current client/ownership
+      //TODO: replace with module-independent calls
+      /* no acknowledgement */
+      if (call Usci.getStat() & UCNACKIFG) {
+        //This occurs during write and read when no ack is received.
+        /* set stop bit */
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
+  
+        /* wait until STOP bit has been transmitted */
+        while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
+          counter--;
+        }
+        call Usci.enterResetMode_();
+        call Usci.leaveResetMode_();
+  
+        //signal appropriate event depending on whether we were
+        //transmitting or receiving
+        //Note that TR will be cleared if we lost MM arbitration because
+        //another master addressed us as a slave. However, this should
+        //manifest as an AL interrupt, not a NACK interrupt.
+        if (call Usci.getCtl1() & UCTR){
+          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
+        }else {
+          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
+        }
+      } 
+    } else {
+      //slave-specific
+      /* arbitration lost (we USED TO be master)*/
+      if (UCB0STAT & UCALIFG) 
+      {
+        call Usci.enterResetMode_();
+        call Usci.leaveResetMode_();
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
       }
-      call Usci.enterResetMode_();
-      call Usci.leaveResetMode_();
 
-      //signal appropriate event depending on whether we were
-      //transmitting or receiving
-      //Note that TR will be cleared if we lost MM arbitration because
-      //another master addressed us as a slave. However, this should
-      //manifest as an AL interrupt, not a NACK interrupt.
-      if (call Usci.getCtl1() & UCTR){
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
-      }else {
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
+      /* STOP condition */
+      else if (UCB0STAT & UCSTPIFG) 
+      {
+        /* disable STOP interrupt, enable START interrupt */
+        //UCB0I2CIE &= ~UCSTPIE;
+        //UCB0I2CIE |= UCSTTIE;
+        call UsciB.setI2cie((call UsciB.getI2cie() | UCSTTIE) & ~UCSTPIE);
+        signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
       }
-    } 
-    /* arbitration lost */
-    else if (UCB0STAT & UCALIFG) 
-    {
-      call Usci.enterResetMode_();
-      call Usci.leaveResetMode_();
-      signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
+      /* START condition */
+      else if (UCB0STAT & UCSTTIFG) 
+      {
+        /* disable START interrupt, enable STOP interrupt */
+//        UCB0I2CIE &= ~UCSTTIE;
+//        UCB0I2CIE |= UCSTPIE;
+        call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
+        signal I2CSlave.slaveStart[call ArbiterInfo.userId()]();
+      }
     }
-    /* STOP condition */
-    else if (UCB0STAT & UCSTPIFG) 
-    {
-      //TODO: I think this is slave-specific, so move
-      /* disable STOP interrupt, enable START interrupt */
-      UCB0I2CIE &= ~UCSTPIE;
-      UCB0I2CIE |= UCSTTIE;
-      //TODO: move to slave code
-      //signal I2CBasicAddr.slaveStop();
-    }
-    /* START condition */
-    else if (UCB0STAT & UCSTTIFG) 
-    {
-      //TODO: i think this is slave-specific, so move
-      /* disable START interrupt, enable STOP interrupt */
-      UCB0I2CIE &= ~UCSTTIE;
-      UCB0I2CIE |= UCSTPIE;
-      //TODO: move to slave code
-      //signal I2CBasicAddr.slaveStart();
-    }
-
   }
 
   //defaults
@@ -451,6 +453,7 @@ implementation {
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
     m_ownaddress = addr;
+    call UsciB.setI2coa(m_ownaddress);
     
     return SUCCESS;
   }
@@ -458,7 +461,8 @@ implementation {
   command error_t I2CSlave.enableSlave[uint8_t client]()
   {
     /**************************************************************/
-    UCB0CTL1 = UCSWRST; // enter reset mode
+    //UCB0CTL1 = UCSWRST; // enter reset mode
+    call Usci.enterResetMode_();
 
     /*
      * UCB0CTL0
@@ -472,17 +476,20 @@ implementation {
      * UCTR         - transmit (~receive)
      *
      */
-    UCB0CTL0 = UCMODE_I2C | UCSYNC;
+    //UCB0CTL0 = UCMODE_I2C | UCSYNC;
+    call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
 
-    call SDA.makeOutput();
-    call SDA.selectModuleFunc();
-    call SCL.makeOutput();
-    call SCL.selectModuleFunc();
+//    call SDA.makeOutput();
+//    call SDA.selectModuleFunc();
+//    call SCL.makeOutput();
+//    call SCL.selectModuleFunc();
+    
+//    UCB0CTL1 &= ~UCSWRST; // exit reset mode
 
-    UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-    UCB0I2CIE = UCSTTIE;
-    IE2 |= UCB0RXIE | UCB0TXIE;
+//    UCB0I2CIE = UCSTTIE;
+//    IE2 |= UCB0RXIE | UCB0TXIE;
+    call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
+    call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
 
     /**************************************************************/
     if (m_ownaddress == 0x0000){
@@ -503,9 +510,10 @@ implementation {
   {
     //TODO: check ownership
     call Usci.enterResetMode_();
+    //go back to being a master
+    call Usci.setCtl0(call Usci.getCtl0() | UCMST);
     call Usci.leaveResetMode_();
     //resetUCB0();
-
     return SUCCESS;
   }
   
