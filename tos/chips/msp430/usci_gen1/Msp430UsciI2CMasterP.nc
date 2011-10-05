@@ -42,6 +42,7 @@ generic module Msp430UsciI2CMasterP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_
   
   provides interface ResourceConfigure[ uint8_t client ];
   provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr[uint8_t client];
+  provides interface I2CSlave[uint8_t client];
   provides interface Msp430UsciError[uint8_t client];
   
   uses interface HplMsp430UsciInterrupts as StateInterrupts;
@@ -69,7 +70,8 @@ implementation {
   norace uint8_t m_len;
   norace uint8_t m_pos;
   norace i2c_flags_t m_flags;
-  //norace uint16_t m_ownaddress = 0x0000;
+  //TODO: this maybe should be just part of config?
+  norace uint16_t m_ownaddress = 0x0000;
   
   void nextRead();
   void nextWrite();
@@ -370,17 +372,10 @@ implementation {
   
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
-    //TODO: no need to check master mode
     //TODO: check for current client/ownership
-    //TODO: replace with module-independent calls
     /* if master mode */
-    if (UCB0CTL0 & UCMST){
+    if (call Usci.getCtl0() & UCMST){
       nextRead();
-    } else {
-      //TODO: move to slave code
-      //if (signal I2CBasicAddr.slaveReceive(UCB0RXBUF) != SUCCESS){
-      //  UCB0CTL1 |= UCTXNACK;
-      //}
     }
   }
   
@@ -450,70 +445,75 @@ implementation {
     //TODO: sensible default!!!
     return NULL;
   }
-/***** Slave-mode functions: move ***/
-//  command error_t I2CBasicAddr.setOwnAddress(uint16_t addr)
-//  {
-//    m_ownaddress = addr;
-//    
-//    return SUCCESS;
-//  }
-//
-//  command error_t I2CBasicAddr.enableSlave()
-//  {
-//    /**************************************************************/
-//    UCB0CTL1 = UCSWRST; // enter reset mode
-//
-//    /*
-//     * UCB0CTL0
-//     * UCSLA10    - 10bit slave address (~7bit slave address)
-//     * UCMM       - MultiMaster mode (~single master mode)
-//     * UCMST      - Master (~slave)
-//     * UCMODE_I2C - I2C mode
-//     * UCSYNC     - I2C mode
-//     *
-//     * UCSSEL_SMCLK - SMCLK clock source
-//     * UCTR         - transmit (~receive)
-//     *
-//     */
-//    UCB0CTL0 = UCMODE_I2C | UCSYNC;
-//
-//    call SDA.makeOutput();
-//    call SDA.selectModuleFunc();
-//    call SCL.makeOutput();
-//    call SCL.selectModuleFunc();
-//
-//    UCB0CTL1 &= ~UCSWRST; // exit reset mode
-//
-//    UCB0I2CIE = UCSTTIE;
-//    IE2 |= UCB0RXIE | UCB0TXIE;
-//
-//    /**************************************************************/
-//
-//    if (m_ownaddress != 0x0000)
-//    {
-//      /* set own address */
-//      UCB0I2COA = m_ownaddress;
-//
-//      return SUCCESS;
-//    }
-//    else
-//      return FAIL;
-//  }
-//
-//
-//  command error_t I2CBasicAddr.disableSlave()
-//  {
-//    resetUCB0();
-//
-//    return SUCCESS;
-//  }
-//  
-//
-//  default async event error_t I2CBasicAddr.slaveReceive(uint8_t data) { return FAIL; }
-//  default async event uint8_t I2CBasicAddr.slaveTransmit() { return 0x00; }
-//
-//  default async event void I2CBasicAddr.slaveStart() { ; }
-//  default async event void I2CBasicAddr.slaveStop() { ; }
+
+/***** Slave-mode functions ***/
+  //part of config?
+  command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
+  {
+    m_ownaddress = addr;
+    
+    return SUCCESS;
+  }
+
+  command error_t I2CSlave.enableSlave[uint8_t client]()
+  {
+    /**************************************************************/
+    UCB0CTL1 = UCSWRST; // enter reset mode
+
+    /*
+     * UCB0CTL0
+     * UCSLA10    - 10bit slave address (~7bit slave address)
+     * UCMM       - MultiMaster mode (~single master mode)
+     * UCMST      - Master (~slave)
+     * UCMODE_I2C - I2C mode
+     * UCSYNC     - I2C mode
+     *
+     * UCSSEL_SMCLK - SMCLK clock source
+     * UCTR         - transmit (~receive)
+     *
+     */
+    UCB0CTL0 = UCMODE_I2C | UCSYNC;
+
+    call SDA.makeOutput();
+    call SDA.selectModuleFunc();
+    call SCL.makeOutput();
+    call SCL.selectModuleFunc();
+
+    UCB0CTL1 &= ~UCSWRST; // exit reset mode
+
+    UCB0I2CIE = UCSTTIE;
+    IE2 |= UCB0RXIE | UCB0TXIE;
+
+    /**************************************************************/
+
+    if (m_ownaddress != 0x0000)
+    {
+      /* set own address */
+      UCB0I2COA = m_ownaddress;
+
+      return SUCCESS;
+    }
+    else
+      return FAIL;
+  }
+
+
+  command error_t I2CSlave.disableSlave[uint8_t client]()
+  {
+    //TODO: check ownership
+    call Usci.enterResetMode_();
+    call Usci.leaveResetMode_();
+    //resetUCB0();
+
+    return SUCCESS;
+  }
+  
+
+  default async event error_t I2CSlave.slaveReceive[uint8_t client](uint8_t data) { return FAIL; }
+  default async event uint8_t I2CSlave.slaveTransmit[uint8_t client]() { return 0x00; }
+
+  default async event void I2CSlave.slaveStart[uint8_t client]() { ; }
+  default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
 
 
 }
