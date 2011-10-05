@@ -76,7 +76,11 @@ implementation {
   void nextRead();
   void nextWrite();
   void signalDone( error_t error );
-  
+
+  void pdbg(uint8_t v){
+    P6OUT = v;
+  }
+
   error_t configure_(const msp430_usci_config_t* config){
     if(! config){
       return FAIL;
@@ -118,10 +122,13 @@ implementation {
 					   uint8_t* buf ) 
   {
     uint8_t counter = 0xFF;
+    pdbg(0);
+    pdbg(1);
     //TODO: replace with module independent calls
     if ( call Usci.getStat() & UCBBUSY )
       return EBUSY;
-    
+    pdbg(0);
+    pdbg(8);
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -131,6 +138,7 @@ implementation {
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START) {
 
+      pdbg(9);
       // set slave address 
       call UsciB.setI2csa(addr);
       //clear TR bit, set start condition
@@ -187,6 +195,8 @@ implementation {
   void nextRead()
   {
     uint16_t counter = 0xFFFF;
+    pdbg(0);
+    pdbg(2);
     //TODO: replace with module-independent calls
     //debug: show position, then byte received
     /* read byte from RX buffer */
@@ -201,17 +211,26 @@ implementation {
     //TODO: this should check m_flags: if RESTART flag is present
     //rather than STOP, we should end with UCTXSTT, not UCTXSTP
     if ( (m_pos == (m_len)) && m_len > 1){
+       pdbg(0);
+       pdbg(3);
        UCB0CTL1 |= UCTXSTP;
 
       //when we receive the last byte, wait until STP condition is
       //cleared, then return
     }
     if (m_pos == m_len){
+       pdbg(0);
+       pdbg(4);
       while( (UCB0CTL1 & UCTXSTP) && (counter > 0x01)){
         counter --;
       }
-      resetUCB0();
+      //don't reset it, idiot
+      //resetUCB0();
+      //disable the rx interrupt 
+      call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
       if (counter > 0x01){
+       pdbg(0);
+       pdbg(5);
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, UCB0I2CSA, m_pos, m_buf );
       } else {
         signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, UCB0I2CSA, m_pos, m_buf );
@@ -323,7 +342,7 @@ implementation {
 
       //disable tx interrupt, we're DONE 
       //TODO: other interrupts?
-      call Usci.setIe(call Usci.getIe() & ~(TXIE_MASK | RXIE_MASK));
+      call Usci.setIe(call Usci.getIe() & ~TXIE_MASK );
       /* fail gracefully */      
       if (counter > 0x01){
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
@@ -355,6 +374,8 @@ implementation {
   
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
+       pdbg(0);
+       pdbg(6);
     //TODO: no need to check master mode
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
@@ -372,6 +393,8 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
+    pdbg(0);
+    pdbg(7);
     //TODO: check for current client/ownership
     //TODO: replace with module-independent calls
     /* no acknowledgement */
