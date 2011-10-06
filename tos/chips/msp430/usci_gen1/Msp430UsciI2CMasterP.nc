@@ -363,13 +363,11 @@ implementation {
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
     //TODO: check for current client/ownership
-    //TODO: no need to check master mode
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextWrite();
     } else {
-      //TODO: move to slave code
-      //UCB0TXBUF = signal I2CBasicAddr.slaveTransmit();
+      call Usci.setTxbuf(signal I2CSlave.slaveTransmit[call ArbiterInfo.userId()]());
     }
   }
   

@@ -24,6 +24,7 @@ module TestP{
   uint8_t resourceGrantedMsg[] = "RESOURCE GRANTED\n\r"; //18
   uint8_t enableSlaveMsg[] = "SLAVE ENABLE\n\r";   //14
   uint8_t enableSlaveFailMsg[] = "SLAVE ENABLE FAIL\n\r";//19
+  uint8_t slaveTransmitDoneMsg[] = "SLAVE TRANSMIT DONE\n\r"; //21
   uint8_t nl[] = "\n\r";                   //2
 
   uint8_t rxByte;
@@ -61,7 +62,9 @@ module TestP{
     S_ENABLE_SLAVE_START = 0x11,
     S_SLAVE_RECEIVE = 0x12,
     S_SLAVE_START = 0x13,
-    S_SLAVE_STOP = 0x14,
+    S_SLAVE_STOP_RECEIVE = 0x14,
+    S_SLAVE_STOP_TRANSMIT = 0x15,
+    S_SLAVE_TRANSMIT = 0x16,
   };
 
   void setState(uint8_t s){
@@ -97,11 +100,13 @@ module TestP{
       call UartStream.send(idleMsg, 1);
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
-    }else if(checkState(S_SLAVE_STOP)){
+    }else if(checkState(S_SLAVE_STOP_RECEIVE)){
       atomic{
         bufLen = i2c_index;
       }
       call UartStream.send(i2c_buf, bufLen);
+    }else if(checkState(S_SLAVE_STOP_TRANSMIT)){
+      call UartStream.send(slaveTransmitDoneMsg, 21);
     }else if(checkState(S_RESETTING)){
       //trigger reset
       WDTCTL = 0x00;
@@ -269,6 +274,8 @@ module TestP{
   }
 
   async event uint8_t I2CSlave.slaveTransmit(){
+    setState(S_SLAVE_TRANSMIT);
+    return i2c_buf[i2c_index++];
   }
 
   async event void I2CSlave.slaveStart(){
@@ -278,6 +285,10 @@ module TestP{
 
   async event void I2CSlave.slaveStop(){
     post shortTimer();
-    setState(S_SLAVE_STOP);
+    if (checkState(S_SLAVE_RECEIVE)){
+      setState(S_SLAVE_STOP_RECEIVE);
+    } else if(checkState(S_SLAVE_TRANSMIT)){
+      setState(S_SLAVE_STOP_TRANSMIT);
+    }
   }
 }
