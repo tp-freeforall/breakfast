@@ -104,6 +104,7 @@ implementation {
   }
 
   error_t unconfigure_(){
+    
     //TODO: wait until idle
     //TODO: disable interrupts
     //TODO: enter reset
@@ -374,31 +375,24 @@ implementation {
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
     uint16_t nackTimeout = 0xffff;
-    pdbg(4);
     //TODO: check for current client/ownership
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
     } else {
-      pdbg(5);
       if( SUCCESS != signal I2CSlave.slaveReceive[call ArbiterInfo.userId()](call Usci.getRxbuf())){
-        pdbg(6);
         //How to deal with this? set NACK? Is it not too late to send
         //NACK if we just read from the buffer?
         call Usci.setCtl1(call Usci.getCtl1()|UCTXNACK);
         while ( nackTimeout > 1 && (call Usci.getCtl1() & UCTXNACK)){
-          pdbg(7);
           nackTimeout --;
           //wait until NACK is sent
         }
-        pdbg(8);
         //should maybe signal to indicate whether the nack made it or
         //not.
         //TODO: reset?
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
-      } else {
-        pdbg(9);
-      }
+      } 
     }
   }
   
@@ -441,22 +435,17 @@ implementation {
         call Usci.leaveResetMode_();
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
       }
-
       /* STOP condition */
-      else if (UCB0STAT & UCSTPIFG) 
+      else if (call Usci.getStat() & UCSTPIFG) 
       {
         /* disable STOP interrupt, enable START interrupt */
-        //UCB0I2CIE &= ~UCSTPIE;
-        //UCB0I2CIE |= UCSTTIE;
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTTIE) & ~UCSTPIE);
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
       }
       /* START condition */
-      else if (UCB0STAT & UCSTTIFG) 
+      else if (call Usci.getStat() & UCSTTIFG) 
       {
         /* disable START interrupt, enable STOP interrupt */
-//        UCB0I2CIE &= ~UCSTTIE;
-//        UCB0I2CIE |= UCSTPIE;
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]();
       }
@@ -483,48 +472,18 @@ implementation {
 
   command error_t I2CSlave.enableSlave[uint8_t client]()
   {
-    pdbg(1);
-    /**************************************************************/
-    //UCB0CTL1 = UCSWRST; // enter reset mode
     call Usci.enterResetMode_();
-
-    /*
-     * UCB0CTL0
-     * UCSLA10    - 10bit slave address (~7bit slave address)
-     * UCMM       - MultiMaster mode (~single master mode)
-     * UCMST      - Master (~slave)
-     * UCMODE_I2C - I2C mode
-     * UCSYNC     - I2C mode
-     *
-     * UCSSEL_SMCLK - SMCLK clock source
-     * UCTR         - transmit (~receive)
-     *
-     */
-    //UCB0CTL0 = UCMODE_I2C | UCSYNC;
     call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
     call Usci.leaveResetMode_();
 
-//    call SDA.makeOutput();
-//    call SDA.selectModuleFunc();
-//    call SCL.makeOutput();
-//    call SCL.selectModuleFunc();
-    
-//    UCB0CTL1 &= ~UCSWRST; // exit reset mode
-
-//    UCB0I2CIE = UCSTTIE;
-//    IE2 |= UCB0RXIE | UCB0TXIE;
     call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
     call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-    pdbg(2);
 
-    /**************************************************************/
     if (m_ownaddress == 0x0000){
-      pdbg(3);
       //if we haven't set an address, then try to get it from the
       //configuration.
       m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
       call UsciB.setI2coa(m_ownaddress);
-      //showRegisters();
       return SUCCESS;
     }
     else{
