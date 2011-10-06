@@ -32,6 +32,7 @@ module TestP{
   uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
   uint8_t i2c_len = 6;
   uint8_t i2c_index;
+  uint8_t bufLen;
 
   uint8_t cmd[] = "doug";
   uint8_t cmd_len = 4;
@@ -97,7 +98,10 @@ module TestP{
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
     }else if(checkState(S_SLAVE_RECEIVE)){
-      call UartStream.send(i2c_buf, i2c_index);
+      atomic{
+        bufLen = i2c_index;
+      }
+      call UartStream.send(i2c_buf, bufLen);
     }else if(checkState(S_RESETTING)){
       //trigger reset
       WDTCTL = 0x00;
@@ -109,14 +113,10 @@ module TestP{
   }
 
   task void doWrite(){
-    //P6OUT = 0x00;
-    //P6OUT = 0x01;
     if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP,
     slaveAddr, cmd_len, cmd)){
-      //P6OUT = 0x02;
       setState(S_WRITING);
     }else{
-      //P6OUT = 0x03;
       setState(S_WRITE_FAIL);
       call UartStream.send(writeFailMsg, 12);
     }
@@ -261,11 +261,11 @@ module TestP{
       call UartStream.send(readDoneFailMsg, 16);
     }
   }
-
+  
   async event error_t I2CSlave.slaveReceive(uint8_t data){
     setState(S_SLAVE_RECEIVE);
     i2c_buf[i2c_index++] = data;
-    call Timer.startOneShot(128);
+    post shortTimer();
     return SUCCESS;
   }
 

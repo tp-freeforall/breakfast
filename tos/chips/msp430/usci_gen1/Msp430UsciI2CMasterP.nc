@@ -78,7 +78,10 @@ implementation {
   void signalDone( error_t error );
 
   void pdbg(uint8_t v){
-    P6OUT = v;
+    atomic{
+      P6OUT = 0x00;
+      P6OUT = v;
+    }
   }
 
   error_t configure_(const msp430_usci_config_t* config){
@@ -373,19 +376,24 @@ implementation {
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
     uint16_t nackTimeout = 0xffff;
+    pdbg(4);
     //TODO: check for current client/ownership
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
     } else {
+      pdbg(5);
       if( SUCCESS != signal I2CSlave.slaveReceive[call ArbiterInfo.userId()](call Usci.getRxbuf())){
+        pdbg(6);
         //How to deal with this? set NACK? Is it not too late to send
         //NACK if we just read from the buffer?
         call Usci.setCtl1(call Usci.getCtl1()|UCTXNACK);
         while ( nackTimeout > 1 && (call Usci.getCtl1() & UCTXNACK)){
+          pdbg(7);
           nackTimeout --;
           //wait until NACK is sent
         }
+        pdbg(8);
         //should maybe signal to indicate whether the nack made it or
         //not.
         //TODO: reset?
@@ -475,6 +483,7 @@ implementation {
 
   command error_t I2CSlave.enableSlave[uint8_t client]()
   {
+    pdbg(1);
     /**************************************************************/
     //UCB0CTL1 = UCSWRST; // enter reset mode
     call Usci.enterResetMode_();
@@ -493,6 +502,7 @@ implementation {
      */
     //UCB0CTL0 = UCMODE_I2C | UCSYNC;
     call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
+    call Usci.leaveResetMode_();
 
 //    call SDA.makeOutput();
 //    call SDA.selectModuleFunc();
@@ -505,14 +515,16 @@ implementation {
 //    IE2 |= UCB0RXIE | UCB0TXIE;
     call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
     call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
+    pdbg(2);
 
     /**************************************************************/
     if (m_ownaddress == 0x0000){
+      pdbg(3);
       //if we haven't set an address, then try to get it from the
       //configuration.
       m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
       call UsciB.setI2coa(m_ownaddress);
-
+      //showRegisters();
       return SUCCESS;
     }
     else{
