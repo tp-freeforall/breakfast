@@ -25,6 +25,8 @@ module TestP{
   uint8_t enableSlaveMsg[] = "SLAVE ENABLE\n\r";   //14
   uint8_t enableSlaveFailMsg[] = "SLAVE ENABLE FAIL\n\r";//19
   uint8_t slaveTransmitDoneMsg[] = "SLAVE TRANSMIT DONE\n\r"; //21
+  uint8_t myAddrMsg[] = "Me:  \n\r";
+  uint8_t slaveAddrMsg[] = "Slave:  \n\r";
   uint8_t nl[] = "\n\r";                   //2
 
   uint8_t rxByte;
@@ -39,7 +41,9 @@ module TestP{
   uint8_t cmd_len = 4;
 
   // 10010 00
-  uint16_t slaveAddr = 0x0042;
+  uint16_t minAddr = 'A';
+  uint16_t myAddr;
+  uint16_t slaveAddr; 
 
   enum{
     S_INIT = 0x01,
@@ -84,6 +88,10 @@ module TestP{
 
   event void Boot.booted(){
     atomic{
+      myAddr = minAddr;
+      myAddrMsg[4] = myAddr;
+      slaveAddr = minAddr;
+      slaveAddrMsg[7] = slaveAddr;
       P6DIR = 0xff;
       P6SEL = 0x00;
       P6OUT = 0x00;
@@ -203,7 +211,18 @@ module TestP{
         setState(S_READ_START);
         call UartStream.send(readingMsg, 9);
         break;
+      case 'm':
+        myAddr++;
+        call I2CSlave.setOwnAddress(myAddr);
+        myAddrMsg[4] = myAddr;
+        call UartStream.send(myAddrMsg, 7);
+        break;
       case 's':
+        slaveAddr++;
+        slaveAddrMsg[7] = slaveAddr;
+        call UartStream.send(slaveAddrMsg, 10);
+        break;
+      case 'e':
         setState(S_ENABLE_SLAVE_START);
         post enableSlave();
         break;

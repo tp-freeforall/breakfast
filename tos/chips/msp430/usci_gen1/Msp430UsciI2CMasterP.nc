@@ -431,6 +431,20 @@ implementation {
       /* arbitration lost (we USED TO be master)*/
       if (UCB0STAT & UCALIFG) 
       {
+        //- determine if we were transmitting or receiving
+        //- signal writeDone/readDone as appropriate
+        //- clear UCALIFG
+        //- set UCSTTIE, TXIE/RXIE: don't know whether or how we will
+        //  be addressed
+        //- if we are addressed, we'll get a slaveStart, followed by
+        //  the relevant slaveTransmit/slaveReceive events
+        //- if we are not addressed, then what do we do? 
+        //  - We're not master, and we won't get slaveStart. Do we
+        //    need to somehow signal I2CPacket that this happened?
+        //  - Should we say "by default, you are a slave" and only
+        //    enter master mode when we initiate a write/read? In
+        //    which case, enableSlave and disableSlave should be
+        //    removed. 
         call Usci.enterResetMode_();
         call Usci.leaveResetMode_();
         signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
