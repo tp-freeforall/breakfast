@@ -96,9 +96,10 @@ implementation {
     call SDA.selectModuleFunc();
 
     //i2c-specific config
-    call UsciB.setI2coa(config->i2coa);
+    //TODO: GCEN needs to be respected
+    call UsciB.setI2coa(UCGCEN | config->i2coa);
     call Usci.leaveResetMode_();
-
+        
     //No interrupts enabled when in master mode/idle
     return SUCCESS;
   }
@@ -479,7 +480,8 @@ implementation {
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
     m_ownaddress = addr;
-    call UsciB.setI2coa(m_ownaddress);
+    //TODO: respect GCEN
+    call UsciB.setI2coa(UCGCEN | m_ownaddress);
     
     return SUCCESS;
   }
@@ -497,7 +499,9 @@ implementation {
       //if we haven't set an address, then try to get it from the
       //configuration.
       m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
-      call UsciB.setI2coa(m_ownaddress);
+      //TODO: respect GCEN
+      
+      call UsciB.setI2coa(UCGCEN | m_ownaddress);
       return SUCCESS;
     }
     else{

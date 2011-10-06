@@ -27,6 +27,7 @@ module TestP{
   uint8_t slaveTransmitDoneMsg[] = "SLAVE TRANSMIT DONE\n\r"; //21
   uint8_t myAddrMsg[] = "Me:  \n\r";
   uint8_t slaveAddrMsg[] = "Slave:  \n\r";
+  uint8_t gcWritingMsg[] = "WRITING TO GC\n\r";//15
   uint8_t nl[] = "\n\r";                   //2
 
   uint8_t rxByte;
@@ -69,6 +70,7 @@ module TestP{
     S_SLAVE_STOP_RECEIVE = 0x14,
     S_SLAVE_STOP_TRANSMIT = 0x15,
     S_SLAVE_TRANSMIT = 0x16,
+    S_GC_WRITE_START = 0x17,
   };
 
   void setState(uint8_t s){
@@ -126,13 +128,21 @@ module TestP{
   }
 
   task void doWrite(){
-    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP,
-    slaveAddr, cmd_len, cmd)){
+    uint16_t destAddr;
+
+    if (checkState(S_GC_WRITE_START)){
+      destAddr = 0x0000;
+    } else {
+      destAddr = slaveAddr;
+    }
+
+    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, destAddr, cmd_len, cmd)){
       setState(S_WRITING);
     }else{
       setState(S_WRITE_FAIL);
       call UartStream.send(writeFailMsg, 12);
     }
+    
   }
 
 
@@ -176,6 +186,8 @@ module TestP{
     } else if (checkState(S_READDONE)){
       memset(i2c_buf, 0xff, i2c_len);
       setState(S_IDLE);
+    } else if(checkState(S_GC_WRITE_START)){
+      post doWrite();
     } else {
       setState(S_IDLE);
     }
@@ -226,6 +238,10 @@ module TestP{
         setState(S_ENABLE_SLAVE_START);
         post enableSlave();
         break;
+      case 'g':
+        setState(S_GC_WRITE_START);
+        call UartStream.send(gcWritingMsg, 15);
+        break;
       default:
         setState(S_ECHOING);
         post echoTask();
@@ -256,7 +272,7 @@ module TestP{
     br0:  0x08,
     br1:  0x00,
     mctl: 0,
-    i2coa: 0x42,
+    i2coa: 'A',
   };
 
 

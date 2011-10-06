@@ -55,8 +55,8 @@ generic module HplMsp430UsciBP(
 }
 implementation {
 #define UCmxI2CIE (*TCAST(volatile uint8_t* ONE, UCmxCTL0_ + 0x04))
-#define UCmxI2COA (*TCAST(volatile uint8_t* ONE, UCmxI2COA_ + 0x00))
-#define UCmxI2CSA (*TCAST(volatile uint8_t* ONE, UCmxI2COA_ + 0x02))
+#define UCmxI2COA (*TCAST(volatile uint16_t* ONE, UCmxI2COA_ + 0x00))
+#define UCmxI2CSA (*TCAST(volatile uint16_t* ONE, UCmxI2COA_ + 0x02))
 
   async command uint16_t UsciB.getI2coa() { return UCmxI2COA; }
   async command void UsciB.setI2coa(uint16_t v) { UCmxI2COA = v; }
