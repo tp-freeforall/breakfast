@@ -398,6 +398,8 @@ implementation {
         //not.
         //TODO: reset?
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
+      } else {
+        pdbg(9);
       }
     }
   }

@@ -97,7 +97,7 @@ module TestP{
       call UartStream.send(idleMsg, 1);
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
-    }else if(checkState(S_SLAVE_RECEIVE)){
+    }else if(checkState(S_SLAVE_STOP)){
       atomic{
         bufLen = i2c_index;
       }
@@ -265,7 +265,6 @@ module TestP{
   async event error_t I2CSlave.slaveReceive(uint8_t data){
     setState(S_SLAVE_RECEIVE);
     i2c_buf[i2c_index++] = data;
-    post shortTimer();
     return SUCCESS;
   }
 
@@ -278,6 +277,7 @@ module TestP{
   }
 
   async event void I2CSlave.slaveStop(){
+    post shortTimer();
     setState(S_SLAVE_STOP);
   }
 }
