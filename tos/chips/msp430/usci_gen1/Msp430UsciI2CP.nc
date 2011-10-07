@@ -110,6 +110,7 @@ implementation {
       call Usci.leaveResetMode_();
     }
     call UsciB.setI2cie(UCSTTIE);
+    return SUCCESS;
   }
 
   error_t unconfigure_(){
@@ -135,7 +136,6 @@ implementation {
 					   uint8_t* buf ) 
   {
     uint8_t counter = 0xFF;
-    uint8_t garbage;
     if ( call Usci.getStat() & UCBBUSY ){
       return EBUSY;
     }
@@ -147,13 +147,6 @@ implementation {
 
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START) {
-      //reading from the RXBUF will clear out any junk left at the end
-      //of the last read. This issue stems from the fact that the stop
-      //condition is generated after we received the last byte in the
-      //previous read (slave might supply another byte before it gets
-      //the stop condition, which might still be kicking around the
-      //RXBUF)
-      garbage = call Usci.getRxbuf();
       call Usci.enterResetMode_();
       call Usci.setCtl0(call Usci.getCtl0() | UCMST);
       call Usci.leaveResetMode_();
