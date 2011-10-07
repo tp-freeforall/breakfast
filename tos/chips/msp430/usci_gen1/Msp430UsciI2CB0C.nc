@@ -37,7 +37,7 @@
 #include <I2C.h>
 #include "msp430usci.h"
 
-generic configuration Msp430UsciI2CMasterB0C() {
+generic configuration Msp430UsciI2CB0C() {
   
   provides interface Resource;
   provides interface ResourceRequested;
@@ -58,7 +58,7 @@ implementation {
   Resource = UsciC.Resource[CLIENT_ID];
   ResourceRequested = UsciC.ResourceRequested[CLIENT_ID];
 
-  components Msp430UsciI2CMasterB0P as I2CP;
+  components Msp430UsciI2CB0P as I2CP;
   I2CPacket = I2CP.I2CPacket[CLIENT_ID];
   I2CSlave = I2CP.I2CSlave[CLIENT_ID];
   Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];

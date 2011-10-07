@@ -1,4 +1,4 @@
-configuration Msp430UsciI2CMasterB0P {
+configuration Msp430UsciI2CB0P {
   provides {
     interface I2CPacket<TI2CBasicAddr>[uint8_t client];
     interface I2CSlave[uint8_t client];
@@ -15,7 +15,7 @@ configuration Msp430UsciI2CMasterB0P {
   components Msp430UsciB0P as UsciC;
   //masks are module-specific so they need to be passed in.
   //alternately, the masks could be retrieved from the UsciA interface
-  components new Msp430UsciI2CMasterP(UCB0TXIE, UCB0RXIE, UCB0TXIFG, UCB0RXIFG) as I2CC;
+  components new Msp430UsciI2CP(UCB0TXIE, UCB0RXIE, UCB0TXIFG, UCB0RXIFG) as I2CC;
 
   I2CC.Usci -> UsciC;
   I2CC.UsciB -> UsciC;

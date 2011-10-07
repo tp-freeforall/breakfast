@@ -7,7 +7,7 @@ configuration TestAppC{
   TestP.Boot -> MainC;
   TestP.Timer -> TimerMilliC;
 
-  components new Msp430UsciI2CMasterB0C() as I2CMaster;
+  components new Msp430UsciI2CB0C() as I2CMaster;
   I2CMaster.Msp430UsciConfigure -> TestP.I2CConfigure;
   TestP.I2CResource -> I2CMaster.Resource;
   TestP.I2CPacket -> I2CMaster.I2CPacket;

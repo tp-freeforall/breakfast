@@ -38,7 +38,7 @@
 
 #include <I2C.h>
 
-generic module Msp430UsciI2CMasterP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIFG_MASK, uint8_t RXIFG_MASK) {
+generic module Msp430UsciI2CP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIFG_MASK, uint8_t RXIFG_MASK) {
   
   provides interface ResourceConfigure[ uint8_t client ];
   provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr[uint8_t client];
