@@ -70,8 +70,6 @@ implementation {
   norace uint8_t m_len;
   norace uint8_t m_pos;
   norace i2c_flags_t m_flags;
-  //TODO: this maybe should be just part of config?
-  norace uint16_t m_ownaddress = 0x0000;
   void showRegisters(); 
   void nextRead();
   void nextWrite();
@@ -114,12 +112,11 @@ implementation {
   }
 
   error_t unconfigure_(){
-    
-    //TODO: wait until idle
-    //TODO: disable interrupts
-    //TODO: enter reset
-    //TODO: switch pins to gpio
-    return FAIL;
+    call Usci.enterResetMode_();
+    call SCL.selectIOFunc();
+    call SDA.selectIOFunc();
+ 
+    return SUCCESS;
   }
 
   async command void ResourceConfigure.configure[ uint8_t client ]() {
@@ -207,9 +204,6 @@ implementation {
   void nextRead()
   {
     uint16_t counter = 0xFFFF;
-    //TODO: replace with module-independent calls
-    //debug: show position, then byte received
-    /* read byte from RX buffer */
 
     if ((m_pos == (m_len - 2)) && m_len > 1)
     {
@@ -226,9 +220,11 @@ implementation {
       //you slowed down the I2C clock enough?
       call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
     }
+    /* read byte from RX buffer */
     m_buf[ m_pos++ ] = call Usci.getRxbuf();
 
-    //TODO: this should check m_flags: if RESTART flag is present
+    //TODO: this should check m_flags: if RESTART flag is present, we
+    //should not send stop condition
     if (m_pos == m_len){
 
       //when we receive the last byte, wait until STP condition is
@@ -329,7 +325,6 @@ implementation {
       }
 
       //disable tx interrupt, we're DONE 
-      //TODO: other interrupts?
       call Usci.setIe(call Usci.getIe() & ~TXIE_MASK );
       /* fail gracefully */      
       if (counter > 0x01){
@@ -339,8 +334,6 @@ implementation {
       }
     } else{
       //send the next char
-    //It appears that this is happening during the slave read, which
-    //it shouldn't
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
     }
   }
@@ -349,7 +342,6 @@ implementation {
 
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
-    //TODO: check for current client/ownership
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextWrite();
@@ -361,7 +353,6 @@ implementation {
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
     uint16_t nackTimeout = 0xffff;
-    //TODO: check for current client/ownership
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
@@ -376,9 +367,9 @@ implementation {
         }
         //should maybe signal to indicate whether the nack made it or
         //not.
-        //TODO: reset?
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
-      }else{
+        //reset it.
+        slaveIdle();
       }
     }
   }
@@ -387,8 +378,6 @@ implementation {
   {
     uint8_t counter = 0xFF;
     if (call Usci.getCtl0() & UCMST){
-      //TODO: check for current client/ownership
-      //TODO: replace with module-independent calls
       /* no acknowledgement */
       if (call Usci.getStat() & UCNACKIFG) {
         //This occurs during write and read when no ack is received.
@@ -401,6 +390,8 @@ implementation {
         }
         call Usci.enterResetMode_();
         call Usci.leaveResetMode_();
+        //back to slave idle mode
+        slaveIdle();
   
         //signal appropriate event depending on whether we were
         //transmitting or receiving
@@ -434,7 +425,7 @@ implementation {
         //    removed. 
         call Usci.enterResetMode_();
         call Usci.leaveResetMode_();
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, UCB0I2CSA, m_len, m_buf );
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf );
       }
       /* STOP condition */
       else if (call Usci.getStat() & UCSTPIFG) 
@@ -493,41 +484,6 @@ implementation {
     }
   }
 
-//  command error_t I2CSlave.enableSlave[uint8_t client]()
-//  {
-//    call Usci.enterResetMode_();
-//    call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
-//    call Usci.leaveResetMode_();
-//
-//    call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
-//    call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-//
-//    if (m_ownaddress == 0x0000){
-//      //if we haven't set an address, then try to get it from the
-//      //configuration.
-//      m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
-//      //TODO: respect GCEN
-//      
-//      call UsciB.setI2coa(UCGCEN | m_ownaddress);
-//      return SUCCESS;
-//    }
-//    else{
-//      return FAIL;
-//    }
-//  }
-//
-//
-//  command error_t I2CSlave.disableSlave[uint8_t client]()
-//  {
-//    //TODO: check ownership
-//    call Usci.enterResetMode_();
-//    //go back to being a master
-//    call Usci.setCtl0(call Usci.getCtl0() | UCMST);
-//    call Usci.leaveResetMode_();
-//    //resetUCB0();
-//    return SUCCESS;
-//  }
-//  
 
   default async event error_t I2CSlave.slaveReceive[uint8_t client](uint8_t data) { return FAIL; }
   default async event uint8_t I2CSlave.slaveTransmit[uint8_t client]() { return 0x00; }
