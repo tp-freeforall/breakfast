@@ -79,7 +79,7 @@ module TestP{
   void setState(uint8_t s){
     atomic{
       state = s;
-      //P6OUT = state;
+      P6OUT = state;
     }
   }
 
@@ -286,7 +286,7 @@ module TestP{
   }
 
   const msp430_usci_config_t i2c_cfg = {
-    ctl0: UCSYNC | UCMODE_3| UCMST,
+    ctl0: UCSYNC | UCMODE_3,
     ctl1: UCSSEL_2 | UCTR,
     br0:  0x08,
     br1:  0x00,

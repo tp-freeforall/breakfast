@@ -72,7 +72,7 @@ implementation {
   norace i2c_flags_t m_flags;
   //TODO: this maybe should be just part of config?
   norace uint16_t m_ownaddress = 0x0000;
-  
+  void showRegisters(); 
   void nextRead();
   void nextWrite();
   void signalDone( error_t error );
@@ -97,8 +97,9 @@ implementation {
     //i2c-specific config
     call UsciB.setI2coa(config->i2coa);
     call Usci.leaveResetMode_();
-        
-    //No interrupts enabled when in master mode/idle
+
+    //enable slave-start interrupt
+    call UsciB.setI2cie(UCSTTIE);
     return SUCCESS;
   }
 
@@ -240,32 +241,6 @@ implementation {
     }
   }
   
-  void showRegisters(){
-    atomic{
-      P6OUT = 0x00;
-      P6OUT = 0xff;
-      P6OUT = UCB0CTL0;
-      P6OUT = 0xff;
-      P6OUT = UCB0CTL1;
-      P6OUT = 0xff;
-      P6OUT = UCB0BR0;
-      P6OUT = 0xff;
-      P6OUT = UCB0BR1;
-      P6OUT = 0xff;
-      P6OUT = UCB0I2CIE;
-      P6OUT = 0xff;
-      P6OUT = UCB0STAT;
-      P6OUT = 0xff;
-      P6OUT = UCB0I2COA;
-      P6OUT = 0xff;
-      P6OUT = UCB0I2CSA;
-      P6OUT = 0xff;
-      P6OUT = IE2;
-      P6OUT = 0xff;
-      P6OUT = 0x00;
-    }
-  }
-
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
@@ -391,7 +366,8 @@ implementation {
         //not.
         //TODO: reset?
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
-      } 
+      }else{
+      }
     }
   }
   
@@ -428,7 +404,7 @@ implementation {
     } else {
       //slave-specific
       /* arbitration lost (we USED TO be master)*/
-      if (UCB0STAT & UCALIFG) 
+      if (call Usci.getStat() & UCALIFG) 
       {
         //- determine if we were transmitting or receiving
         //- signal writeDone/readDone as appropriate
@@ -460,6 +436,8 @@ implementation {
       {
         /* disable START interrupt, enable STOP interrupt */
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
+        //enable RX/TX interrupts
+        call Usci.setIe(RXIE_MASK | TXIE_MASK);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]();
       }
     }
@@ -540,6 +518,36 @@ implementation {
 
   default async event void I2CSlave.slaveStart[uint8_t client]() { ; }
   default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
+
+  void showRegisters(){
+    atomic{
+      P6OUT = 0x00;
+      P6OUT = 0xff;
+      P6OUT = UCB0CTL0;
+      P6OUT = 0xff;
+      P6OUT = UCB0CTL1;
+      P6OUT = 0xff;
+      P6OUT = UCB0BR0;
+      P6OUT = 0xff;
+      P6OUT = UCB0BR1;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2CIE;
+      P6OUT = 0xff;
+      P6OUT = UCB0STAT;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2COA >> 8;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2COA & 0xff;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2CSA >> 8;
+      P6OUT = 0xff;
+      P6OUT = UCB0I2CSA & 0xff;
+      P6OUT = 0xff;
+      P6OUT = IE2;
+      P6OUT = 0xff;
+      P6OUT = 0x00;
+    }
+  }
 
 
 }
