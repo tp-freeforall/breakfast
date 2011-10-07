@@ -61,14 +61,17 @@ generic module Msp430UsciI2CP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIF
 }
 
 implementation {
-  
-  enum {
-    TIMEOUT = 64,
+
+  enum{
+    SLAVE = 0,
+    MASTER_READ = 1,
+    MASTER_WRITE = 2,
   };
-  
+
   norace uint8_t* m_buf;
   norace uint8_t m_len;
   norace uint8_t m_pos;
+  norace uint8_t m_action;
   norace i2c_flags_t m_flags;
   void showRegisters(); 
   void nextRead();
@@ -102,12 +105,15 @@ implementation {
   }
 
   error_t slaveIdle(){
+    //only reset if we are master: if we are already slave we don't
+    //want to clear any state flags by accident.
     if (call Usci.getCtl0() & UCMST){
       call Usci.enterResetMode_();
       call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
       call Usci.leaveResetMode_();
     }
     call UsciB.setI2cie(UCSTTIE);
+    m_action = SLAVE;
     return SUCCESS;
   }
 
@@ -140,6 +146,7 @@ implementation {
     m_len = len;
     m_flags = flags;
     m_pos = 0;
+    m_action = MASTER_READ;
 
 
     /* check if this is a new connection or a continuation */
@@ -256,6 +263,7 @@ implementation {
     m_len = len;
     m_flags = flags;
     m_pos = 0;
+    m_action = MASTER_WRITE;
 
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
@@ -322,6 +330,8 @@ implementation {
         //STOPping and just finished last send, so we should go back
         //to slave mode.
         slaveIdle();
+      }else {
+        //TODO: test restart
       }
 
       //disable tx interrupt, we're DONE 
@@ -409,23 +419,19 @@ implementation {
       /* arbitration lost (we USED TO be master)*/
       if (call Usci.getStat() & UCALIFG) 
       {
-        //- determine if we were transmitting or receiving
-        //- signal writeDone/readDone as appropriate
-        //- clear UCALIFG
-        //- set UCSTTIE, TXIE/RXIE: don't know whether or how we will
-        //  be addressed
-        //- if we are addressed, we'll get a slaveStart, followed by
-        //  the relevant slaveTransmit/slaveReceive events
-        //- if we are not addressed, then what do we do? 
-        //  - We're not master, and we won't get slaveStart. Do we
-        //    need to somehow signal I2CPacket that this happened?
-        //  - Should we say "by default, you are a slave" and only
-        //    enter master mode when we initiate a write/read? In
-        //    which case, enableSlave and disableSlave should be
-        //    removed. 
-        call Usci.enterResetMode_();
-        call Usci.leaveResetMode_();
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf );
+        uint8_t lastAction = m_action;
+        slaveIdle();
+        //clear AL flag
+        call Usci.setStat(call Usci.getStat() & ~(UCALIFG));
+        //TODO: more descriptive error? I guess EBUSY is fair.
+        if(lastAction == MASTER_WRITE){
+          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf );
+        } else if(lastAction == MASTER_READ){
+          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf);
+        }
+        //once this returns, we should get another interrupt for STT
+        //if we are addressed. Otherwise, we're just chillin' in idle
+        //slave mode as per usual.
       }
       /* STOP condition */
       else if (call Usci.getStat() & UCSTPIFG) 
