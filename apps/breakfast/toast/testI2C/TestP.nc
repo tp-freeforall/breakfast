@@ -31,6 +31,8 @@ module TestP{
   uint8_t slaveAddrMsg[] = "Slave:  \n\r";
   uint8_t gcWritingMsg[] = "WRITING TO GC\n\r";//15
   uint8_t nl[] = "\n\r";                   //2
+  uint8_t writeArbitrationLostMsg[] = "WRITE ARBITRATION LOST\n\r";//24
+  uint8_t readArbitrationLostMsg[] = "READ ARBITRATION LOST\n\r";//23
 
   uint8_t rxByte;
   uint8_t state;
@@ -73,7 +75,9 @@ module TestP{
     S_SLAVE_STOP_TRANSMIT = 0x15,
     S_SLAVE_TRANSMIT = 0x16,
     S_GC_WRITE_START = 0x17,
-    S_DISABLE_GC_START = 0x12,
+    S_DISABLE_GC_START = 0x18,
+    S_READ_ARBITRATION_LOST = 0x19,
+    S_WRITE_ARBITRATION_LOST = 0x1a,
   };
 
   void setState(uint8_t s){
@@ -276,7 +280,10 @@ module TestP{
     if(error == SUCCESS){
       setState(S_WRITEDONE);
       call UartStream.send(writeDoneMsg, 12);
-    } else{
+    } else if(error == EBUSY){
+      setState(S_WRITE_ARBITRATION_LOST);
+      call UartStream.send(writeArbitrationLostMsg, 24);
+    }else{
       setState(S_WRITEDONE_FAIL);
       call UartStream.send(writeDoneFailMsg, 17);
     }
@@ -315,7 +322,10 @@ module TestP{
 //        P6OUT = 0x00;
 //      }
       call UartStream.send(data, length);
-    }else{
+    }else if(error == EBUSY){
+      setState(S_READ_ARBITRATION_LOST);
+      call UartStream.send(readArbitrationLostMsg, 23);
+    }else {
       setState(S_READDONE_FAIL);
       call UartStream.send(readDoneFailMsg, 16);
     }
