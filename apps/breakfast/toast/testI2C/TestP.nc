@@ -79,7 +79,7 @@ module TestP{
   void setState(uint8_t s){
     atomic{
       state = s;
-      P6OUT = state;
+      //P6OUT = state;
     }
   }
 

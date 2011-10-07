@@ -437,7 +437,7 @@ implementation {
         /* disable START interrupt, enable STOP interrupt */
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
         //enable RX/TX interrupts
-        call Usci.setIe(RXIE_MASK | TXIE_MASK);
+        call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]();
       }
     }
@@ -460,10 +460,14 @@ implementation {
   }
 
   command error_t I2CSlave.enableGeneralCall[uint8_t client](){
+    pdbg(1);
+    showRegisters();
     if (UCGCEN & (call UsciB.getI2coa())){
       return EALREADY;
     }else {
       call UsciB.setI2coa(UCGCEN | (call UsciB.getI2coa()));
+      pdbg(2);
+      showRegisters();
       return SUCCESS;
     }
   }
