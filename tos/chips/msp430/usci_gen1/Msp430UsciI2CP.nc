@@ -145,6 +145,9 @@ implementation {
       //the stop condition, which might still be kicking around the
       //RXBUF)
       garbage = call Usci.getRxbuf();
+      call Usci.enterResetMode_();
+      call Usci.setCtl0(call Usci.getCtl0() | UCMST);
+      call Usci.leaveResetMode_();
       // set slave address 
       call UsciB.setI2csa(addr);
       //clear TR bit, set start condition
@@ -266,6 +269,11 @@ implementation {
       // but the second one began with the UCSTPIFG set, and the first
       // character was dropped. I have no explanation for why this
       // would be the case.
+
+      //need to enter master mode
+      call Usci.enterResetMode_();
+      call Usci.setCtl0(call Usci.getCtl0() | UCMST);
+      call Usci.leaveResetMode_();
 
       // set slave address 
       call UsciB.setI2csa(addr);
