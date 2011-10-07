@@ -38,6 +38,7 @@ module TestP{
   uint8_t rxByte;
   uint8_t state;
   bool writeBack = FALSE;
+  bool rxReportPending = FALSE;
 
   uint8_t i2c_index;
 
@@ -126,12 +127,13 @@ module TestP{
   }
 
   event void Timer.fired(){
-    if(checkState(S_IDLE)){
+    if(rxReportPending){
+      rxReportPending = FALSE;
+      call UartStream.send(rxPkt.msg.data, sizeof(rxPkt));
+    }else if(checkState(S_IDLE)){
       call UartStream.send(idleMsg, 1);
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
-    }else if(checkState(S_SLAVE_STOP_RECEIVE)){
-      call UartStream.send(rxPkt.msg.data, sizeof(rxPkt));
     }else if(checkState(S_SLAVE_STOP_TRANSMIT)){
       call UartStream.send(slaveTransmitDoneMsg, 21);
     }else if(checkState(S_RESETTING)){
@@ -355,6 +357,7 @@ module TestP{
   async event void I2CSlave.slaveStop(){
     post shortTimer();
     if (checkState(S_SLAVE_RECEIVE)){
+      rxReportPending = TRUE;
       if(writeBack){
         //echo it
         memcpy(txPkt.msg.data, rxPkt.msg.data, 4);
