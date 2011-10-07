@@ -90,14 +90,12 @@ implementation {
     }
     //basic config (leave in reset)
     call Usci.configure(config, TRUE);
-
     //direction is don't-care in datasheet
     call SCL.selectModuleFunc();
     call SDA.selectModuleFunc();
 
     //i2c-specific config
-    //TODO: GCEN needs to be respected
-    call UsciB.setI2coa(UCGCEN | config->i2coa);
+    call UsciB.setI2coa(config->i2coa);
     call Usci.leaveResetMode_();
         
     //No interrupts enabled when in master mode/idle
@@ -475,52 +473,67 @@ implementation {
     return NULL;
   }
 
-/***** Slave-mode functions ***/
-  //part of config?
+  /***** Slave-mode functions ***/
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
-    m_ownaddress = addr;
-    //TODO: respect GCEN
-    call UsciB.setI2coa(UCGCEN | m_ownaddress);
-    
+    //retain UCGCEN bit
+    call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
     return SUCCESS;
   }
 
-  command error_t I2CSlave.enableSlave[uint8_t client]()
-  {
-    call Usci.enterResetMode_();
-    call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
-    call Usci.leaveResetMode_();
-
-    call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
-    call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-
-    if (m_ownaddress == 0x0000){
-      //if we haven't set an address, then try to get it from the
-      //configuration.
-      m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
-      //TODO: respect GCEN
-      
-      call UsciB.setI2coa(UCGCEN | m_ownaddress);
+  command error_t I2CSlave.enableGeneralCall[uint8_t client](){
+    if (UCGCEN & (call UsciB.getI2coa())){
+      return EALREADY;
+    }else {
+      call UsciB.setI2coa(UCGCEN | (call UsciB.getI2coa()));
       return SUCCESS;
     }
-    else{
-      return FAIL;
+  }
+
+  command error_t I2CSlave.disableGeneralCall[uint8_t client](){
+    if (UCGCEN & ~(call UsciB.getI2coa())){
+      return EALREADY;
+    }else{
+      call UsciB.setI2coa(~UCGCEN & (call UsciB.getI2coa()));
+      return SUCCESS;
     }
   }
 
-
-  command error_t I2CSlave.disableSlave[uint8_t client]()
-  {
-    //TODO: check ownership
-    call Usci.enterResetMode_();
-    //go back to being a master
-    call Usci.setCtl0(call Usci.getCtl0() | UCMST);
-    call Usci.leaveResetMode_();
-    //resetUCB0();
-    return SUCCESS;
-  }
-  
+//  command error_t I2CSlave.enableSlave[uint8_t client]()
+//  {
+//    call Usci.enterResetMode_();
+//    call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
+//    call Usci.leaveResetMode_();
+//
+//    call UsciB.setI2cie(call UsciB.getI2cie() | UCSTTIE);
+//    call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
+//
+//    if (m_ownaddress == 0x0000){
+//      //if we haven't set an address, then try to get it from the
+//      //configuration.
+//      m_ownaddress = (call Msp430UsciConfigure.getConfiguration[client]())-> i2coa;
+//      //TODO: respect GCEN
+//      
+//      call UsciB.setI2coa(UCGCEN | m_ownaddress);
+//      return SUCCESS;
+//    }
+//    else{
+//      return FAIL;
+//    }
+//  }
+//
+//
+//  command error_t I2CSlave.disableSlave[uint8_t client]()
+//  {
+//    //TODO: check ownership
+//    call Usci.enterResetMode_();
+//    //go back to being a master
+//    call Usci.setCtl0(call Usci.getCtl0() | UCMST);
+//    call Usci.leaveResetMode_();
+//    //resetUCB0();
+//    return SUCCESS;
+//  }
+//  
 
   default async event error_t I2CSlave.slaveReceive[uint8_t client](uint8_t data) { return FAIL; }
   default async event uint8_t I2CSlave.slaveTransmit[uint8_t client]() { return 0x00; }

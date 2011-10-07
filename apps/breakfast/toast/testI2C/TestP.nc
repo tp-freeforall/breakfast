@@ -22,8 +22,10 @@ module TestP{
   uint8_t readFailMsg[] = "READ FAIL\n\r";    //11
   uint8_t readDoneFailMsg[] = "READ DONE FAIL\n\r";    //16
   uint8_t resourceGrantedMsg[] = "RESOURCE GRANTED\n\r"; //18
-  uint8_t enableSlaveMsg[] = "SLAVE ENABLE\n\r";   //14
-  uint8_t enableSlaveFailMsg[] = "SLAVE ENABLE FAIL\n\r";//19
+  uint8_t disableGCMsg[] = "GC DISABLE\n\r";   //12
+  uint8_t disableGCFailMsg[] = "GC DISABLE FAIL\n\r";//17
+  uint8_t enableGCMsg[] = "GC ENABLE\n\r";   //11
+  uint8_t enableGCFailMsg[] = "GC ENABLE FAIL\n\r";//16
   uint8_t slaveTransmitDoneMsg[] = "SLAVE TRANSMIT DONE\n\r"; //21
   uint8_t myAddrMsg[] = "Me:  \n\r";
   uint8_t slaveAddrMsg[] = "Slave:  \n\r";
@@ -64,13 +66,14 @@ module TestP{
     S_READDONE = 0x0e,
     S_READDONE_FAIL = 0x0f,
     S_READ_FAIL = 0x10,
-    S_ENABLE_SLAVE_START = 0x11,
+    S_ENABLE_GC_START = 0x11,
     S_SLAVE_RECEIVE = 0x12,
     S_SLAVE_START = 0x13,
     S_SLAVE_STOP_RECEIVE = 0x14,
     S_SLAVE_STOP_TRANSMIT = 0x15,
     S_SLAVE_TRANSMIT = 0x16,
     S_GC_WRITE_START = 0x17,
+    S_DISABLE_GC_START = 0x12,
   };
 
   void setState(uint8_t s){
@@ -130,12 +133,13 @@ module TestP{
   task void doWrite(){
     uint16_t destAddr;
 
-    if (checkState(S_GC_WRITE_START)){
-      destAddr = 0x0000;
-    } else {
-      destAddr = slaveAddr;
+    atomic{
+      if (checkState(S_GC_WRITE_START)){
+        destAddr = 0x0000;
+      } else {
+        destAddr = slaveAddr;
+      }
     }
-
     if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, destAddr, cmd_len, cmd)){
       setState(S_WRITING);
     }else{
@@ -147,8 +151,10 @@ module TestP{
 
 
   task void doRead(){
+    uint16_t destAddr;
+    atomic destAddr = slaveAddr;
     if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
-          slaveAddr, cmd_len, i2c_buf)){
+          destAddr, cmd_len, i2c_buf)){
       setState(S_READING);
     } else{
       setState(S_READ_FAIL);
@@ -165,11 +171,20 @@ module TestP{
     }
   }
   
-  task void enableSlave(){
-    if(SUCCESS == call I2CSlave.enableSlave()){
-      call UartStream.send(enableSlaveMsg, 14);
+  task void disableGC(){
+    if(SUCCESS == call I2CSlave.disableGeneralCall()){
+      call UartStream.send(disableGCMsg, 12);
     } else {
-      call UartStream.send(enableSlaveFailMsg, 19 );
+      call UartStream.send(disableGCFailMsg, 17 );
+    }
+    setState(S_IDLE);
+  }
+
+  task void enableGC(){
+    if(SUCCESS == call I2CSlave.enableGeneralCall()){
+      call UartStream.send(enableGCMsg, 11);
+    } else {
+      call UartStream.send(enableGCFailMsg, 16 );
     }
     setState(S_IDLE);
   }
@@ -235,8 +250,12 @@ module TestP{
         call UartStream.send(slaveAddrMsg, 10);
         break;
       case 'e':
-        setState(S_ENABLE_SLAVE_START);
-        post enableSlave();
+        setState(S_ENABLE_GC_START);
+        post enableGC();
+        break;
+      case 'd':
+        setState(S_DISABLE_GC_START);
+        post disableGC();
         break;
       case 'g':
         setState(S_GC_WRITE_START);
