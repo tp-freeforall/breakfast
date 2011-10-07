@@ -39,10 +39,7 @@ module TestP{
   uint8_t state;
   bool writeBack = FALSE;
 
-  uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
-  uint8_t i2c_len = 6;
   uint8_t i2c_index;
-  uint8_t bufLen;
 
   // 10010 00
   uint16_t minAddr = 'A';
@@ -117,6 +114,10 @@ module TestP{
       P6SEL = 0x00;
       P6OUT = 0x00;
       //P6DIR = 0x00;
+      txPkt.msg.data[0] = 't';
+      txPkt.msg.data[1] = 'x';
+      txPkt.msg.data[2] = '\n';
+      txPkt.msg.data[3] = '\r';
     }
     if (call StdControl.start() == SUCCESS){
       setState(S_INIT);
@@ -130,10 +131,7 @@ module TestP{
     }else if(checkState(S_INIT)){
       call UartStream.send(welcomeMsg, 12);
     }else if(checkState(S_SLAVE_STOP_RECEIVE)){
-      atomic{
-        bufLen = i2c_index;
-      }
-      call UartStream.send(i2c_buf, bufLen);
+      call UartStream.send(rxPkt.msg.data, sizeof(rxPkt));
     }else if(checkState(S_SLAVE_STOP_TRANSMIT)){
       call UartStream.send(slaveTransmitDoneMsg, 21);
     }else if(checkState(S_RESETTING)){
@@ -247,6 +245,7 @@ module TestP{
         break;
       case 'w':
         setState(S_WRITE_START);
+        txPkt.msg.srcAddr = myAddr;
         call UartStream.send(writingMsg, 9);
         break;
       case 'r':
@@ -255,7 +254,6 @@ module TestP{
         break;
       case 'm':
         myAddr++;
-        txPkt.msg.srcAddr=myAddr;
         call I2CSlave.setOwnAddress(myAddr);
         myAddrMsg[4] = myAddr;
         call UartStream.send(myAddrMsg, 7);
@@ -274,6 +272,7 @@ module TestP{
         post disableGC();
         break;
       case 'g':
+        txPkt.msg.srcAddr = myAddr;
         setState(S_GC_WRITE_START);
         call UartStream.send(gcWritingMsg, 15);
         break;
@@ -349,6 +348,7 @@ module TestP{
 
   async event void I2CSlave.slaveStart(){
     i2c_index = 0;
+    txPkt.msg.srcAddr = myAddr;
     setState(S_SLAVE_START);
   }
 
@@ -357,7 +357,7 @@ module TestP{
     if (checkState(S_SLAVE_RECEIVE)){
       if(writeBack){
         //echo it
-        memcpy(txPkt.data, rxPkt.data, 4);
+        memcpy(txPkt.msg.data, rxPkt.msg.data, 4);
         call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
       }
       setState(S_SLAVE_STOP_RECEIVE);
