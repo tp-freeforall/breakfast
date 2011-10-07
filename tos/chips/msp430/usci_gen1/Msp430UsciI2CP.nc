@@ -103,6 +103,15 @@ implementation {
     return SUCCESS;
   }
 
+  error_t slaveIdle(){
+    if (call Usci.getCtl0() & UCMST){
+      call Usci.enterResetMode_();
+      call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
+      call Usci.leaveResetMode_();
+    }
+    call UsciB.setI2cie(UCSTTIE);
+  }
+
   error_t unconfigure_(){
     
     //TODO: wait until idle
@@ -234,6 +243,9 @@ implementation {
       while( (call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
         counter --;
       }
+      //switch back to slave mode, we're done
+      slaveIdle();
+
       //disable the rx interrupt 
       call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
       if (counter > 0x01){
@@ -318,10 +330,9 @@ implementation {
         while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
           counter--;
         }
-        //TODO: when write is done, should we put module back into
-        //  reset?  I think not, the application should release the
-        //  resource and then it will deconfigure when it's not in
-        //  use.
+        //STOPping and just finished last send, so we should go back
+        //to slave mode.
+        slaveIdle();
       }
 
       //disable tx interrupt, we're DONE 
