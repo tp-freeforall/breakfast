@@ -33,23 +33,35 @@ module TestP{
   uint8_t nl[] = "\n\r";                   //2
   uint8_t writeArbitrationLostMsg[] = "WRITE ARBITRATION LOST\n\r";//24
   uint8_t readArbitrationLostMsg[] = "READ ARBITRATION LOST\n\r";//23
+  uint8_t arbitrationTestMsg[] = "ARBITRATION TEST: x\n\r";//21
 
   uint8_t rxByte;
   uint8_t state;
+  bool writeBack = FALSE;
 
   uint8_t i2c_buf[] = {0xff,0xff,0xff,0xff, 0xff, 0xff};
   uint8_t i2c_len = 6;
   uint8_t i2c_index;
   uint8_t bufLen;
 
-  uint8_t cmd[] = "doug";
-  uint8_t cmd_len = 4;
-
   // 10010 00
   uint16_t minAddr = 'A';
   uint16_t myAddr;
   uint16_t slaveAddr; 
 
+  typedef struct {
+    uint16_t srcAddr;
+    uint8_t  data[4];
+  } i2c_message_t;
+
+  typedef union {
+    i2c_message_t msg;
+    uint8_t data[0];
+  } i2c_packet_t;
+
+  i2c_packet_t txPkt;
+  i2c_packet_t rxPkt;
+  
   enum{
     S_INIT = 0x01,
     S_IDLE = 0x00,
@@ -144,7 +156,7 @@ module TestP{
         destAddr = slaveAddr;
       }
     }
-    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, destAddr, cmd_len, cmd)){
+    if( SUCCESS == call I2CPacket.write(I2C_START | I2C_STOP, destAddr, sizeof(txPkt), (uint8_t*)&txPkt)){
       setState(S_WRITING);
     }else{
       setState(S_WRITE_FAIL);
@@ -157,8 +169,7 @@ module TestP{
   task void doRead(){
     uint16_t destAddr;
     atomic destAddr = slaveAddr;
-    if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, 
-          destAddr, cmd_len, i2c_buf)){
+    if (SUCCESS == call I2CPacket.read(I2C_START|I2C_STOP, destAddr, sizeof(rxPkt), rxPkt.data)){
       setState(S_READING);
     } else{
       setState(S_READ_FAIL);
@@ -203,7 +214,7 @@ module TestP{
     } else if (checkState(S_READ_START)){
       post doRead();
     } else if (checkState(S_READDONE)){
-      memset(i2c_buf, 0xff, i2c_len);
+      memset(rxPkt.data, 0xff, sizeof(rxPkt));
       setState(S_IDLE);
     } else if(checkState(S_GC_WRITE_START)){
       post doWrite();
@@ -244,6 +255,7 @@ module TestP{
         break;
       case 'm':
         myAddr++;
+        txPkt.msg.srcAddr=myAddr;
         call I2CSlave.setOwnAddress(myAddr);
         myAddrMsg[4] = myAddr;
         call UartStream.send(myAddrMsg, 7);
@@ -264,6 +276,11 @@ module TestP{
       case 'g':
         setState(S_GC_WRITE_START);
         call UartStream.send(gcWritingMsg, 15);
+        break;
+      case 'a':
+        writeBack= !writeBack;
+        arbitrationTestMsg[18] = (writeBack)?'y':'n';
+        call UartStream.send(arbitrationTestMsg, 21);
         break;
       default:
         setState(S_ECHOING);
@@ -294,7 +311,7 @@ module TestP{
 
   const msp430_usci_config_t i2c_cfg = {
     ctl0: UCSYNC | UCMODE_3,
-    ctl1: UCSSEL_2 | UCTR,
+    ctl1: UCSSEL_2,
     br0:  0x08,
     br1:  0x00,
     mctl: 0,
@@ -309,18 +326,6 @@ module TestP{
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
     if (error == SUCCESS){
       setState(S_READDONE);
-//      atomic{
-//        uint8_t i;
-//        P6OUT = 0xff;
-//        P6OUT = 0x00;
-//        P6OUT = 0xff;
-//        P6OUT = 0x00;
-//        
-//        for ( i = 0; i < length; i++){
-//          P6OUT = data[i];
-//        }
-//        P6OUT = 0x00;
-//      }
       call UartStream.send(data, length);
     }else if(error == EBUSY){
       setState(S_READ_ARBITRATION_LOST);
@@ -331,15 +336,15 @@ module TestP{
     }
   }
   
-  async event error_t I2CSlave.slaveReceive(uint8_t data){
+  async event error_t I2CSlave.slaveReceive(uint8_t b){
     setState(S_SLAVE_RECEIVE);
-    i2c_buf[i2c_index++] = data;
+    rxPkt.data[i2c_index++] = b;
     return SUCCESS;
   }
 
   async event uint8_t I2CSlave.slaveTransmit(){
     setState(S_SLAVE_TRANSMIT);
-    return i2c_buf[i2c_index++];
+    return txPkt.data[i2c_index++];
   }
 
   async event void I2CSlave.slaveStart(){
@@ -350,6 +355,11 @@ module TestP{
   async event void I2CSlave.slaveStop(){
     post shortTimer();
     if (checkState(S_SLAVE_RECEIVE)){
+      if(writeBack){
+        //echo it
+        memcpy(txPkt.data, rxPkt.data, 4);
+        call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
+      }
       setState(S_SLAVE_STOP_RECEIVE);
     } else if(checkState(S_SLAVE_TRANSMIT)){
       setState(S_SLAVE_STOP_TRANSMIT);
