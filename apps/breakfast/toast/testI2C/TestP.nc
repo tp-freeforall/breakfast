@@ -10,6 +10,9 @@ module TestP{
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface I2CSlave;
   uses interface Resource as I2CResource;
+
+  uses interface GpioInterrupt as OWInterrupt;
+  uses interface GeneralIO as OWIO;
 } implementation {
   uint8_t idleMsg[]    = ".";              //1
   uint8_t resetMsg[]   = "RESET\n\r";      //7
@@ -120,6 +123,8 @@ module TestP{
       txPkt.msg.data[2] = '\n';
       txPkt.msg.data[3] = '\r';
     }
+    call OWIO.makeOutput();
+    call OWIO.clr();
     if (call StdControl.start() == SUCCESS){
       setState(S_INIT);
       call Timer.startOneShot(256);
@@ -280,8 +285,21 @@ module TestP{
         break;
       case 'a':
         writeBack= !writeBack;
+        if (writeBack){
+          call OWIO.makeInput();
+          call OWInterrupt.enableRisingEdge();
+        }else {
+          call OWIO.makeOutput();
+          call OWInterrupt.disable();
+        }
         arbitrationTestMsg[18] = (writeBack)?'y':'n';
         call UartStream.send(arbitrationTestMsg, 21);
+        break;
+      case 't':
+        call OWIO.makeOutput();
+        call OWIO.clr();
+        call OWIO.set();
+        call OWIO.clr();
         break;
       default:
         setState(S_ECHOING);
@@ -368,4 +386,13 @@ module TestP{
       setState(S_SLAVE_STOP_TRANSMIT);
     }
   }
+  
+  task void tryWriteAL(){
+    call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
+  }
+
+  async event void OWInterrupt.fired(){
+    post tryWriteAL();
+  }
+
 }

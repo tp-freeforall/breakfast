@@ -17,4 +17,15 @@ configuration TestAppC{
   TestP.UartStream -> PlatformSerialC;
   TestP.UartByte -> PlatformSerialC;
   TestP.StdControl -> PlatformSerialC;
+
+  components new Msp430InterruptC();
+  components HplMsp430InterruptC;
+  Msp430InterruptC.HplInterrupt -> HplMsp430InterruptC.Port12;
+
+  components new Msp430GpioC();
+  components HplMsp430GeneralIOC;
+  Msp430GpioC.HplGeneralIO -> HplMsp430GeneralIOC.Port12;
+
+  TestP.OWIO -> Msp430GpioC;
+  TestP.OWInterrupt -> Msp430InterruptC;
 }
