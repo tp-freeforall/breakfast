@@ -52,7 +52,7 @@ module TestP{
 
   typedef struct {
     uint16_t srcAddr;
-    uint8_t  data[4];
+    uint8_t  data[3];
   } i2c_message_t;
 
   typedef union {
@@ -118,10 +118,9 @@ module TestP{
       P6SEL = 0x00;
       P6OUT = 0x00;
       //P6DIR = 0x00;
-      txPkt.msg.data[0] = 't';
-      txPkt.msg.data[1] = 'x';
-      txPkt.msg.data[2] = '\n';
-      txPkt.msg.data[3] = '\r';
+      txPkt.msg.data[0] = 'a';
+      txPkt.msg.data[1] = '\n';
+      txPkt.msg.data[2] = '\r';
     }
     call OWIO.makeOutput();
     call OWIO.clr();
@@ -134,7 +133,7 @@ module TestP{
   event void Timer.fired(){
     if(rxReportPending){
       rxReportPending = FALSE;
-      call UartStream.send(rxPkt.msg.data, sizeof(rxPkt));
+      call UartStream.send(rxPkt.msg.data, 3);
     }else if(checkState(S_IDLE)){
       call UartStream.send(idleMsg, 1);
     }else if(checkState(S_INIT)){
@@ -284,6 +283,10 @@ module TestP{
         setState(S_GC_WRITE_START);
         call UartStream.send(gcWritingMsg, 15);
         break;
+      case 'c':
+        txPkt.msg.data[0]++;
+        call UartStream.send(txPkt.msg.data, 3);
+        break;
       case 'a':
         writeBack= !writeBack;
         if (writeBack){
@@ -377,11 +380,6 @@ module TestP{
     post shortTimer();
     if (checkState(S_SLAVE_RECEIVE)){
       rxReportPending = TRUE;
-//      if(writeBack){
-//        //echo it
-//        memcpy(txPkt.msg.data, rxPkt.msg.data, 4);
-//        call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
-//      }
       setState(S_SLAVE_STOP_RECEIVE);
     } else if(checkState(S_SLAVE_TRANSMIT)){
       setState(S_SLAVE_STOP_TRANSMIT);
