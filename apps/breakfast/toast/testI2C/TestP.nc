@@ -263,6 +263,7 @@ module TestP{
         myAddr++;
         call I2CSlave.setOwnAddress(myAddr);
         myAddrMsg[4] = myAddr;
+        txPkt.msg.srcAddr = myAddr;
         call UartStream.send(myAddrMsg, 7);
         break;
       case 's':
@@ -329,7 +330,7 @@ module TestP{
   }
 
   const msp430_usci_config_t i2c_cfg = {
-    ctl0: UCSYNC | UCMODE_3,
+    ctl0: UCSYNC | UCMODE_3 | UCMM,
     ctl1: UCSSEL_2,
     br0:  0x08,
     br1:  0x00,
@@ -376,11 +377,11 @@ module TestP{
     post shortTimer();
     if (checkState(S_SLAVE_RECEIVE)){
       rxReportPending = TRUE;
-      if(writeBack){
-        //echo it
-        memcpy(txPkt.msg.data, rxPkt.msg.data, 4);
-        call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
-      }
+//      if(writeBack){
+//        //echo it
+//        memcpy(txPkt.msg.data, rxPkt.msg.data, 4);
+//        call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
+//      }
       setState(S_SLAVE_STOP_RECEIVE);
     } else if(checkState(S_SLAVE_TRANSMIT)){
       setState(S_SLAVE_STOP_TRANSMIT);
@@ -388,7 +389,7 @@ module TestP{
   }
   
   task void tryWriteAL(){
-    call I2CPacket.write(I2C_START | I2C_STOP, rxPkt.msg.srcAddr, sizeof(txPkt), txPkt.data);
+    call I2CPacket.write(I2C_START | I2C_STOP, slaveAddr, sizeof(txPkt), txPkt.data);
   }
 
   async event void OWInterrupt.fired(){
