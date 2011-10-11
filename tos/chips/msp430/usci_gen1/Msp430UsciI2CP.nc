@@ -359,7 +359,12 @@ implementation {
       if(signal I2CSlave.slaveTransmitRequested[call ArbiterInfo.userId()]()){
         //disable TX interrupt in case the client needs to do some
         //out-of-interrupt-context work
-        call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+        //note that the flag will be clear in *almost all* cases if
+        //the slave serviced this request in the same context
+        //TODO: better tighten that up
+        if( call Usci.getIfg() & TXIFG_MASK){
+          call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+        }
       }else{
         //disable tx interrupt, send garbage + NACK
         call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
@@ -370,7 +375,7 @@ implementation {
     }
   }
 
-  async command void slaveTransmit[uint8_t clientId](uint8_t data){
+  async command void I2CSlave.slaveTransmit[uint8_t clientId](uint8_t data){
     //TODO: safety
     //write it, reenable interrupt
     call Usci.setTxbuf(data);
@@ -386,6 +391,10 @@ implementation {
     } else {
       if (signal I2CSlave.slaveReceiveRequested[call ArbiterInfo.userId()]()){
         //disable RX interrupt until client is ready
+        //TODO: slaveReceiveREquested should return an enum where the
+        //values indicate whether we're going to respond immediately
+        //(leave interrupt enabled), respond later (disable
+        //interrupt), or never respond (NACK/disable)
         call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
       } else {
         //send that nack, disable RX interrupt since we won't be

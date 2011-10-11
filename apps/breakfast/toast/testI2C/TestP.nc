@@ -359,7 +359,7 @@ module TestP{
     }
   }
   
-  async event error_t I2CSlave.slaveReceive(uint8_t b){
+  async event bool I2CSlave.slaveReceiveRequested(){
     setState(S_SLAVE_RECEIVE);
     rxPkt.data[i2c_index++] = b;
     return SUCCESS;
