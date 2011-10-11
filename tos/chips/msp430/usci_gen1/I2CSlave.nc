@@ -7,8 +7,7 @@ interface I2CSlave{
 
   //should these return error so we can say "no, I'm not going to be a
   //slave right now"?
-  //TODO: pass bool to indicate whether it's for GC or direct
-  async event void slaveStart();
+  async event void slaveStart(bool isGeneralCall);
   //or maybe we should pass an error to slaveStop so that the top
   //level can know that it ended abnormally
   async event void slaveStop();

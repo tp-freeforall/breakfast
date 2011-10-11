@@ -30,7 +30,7 @@ for (split(/\n/, <<'EOText'
   %T/lib/timer
   %T/lib/util/keyvaluerecord
   %T/lib/serial
-  %T/lib/serialprint
+  %T/lib/serialprintf
 
 EOText
 )) {

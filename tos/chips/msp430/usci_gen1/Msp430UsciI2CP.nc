@@ -447,7 +447,7 @@ implementation {
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
         //enable RX/TX interrupts
         call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
-        signal I2CSlave.slaveStart[call ArbiterInfo.userId()]();
+        signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
       }
     }
   }
@@ -494,7 +494,7 @@ implementation {
   default async event error_t I2CSlave.slaveReceive[uint8_t client](uint8_t data) { return FAIL; }
   default async event uint8_t I2CSlave.slaveTransmit[uint8_t client]() { return 0x00; }
 
-  default async event void I2CSlave.slaveStart[uint8_t client]() { ; }
+  default async event void I2CSlave.slaveStart[uint8_t client](bool isGeneralCall) { ; }
   default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
 
   void showRegisters(){
