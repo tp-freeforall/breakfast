@@ -300,6 +300,21 @@ generic module Msp430UsciUartP (uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TX
     if (m_tx_buf) {
       return EBUSY;
     }
+//    //From x2xx impl: clear/disable tx interrupt
+//    call Usci.setIfg(call Usci.getIfg() & ~TXIFG_MASK);
+//    call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+//    call Usci.setTxbuf(byte);
+//    while(! (TXIFG_MASK & call Usci.getIfg())){
+//    }
+//    call Usci.setIfg(call Usci.getIfg() & ~TXIFG_MASK);
+//    call Usci.setIe(call Usci.getIe() | TXIE_MASK);
+
+//This works, but it's odd that we have to spin on UCBUSY. plus,
+//when this completes, we haven't sent yet.
+    //Not sure why this is necessary
+    while(call Usci.getStat() & UCBUSY){
+    }
+
     /* Wait for TXBUF to become available */
     while (! (TXIFG_MASK & call Usci.getIfg())) {
     }
