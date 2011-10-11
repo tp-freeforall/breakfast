@@ -356,10 +356,27 @@ implementation {
     if (call Usci.getCtl0() & UCMST){
       nextWrite();
     } else {
-      call Usci.setTxbuf(signal I2CSlave.slaveTransmit[call ArbiterInfo.userId()]());
+      if(signal I2CSlave.slaveTransmitRequested[call ArbiterInfo.userId()]()){
+        //disable TX interrupt in case the client needs to do some
+        //out-of-interrupt-context work
+        call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+      }else{
+        //disable tx interrupt, send garbage + NACK
+        call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXNACK);
+        call Usci.setTxbuf(0xff);
+        //we should get a state change interrupt some time after this.
+      }
     }
   }
-  
+
+  async command void slaveTransmit[uint8_t clientId](uint8_t data){
+    //TODO: safety
+    //write it, reenable interrupt
+    call Usci.setTxbuf(data);
+    call Usci.setIe(call Usci.getIe() | TXIE_MASK);
+  }
+
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
     uint16_t nackTimeout = 0xffff;
@@ -367,21 +384,24 @@ implementation {
     if (call Usci.getCtl0() & UCMST){
       nextRead();
     } else {
-      if( SUCCESS != signal I2CSlave.slaveReceive[call ArbiterInfo.userId()](call Usci.getRxbuf())){
-        //How to deal with this? set NACK? Is it not too late to send
-        //NACK if we just read from the buffer?
-        call Usci.setCtl1(call Usci.getCtl1()|UCTXNACK);
-        while ( nackTimeout > 1 && (call Usci.getCtl1() & UCTXNACK)){
-          nackTimeout --;
-          //wait until NACK is sent
-        }
-        //should maybe signal to indicate whether the nack made it or
-        //not.
-        signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
-        //reset it.
-        slaveIdle();
+      if (signal I2CSlave.slaveReceiveRequested[call ArbiterInfo.userId()]()){
+        //disable RX interrupt until client is ready
+        call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
+      } else {
+        //send that nack, disable RX interrupt since we won't be
+        //reading from the buffer.
+        call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
+        call Usci.setCtl1(call Usci.getCtl1() | UCTXNACK);
+        //we should get a state-change interrupt from the master at
+        //some point after this. 
       }
     }
+  }
+
+  async command uint8_t I2CSlave.slaveReceive[uint8_t client](){
+    //re-enable rx interrupt, read the byte
+    call Usci.setIe(call Usci.getIe() | RXIE_MASK);
+    return call Usci.getRxbuf();
   }
   
   async event void StateInterrupts.interrupted(uint8_t iv) 
