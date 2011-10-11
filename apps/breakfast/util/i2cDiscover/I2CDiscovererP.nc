@@ -1,10 +1,10 @@
 #include "I2CDiscoverable.h"
 //TODO: ten-bit addresses: should be parameterized
-generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
+generic module I2CDiscovererP(uint8_t globalAddrLength){
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface I2CSlave;
   uses interface Resource;
-  provides interface I2CDiscoverable;
+  provides interface I2CDiscoverer;
   provides interface SplitControl;
   uses interface Timer<TMilli>;
   //TODO: should provide Msp430UsciConfigure: set UCMM!
@@ -21,11 +21,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   bool isReceive;
 
   enum{
-    S_WAITING,
-    S_CLAIMING_BUS,
-    S_ZEROING_MASTER,
-    S_READING_ADDR,
-    S_ASSIGNED,
     S_ERROR,
     S_OFF,
   };
@@ -56,10 +51,10 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
 
   command error_t SplitControl.start(){
     if ( SUCCESS == call Resource.request()){
-      setState(S_WAITING);
-      _reservation.msg.pos = 0;
-      _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
-      memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), globalAddrLength);
+      setState(S_INIT);
+      //TODO: put this in a structure
+      //register setup is : cmd [globalAddr] localAddr
+      reg[globalAddrLength] = I2C_FIRST_DISCOVERABLE_ADDR;
       return SUCCESS;
     } else {
       return FAIL;
@@ -67,34 +62,65 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   }
 
   event void Resource.granted(){
-    //start timeout-- if we haven't been assigned an addr by
-    //that time, give up.
-    setState(S_WAITING);
-    call I2CSlave.setOwnAddress(I2C_DISCOVERABLE_UNASSIGNED);
-    call I2CSlave.enableGeneralCall();
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
+    localAddr = signal I2CDiscoverer.getLocalAddr();
+    call I2CSlave.setOwnAddress(localAddr);
+    post announce();
   }
 
+  task void announce(){
+    reg[0] = (localAddr << 1) | 0x01;
+    if( SUCCESS != call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, reg)){
+      setState(S_ERROR);
+      signal SplitControl.startDone(FAIL);
+    }else {
+      setState(S_ANNOUNCING);
+    }
+  }
+
+  async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
+    uint8_t stateTmp;
+    atomic stateTmp = state;
+    switch(stateTmp){
+      case S_ANNOUNCING:
+        if(error == SUCCESS){
+          setState(S_WAITING);
+        } else if (error == ENOACK){
+          //TODO: nobody home, we're done
+        } else {
+          setState(S_ERROR);
+        }
+        break;
+      default:
+        setState(S_ERROR);
+    }
+  }
+
+  task void startRound(){
+  }
 
   async event void I2CSlave.slaveStart(bool generalCall){
     isGC = generalCall;
-    setAddrNeeded = FALSE;
-    resetNeeded = FALSE;
     transCount = 0;
+    switch(state){
+      case S_WAITING:
+        //we expect the master to write the CLAIM cmd, then their global address from
+        //  position 0 onward
+        setState(S_ASSIGNING);
+        break;
+      case S_ASSIGNING:
+        //we expect the master to read one byte (their local address)
+        //  then stop.
+        break;
+      default:
+        setState(S_ERROR);
+    }
   }
 
   async event error_t I2CSlave.slaveReceive(uint8_t data){
-    isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
       if (data & 0x01){
-        if (checkState(S_WAITING) || checkState(S_ASSIGNED)){
-          masterAddr = data >> 1;
-        } else {
-          //changing the master address while we're doing anything
-          //(except waiting or chillin) is bad.
-          setState(S_ERROR);
-        }
+        // ignoring own-address announcements
       } else {
         switch(data){
           case 0x06:    //reset + set addr
@@ -133,65 +159,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     }
   }
 
-  task void requestLocalAddrTask(){
-    //first, try to write your globally-unique ID to the master, with RESTART 
-    //  - Succeeds: you've got the bus, so read from next-local-addr
-    //  register
-    //  - write succeeds, but get an EBUSY in writeDone: try again
-    //    next time
-    //  - fails: something's wrong
-    if (SUCCESS ==  call I2CPacket.write(I2C_START|I2C_RESTART,
-        masterAddr, sizeof(_reservation), _reservation.data)){
-      setState(S_CLAIMING_BUS);
-    } else {
-      //TODO: EBUSY = go back to wait, fail = error?
-      setState(S_ERROR);
-    }
-    
-  }
-
-  task void zeroMaster(){
-    _reservation.msg.pos = 0x00;
-    //write position only
-    if (SUCCESS == call I2CPacket.write(I2C_RESTART,
-        masterAddr, 1, _reservation.data)){
-      setState(S_ZEROING_MASTER);
-    }else{
-      setState(S_ERROR);
-    }
-  }
-
-  task void readLocalAddr(){
-    if (SUCCESS == call I2CPacket.read(I2C_STOP, masterAddr,
-        2, (uint8_t*)(&localAddr))){
-      setState(S_READING_ADDR);
-    } else {
-      setState(S_ERROR);
-    }
-  }
-
-  async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
-    uint8_t stateTmp;
-    atomic stateTmp = state;
-    switch(stateTmp){
-      case S_CLAIMING_BUS:
-        if(error == SUCCESS){
-          post zeroMaster();
-        } else {
-          setState(S_WAITING);
-        }
-        break;
-      case S_ZEROING_MASTER:
-        if (error == SUCCESS){
-          post readLocalAddr();
-        } else {
-          setState(S_ERROR);
-        }
-        break;
-      default:
-        setState(S_ERROR);
-    }
-  }
 
   task void assignedTask(){
     call Timer.stop();
@@ -202,16 +169,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     uint8_t stateTmp;
     atomic stateTmp = state;
     switch(stateTmp){
-      case S_READING_ADDR:
-        if (error == SUCCESS){
-          //great, we're all set.
-          setState(S_ASSIGNED);
-          post assignedTask();
-        } else {
-          setState(S_ERROR);
-        }
-        break;
-      default:
+     default:
         setState(S_ERROR);
     }
   }
@@ -241,11 +199,12 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   }
 
   async event void I2CSlave.slaveStop(){
-    if (isReceive){
-      post processSlaveReceive();
-    } else {
-      post processSlaveTransmit();
-    }
+    if (checkState(S_RECEIVING)){
+      signal I2CDiscoverer.transactionEnd(reg);
+      reg[globalAddrLength]++;
+    }else{
+      setState(S_ERROR);
+    } 
   }
 
   task void signalStopDone(){
@@ -281,3 +240,4 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     return localAddr;
   }
 }
+
