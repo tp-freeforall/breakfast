@@ -358,19 +358,28 @@ module TestP{
       call UartStream.send(readDoneFailMsg, 16);
     }
   }
-  
+
+  void task receiveTask(){
+    rxPkt.data[i2c_index++] = call I2CSlave.slaveReceive();
+  }
+
   async event bool I2CSlave.slaveReceiveRequested(){
     setState(S_SLAVE_RECEIVE);
-    rxPkt.data[i2c_index++] = b;
-    return SUCCESS;
+    post receiveTask();
+    return TRUE;
   }
 
-  async event uint8_t I2CSlave.slaveTransmit(){
+  void task transmitTask(){
+    call I2CSlave.slaveTransmit(txPkt.data[i2c_index++]);
+  }
+
+  async event bool I2CSlave.slaveTransmitRequested(){
     setState(S_SLAVE_TRANSMIT);
-    return txPkt.data[i2c_index++];
+    post transmitTask();
+    return TRUE;
   }
 
-  async event void I2CSlave.slaveStart(){
+  async event void I2CSlave.slaveStart(bool isGC){
     i2c_index = 0;
     txPkt.msg.srcAddr = myAddr;
     setState(S_SLAVE_START);

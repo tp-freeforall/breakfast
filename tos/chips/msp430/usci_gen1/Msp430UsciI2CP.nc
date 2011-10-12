@@ -520,8 +520,8 @@ implementation {
   }
 
 
-  default async event error_t I2CSlave.slaveReceive[uint8_t client](uint8_t data) { return FAIL; }
-  default async event uint8_t I2CSlave.slaveTransmit[uint8_t client]() { return 0x00; }
+  default async event bool I2CSlave.slaveReceiveRequested[uint8_t client]() { return FALSE; }
+  default async event bool I2CSlave.slaveTransmitRequested[uint8_t client]() { return FALSE; }
 
   default async event void I2CSlave.slaveStart[uint8_t client](bool isGeneralCall) { ; }
   default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
