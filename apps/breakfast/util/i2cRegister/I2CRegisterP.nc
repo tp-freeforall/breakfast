@@ -52,9 +52,7 @@ generic module I2CRegisterP(uint8_t registerLength){
   async event void I2CPacket.writeDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){
   }
   
-  //yeah, this all has to be atomic
-  task void receive(){
-    atomic{
+  void receive(){
       uint8_t data = call I2CSlave.slaveReceive();
       printf("RX %x", data);
       if (isGC && transCount < 2) {
@@ -78,23 +76,21 @@ generic module I2CRegisterP(uint8_t registerLength){
         }
       }
       transCount++;
-    }
-  }
-  //TODO: don't do it split-phase
-  async event bool I2CSlave.slaveReceiveRequested(){
-    post receive();
-    return FALSE;
   }
 
-  task void transmit(){
+  async event bool I2CSlave.slaveReceiveRequested(){
+    receive();
+    return TRUE;
+  }
+
+  void transmit(){
     transCount++;
     call I2CSlave.slaveTransmit(0xff);
   }
 
-  //TODO: don't do it split-phase
   async event bool I2CSlave.slaveTransmitRequested(){
-    post transmit();
-    return FALSE;
+    transmit();
+    return TRUE;
   }
   
   async event void I2CSlave.slaveStart(bool generalCall){
