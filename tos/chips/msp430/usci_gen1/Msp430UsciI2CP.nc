@@ -484,8 +484,7 @@ implementation {
   default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async event void I2CBasicAddr.writeDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration[uint8_t client](){
-    //TODO: sensible default!!!
-    return NULL;
+    return &msp430_usci_i2c_default_config;
   }
 
   /***** Slave-mode functions ***/

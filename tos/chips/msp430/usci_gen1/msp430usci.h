@@ -58,6 +58,15 @@ msp430_usci_config_t msp430_usci_spi_default_config = {
   mctl : 0                      /* Always 0 in SPI mode */
 };
 
+msp430_usci_config_t msp430_usci_i2c_default_config = {
+  ctl0: UCSYNC|UCMODE_3|UCMM,
+  ctl1: UCSSEL_2,
+  br0:  0x08,
+  br1:  0x00,
+  mctl: 0x00,
+  i2coa: 'A',
+};
+
 enum {
   /** Bit set in Msp430UsciError.condition parameter when a framing
    * error (UART) or bus conflict (SPI) has been detected.  Applies in
