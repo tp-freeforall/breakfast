@@ -80,10 +80,10 @@ generic module I2CRegisterP(uint8_t registerLength){
       transCount++;
     }
   }
-
+  //TODO: don't do it split-phase
   async event bool I2CSlave.slaveReceiveRequested(){
     post receive();
-    return TRUE;
+    return FALSE;
   }
 
   task void transmit(){
@@ -91,9 +91,10 @@ generic module I2CRegisterP(uint8_t registerLength){
     call I2CSlave.slaveTransmit(0xff);
   }
 
+  //TODO: don't do it split-phase
   async event bool I2CSlave.slaveTransmitRequested(){
     post transmit();
-    return TRUE;
+    return FALSE;
   }
   
   async event void I2CSlave.slaveStart(bool generalCall){
