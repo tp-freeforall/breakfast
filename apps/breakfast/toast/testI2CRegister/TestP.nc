@@ -44,11 +44,12 @@ module TestP{
   typedef struct{
     uint8_t pos;
     reg_msg_body_t body;
-  } reg_msg_t;
+  //} reg_msg_t;
+  }__attribute__((__packed__)) reg_msg_t;
 
   typedef union{
     reg_msg_t msg;
-    uint8_t data[sizeof(reg_msg_t)];
+    uint8_t data[I2C_REGISTER_LENGTH + 1];
   } reg_pkt_t;
 
   reg_pkt_t txPkt;
@@ -67,6 +68,8 @@ module TestP{
   }
 
   event void Boot.booted(){
+    uint8_t i;
+    uint8_t* p;
     call UartControl.start();
     printf("I2C Register Test\n\r");
     //printGlobalAddr();
@@ -74,6 +77,19 @@ module TestP{
     txPkt.msg.body.cmd = 'm';
     txPkt.msg.body.data[0] = 'a';
     slaveAddr = 'A';
+    printf("&txPkt: %p\n\r", &txPkt);
+    printf("&txPkt.msg: %p\n\r", &txPkt.msg);
+    printf("&txPkt.msg.pos: %p\n\r", &txPkt.msg.pos);
+    printf("&txPkt.msg.body: %p\n\r", &txPkt.msg.body);
+    printf("&txPkt.msg.body.cmd: %p\n\r", &txPkt.msg.body.cmd);
+    printf("&txPkt.msg.body.data: %p\n\r", &txPkt.msg.body.data);
+    printf("&txPkt.data: %p\n\r", &txPkt.data);
+    printf("txPkt.data: %p\n\r", txPkt.data);
+    for(i = 0; i< sizeof(txPkt.msg); i++){
+      p = ((uint8_t*)&txPkt)+i;
+      printf("txPkt[%d](%p): %x\n\r", i, p, *p);
+    }
+
   }
 
   task void receiver(){
@@ -92,7 +108,8 @@ module TestP{
         printf("stopping.\n\r");
       }
     }else{
-      printf("Writing: %s\n\r", decodeError(call I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(txPkt), txPkt.data)));
+      printf("Writing: %s %x %p\n\r", decodeError(call
+      I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(txPkt.msg), txPkt.data)), sizeof(txPkt.msg), txPkt.data);
     }
   }
 
