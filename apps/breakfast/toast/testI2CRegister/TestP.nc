@@ -62,6 +62,10 @@ module TestP{
     printf("\n\r");
   }
 
+  void status(){
+    printf("Slave: %c Pos: %x Cmd: %x Data[0]: %x\n\r", slaveAddr, txPkt.msg.pos, txPkt.msg.body.cmd, txPkt.msg.body.data[0]);
+  }
+
   event void Boot.booted(){
     call UartControl.start();
     printf("I2C Register Test\n\r");
@@ -86,7 +90,7 @@ module TestP{
         printf("Stop fail, requesting: %s\n\r", decodeError(call Resource.request()));
       }
     }else{
-      printf("Writing: %s\n\r", decodeError(call I2CPacket.write(I2C_START, slaveAddr, sizeof(txPkt), txPkt.data)));
+      printf("Writing: %s\n\r", decodeError(call I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(txPkt), txPkt.data)));
     }
   }
 
@@ -118,6 +122,7 @@ module TestP{
         break;
       case 's':
         slaveAddr ++;
+        status();
         break;
       case 'r':
         post receiver();
@@ -163,9 +168,10 @@ module TestP{
 
   async event uint8_t* I2CRegister.transactionStop(uint8_t* reg_, uint8_t len, uint8_t gcCmd){
     uint8_t* swp = reg;
-    printf("%s: \n\r", __FUNCTION__);
+    printf("Stop reg=%p got=%p\n\r", reg, reg_);
     reg = reg_;
     post printReg();
+    printf("Stop return: reg=%p return=%p\n\r", reg, swp);
     return swp;
   }
 

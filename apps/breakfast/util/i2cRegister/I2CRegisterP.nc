@@ -58,19 +58,23 @@ generic module I2CRegisterP(uint8_t registerLength){
     printf("%s: \n\r", __FUNCTION__);
     atomic{
       uint8_t data = call I2CSlave.slaveReceive();
-      printf("RX %c\n\r", data);
+      printf("RX %x", data);
       if (isGC && transCount < 2) {
         //General call: 0th byte is reset/setaddr/announce. standard
         //behavior begins after this.
         if(transCount == 0){
+          printf(" -> gcCmd\n\r");
           gcCmd = data;
         }else{
+          printf(" -> pos\n\r");
           pos = data;
         }
       } else {
         if(transCount == 0){
+          printf(" -> pos\n\r");
           pos = data;
         }else {
+          printf(" -> reg[%x]\n\r", pos%registerLength);
           reg[pos%registerLength] = data;
           pos++;
         }
