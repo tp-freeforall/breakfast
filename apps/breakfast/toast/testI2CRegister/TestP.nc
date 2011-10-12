@@ -39,7 +39,7 @@ module TestP{
   typedef struct{
     uint8_t cmd;
     uint8_t data[I2C_REGISTER_LENGTH -1];
-  } reg_msg_body_t;
+  } __attribute__((__packed__)) reg_msg_body_t;
 
   typedef struct{
     uint8_t pos;
@@ -76,6 +76,7 @@ module TestP{
     txPkt.msg.pos = 0;
     txPkt.msg.body.cmd = 'm';
     txPkt.msg.body.data[0] = 'a';
+    txPkt.msg.body.data[1] = 'b';
     slaveAddr = 'A';
     printf("&txPkt: %p\n\r", &txPkt);
     printf("&txPkt.msg: %p\n\r", &txPkt.msg);
@@ -108,8 +109,12 @@ module TestP{
         printf("stopping.\n\r");
       }
     }else{
-      printf("Writing: %s %x %p\n\r", decodeError(call
-      I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(txPkt.msg), txPkt.data)), sizeof(txPkt.msg), txPkt.data);
+      printf("Writing: %s %x %p\n\r", 
+        decodeError(call I2CPacket.write(I2C_START|I2C_STOP, 
+            slaveAddr, 
+            sizeof(txPkt.msg), 
+            txPkt.data)), 
+          sizeof(txPkt.msg), txPkt.data);
     }
   }
 
