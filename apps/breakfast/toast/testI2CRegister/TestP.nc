@@ -77,17 +77,19 @@ module TestP{
   }
 
   task void receiver(){
-    printf("%s: %s \n\r", __FUNCTION__, decodeError(call SplitControl.start()));
     if(call Resource.isOwner()){
       printf("Release resource: %s\n\r", decodeError(call Resource.release()));
+    }else {
+      call SplitControl.start();
     }
   }
 
   task void write(){
     if (! call Resource.isOwner()){
-      printf("Not owner\n\r");
       if (call SplitControl.stop() != SUCCESS){
         printf("Stop fail, requesting: %s\n\r", decodeError(call Resource.request()));
+      }else{
+        printf("stopping.\n\r");
       }
     }else{
       printf("Writing: %s\n\r", decodeError(call I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(txPkt), txPkt.data)));
@@ -142,7 +144,7 @@ module TestP{
   }
 
   event void SplitControl.startDone(error_t error){
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+    printf("Register started\n\r");
     call I2CRegister.setOwnAddress('B');
   }
 

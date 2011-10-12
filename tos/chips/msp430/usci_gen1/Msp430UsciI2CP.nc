@@ -37,6 +37,7 @@
  */
 
 #include <I2C.h>
+#include <stdio.h>
 
 generic module Msp430UsciI2CP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIFG_MASK, uint8_t RXIFG_MASK) {
   
@@ -344,6 +345,7 @@ implementation {
       }
     } else{
       //send the next char
+      printf("TX[%x]:%x\n\r", m_pos, m_buf[m_pos]);
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
     }
   }

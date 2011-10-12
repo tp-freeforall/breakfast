@@ -22,7 +22,6 @@ generic module I2CRegisterP(uint8_t registerLength){
   }
 
   command void I2CRegister.setOwnAddress(uint16_t addr){
-    printf("%s: %c\n\r", __FUNCTION__, addr);
     call I2CSlave.setOwnAddress(addr);
   }
   
