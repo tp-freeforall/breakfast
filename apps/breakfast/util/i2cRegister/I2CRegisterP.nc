@@ -55,7 +55,6 @@ generic module I2CRegisterP(uint8_t registerLength){
   
   //yeah, this all has to be atomic
   task void receive(){
-    printf("%s: \n\r", __FUNCTION__);
     atomic{
       uint8_t data = call I2CSlave.slaveReceive();
       printf("RX %x", data);
@@ -79,6 +78,7 @@ generic module I2CRegisterP(uint8_t registerLength){
           pos++;
         }
       }
+      transCount++;
     }
   }
 
@@ -88,6 +88,7 @@ generic module I2CRegisterP(uint8_t registerLength){
   }
 
   task void transmit(){
+    transCount++;
     call I2CSlave.slaveTransmit(0xff);
   }
 
@@ -103,6 +104,7 @@ generic module I2CRegisterP(uint8_t registerLength){
   }
 
   async event void I2CSlave.slaveStop(){
+    printf("%s: \n\r", __FUNCTION__);
     signal I2CRegister.transactionStop(reg, registerLength, gcCmd);
   }
 

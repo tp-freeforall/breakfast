@@ -71,7 +71,7 @@ module TestP{
     printf("I2C Register Test\n\r");
     //printGlobalAddr();
     txPkt.msg.pos = 0;
-    txPkt.msg.body.cmd = 0x00;
+    txPkt.msg.body.cmd = 'm';
     txPkt.msg.body.data[0] = 'a';
     slaveAddr = 'A';
   }
