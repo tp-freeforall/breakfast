@@ -30,9 +30,17 @@ generic module I2CRegisterP(uint8_t registerLength){
     return call Resource.request();
   }
 
+  task void stopDone(){
+    signal SplitControl.stopDone(SUCCESS);
+  }
+
   command error_t SplitControl.stop(){
+    error_t ret = call Resource.release();
     printf("%s: \n\r", __FUNCTION__);
-    return SUCCESS;
+    if (ret == SUCCESS){
+      post stopDone();
+    }
+    return ret;
   }
 
   event void Resource.granted(){
@@ -50,6 +58,7 @@ generic module I2CRegisterP(uint8_t registerLength){
     printf("%s: \n\r", __FUNCTION__);
     atomic{
       uint8_t data = call I2CSlave.slaveReceive();
+      printf("RX %c\n\r", data);
       if (isGC && transCount < 2) {
         //General call: 0th byte is reset/setaddr/announce. standard
         //behavior begins after this.
