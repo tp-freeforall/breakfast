@@ -384,7 +384,6 @@ implementation {
 
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
-    uint16_t nackTimeout = 0xffff;
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
