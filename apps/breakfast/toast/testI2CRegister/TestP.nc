@@ -52,6 +52,7 @@ module TestP{
   }
 
   async event void I2CRegister.transactionStart(bool generalCall){
+    printf("%s: \n\r", __FUNCTION__);
   }
 
   task void printReg(){
@@ -67,6 +68,7 @@ module TestP{
 
   async event uint8_t* I2CRegister.transactionStop(uint8_t* reg_, uint8_t len, uint8_t gcCmd){
     uint8_t* swp = reg;
+    printf("%s: \n\r", __FUNCTION__);
     reg = reg_;
     post printReg();
     return swp;
