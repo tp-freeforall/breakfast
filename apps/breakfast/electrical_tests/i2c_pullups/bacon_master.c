@@ -30,6 +30,8 @@ unsigned char TXByteCtr;
 
 void main(void)
 {
+  volatile unsigned int i;
+
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
   
   PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs  
@@ -55,6 +57,9 @@ void main(void)
   UCB0IE |= UCTXIE;                         // Enable TX interrupt
 
   TXData = 0x01;                            // Holds TX data
+  i = 50000;
+  do (i--);
+  while (i!= 0);
 
   while (1)
   {
