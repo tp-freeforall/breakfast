@@ -37,6 +37,7 @@ const unsigned char TxData[] =              // Table of data to transmit
 
 void main(void)
 {
+  volatile unsigned int i;
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
   P3SEL |= 0x06;                            // Assign I2C pins to USCI_B0
   UCB0CTL1 |= UCSWRST;                      // Enable SW reset
@@ -47,6 +48,10 @@ void main(void)
   UCB0I2CSA = 0x48;                         // Slave Address is 048h
   UCB0CTL1 &= ~UCSWRST;                     // Clear SW reset, resume operation
   IE2 |= UCB0TXIE;                          // Enable TX interrupt
+  //delay for a hot sec
+  i = 50000;
+  do (i--);
+  while (i != 0);
 
   while (1)
   {
