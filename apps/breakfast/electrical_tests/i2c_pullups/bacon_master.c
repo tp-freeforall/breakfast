@@ -27,37 +27,40 @@
 
 unsigned char TXData;
 unsigned char TXByteCtr;
-
+void setupClock(void);
 void main(void)
 {
   volatile unsigned int i;
-
+ 
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
-  
+  setupClock();
+
   PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs  
   P2MAP6 = PM_UCB0SDA;                      // Map UCB0SDA output to P2.6 
   P2MAP7 = PM_UCB0SCL;                      // Map UCB0SCL output to P2.7 
   PMAPPWD = 0;                              // Lock port mapping registers 
-  
+
+
   P2SEL |= BIT6 + BIT7;                     // Select P2.6 & P2.7 to I2C function
   #ifdef INTERNAL_PULLUP
   //DIR = 0 REN = 1: pullup/down enabled. OUT=1: up OUT=0: down
   P2DIR &= ~(BIT6 + BIT7);
   P2OUT |= (BIT6 + BIT7);
-  P2REN &= ~(BIT6 + BIT7);
+  P2REN |= (BIT6 + BIT7);
   #endif
     
   UCB0CTL1 |= UCSWRST;                      // Enable SW reset
   UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;     // I2C Master, synchronous mode
   UCB0CTL1 = UCSSEL_2 + UCSWRST;            // Use SMCLK, keep SW reset
-  UCB0BR0 = 12;                             // fSCL = SMCLK/12 = ~100kHz
+  UCB0BR0 = 8;                             // fSCL = SMCLK/12 = ~100kHz
   UCB0BR1 = 0;
   UCB0I2CSA = 0x48;                         // Slave Address is 048h
   UCB0CTL1 &= ~UCSWRST;                     // Clear SW reset, resume operation
   UCB0IE |= UCTXIE;                         // Enable TX interrupt
+//  UCB0IE |= UCNACKIE;                       // Enable NACK interrupt
 
   TXData = 0x01;                            // Holds TX data
-  i = 50000;
+  i = 50000;  //delay (for when slave powered on at the same time as master
   do (i--);
   while (i!= 0);
 
@@ -92,7 +95,12 @@ __attribute((wakeup)) __attribute((interrupt(USCI_B0_VECTOR))) void USCI_B0_ISR(
   {
   case  0: break;                           // Vector  0: No interrupts
   case  2: break;                           // Vector  2: ALIFG
-  case  4: break;                           // Vector  4: NACKIFG
+  case  4: 
+//    UCB0CTL1 |= UCTXSTP;
+//    UCB0IFG &=- ~UCTXIFG;
+//    UCB0IFG &=- ~UCNACKIFG;
+//    __bic_SR_register_on_exit(LPM0_bits); // Exit LPM0
+    break;                           // Vector  4: NACKIFG
   case  6: break;                           // Vector  6: STTIFG
   case  8: break;                           // Vector  8: STPIFG
   case 10: break;                           // Vector 10: RXIFG
@@ -112,3 +120,86 @@ __attribute((wakeup)) __attribute((interrupt(USCI_B0_VECTOR))) void USCI_B0_ISR(
   default: break;
   }
 }
+
+void setupClock(void){
+  PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs  
+  P1MAP1 = PM_SMCLK;
+//  P2MAP0 = PM_ACLK;                         // Map ACLK output to P2.0 
+//  P2MAP2 = PM_MCLK;                         // Map MCLK output to P2.2 
+//  P2MAP4 = PM_SMCLK;                        // Map SMCLK output to P2.4 
+  PMAPPWD = 0;                              // Lock port mapping registers  
+  
+  P1DIR |= BIT1;
+  P1SEL |= BIT1;
+//  P2DIR |= BIT0 + BIT2 + BIT4;              // ACLK, MCLK, SMCLK set out to pins
+//  P2SEL |= BIT0 + BIT2 + BIT4;              // P2.0,2,4 for debugging purposes
+
+  UCSCTL3 |= SELREF_2;                      // Set DCO FLL reference = REFO
+  UCSCTL4 |= SELA_2;                        // Set ACLK = REFO
+
+  __bis_SR_register(SCG0);                  // Disable the FLL control loop
+  UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
+  UCSCTL1 = DCORSEL_5;                      // Select DCO range 16MHz operation
+  UCSCTL2 = FLLD_1 + 249;                   // Set DCO Multiplier for 8MHz
+                                            // (N + 1) * FLLRef = Fdco
+                                            // (249 + 1) * 32768 = 8MHz
+                                            // Set FLL Div = fDCOCLK/2
+  __bic_SR_register(SCG0);                  // Enable the FLL control loop
+
+  // Worst-case settling time for the DCO when the DCO range bits have been
+  // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
+  // UG for optimization.
+  // 32 x 32 x 8 MHz / 32,768 Hz = 250000 = MCLK cycles for DCO to settle
+  __delay_cycles(125000);
+  __delay_cycles(125000);
+
+  // Loop until XT1,XT2 & DCO fault flag is cleared
+  do
+  {
+    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+                                            // Clear XT2,XT1,DCO fault flags
+    SFRIFG1 &= ~OFIFG;                      // Clear fault flags
+  }while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
+	
+  PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs  
+  P1MAP1 = PM_SMCLK;
+//  P2MAP0 = PM_ACLK;                         // Map ACLK output to P2.0 
+//  P2MAP2 = PM_MCLK;                         // Map MCLK output to P2.2 
+//  P2MAP4 = PM_SMCLK;                        // Map SMCLK output to P2.4 
+  PMAPPWD = 0;                              // Lock port mapping registers  
+  
+  P1DIR |= BIT1;
+  P1SEL |= BIT1;
+//  P2DIR |= BIT0 + BIT2 + BIT4;              // ACLK, MCLK, SMCLK set out to pins
+//  P2SEL |= BIT0 + BIT2 + BIT4;              // P2.0,2,4 for debugging purposes
+
+  UCSCTL3 |= SELREF_2;                      // Set DCO FLL reference = REFO
+  UCSCTL4 |= SELA_2;                        // Set ACLK = REFO
+
+  __bis_SR_register(SCG0);                  // Disable the FLL control loop
+  UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
+  UCSCTL1 = DCORSEL_5;                      // Select DCO range 16MHz operation
+  UCSCTL2 = FLLD_1 + 249;                   // Set DCO Multiplier for 8MHz
+                                            // (N + 1) * FLLRef = Fdco
+                                            // (249 + 1) * 32768 = 8MHz
+                                            // Set FLL Div = fDCOCLK/2
+  __bic_SR_register(SCG0);                  // Enable the FLL control loop
+
+  // Worst-case settling time for the DCO when the DCO range bits have been
+  // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
+  // UG for optimization.
+  // 32 x 32 x 8 MHz / 32,768 Hz = 250000 = MCLK cycles for DCO to settle
+  __delay_cycles(125000);
+  __delay_cycles(125000);
+
+  // Loop until XT1,XT2 & DCO fault flag is cleared
+  do
+  {
+    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+                                            // Clear XT2,XT1,DCO fault flags
+    SFRIFG1 &= ~OFIFG;                      // Clear fault flags
+  }while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
+	
+}
+
+

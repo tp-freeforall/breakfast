@@ -1,6 +1,6 @@
-SOURCES=bacon_master.c
+SOURCES=bacon_master.c 8mhz_clock.c
 CC=msp430-gcc
-CCFLAGS=-mmcu=cc430x5137
+CCFLAGS+=-mmcu=cc430x5137
 OBJCOPY=msp430-objcopy
 ODIR=bin
 EXES=$(SOURCES:.c=.bin)
