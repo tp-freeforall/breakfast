@@ -33,7 +33,7 @@ void main(void)
   volatile unsigned int i;
  
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
-  setupClock();
+  //setupClock();
 
   PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs  
   P2MAP6 = PM_UCB0SDA;                      // Map UCB0SDA output to P2.6 
