@@ -56,8 +56,8 @@ void main(void)
   UCB0CTL1 |= UCSWRST;                      // Enable SW reset
   UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;     // I2C Master, synchronous mode
   UCB0CTL1 = UCSSEL_2 + UCSWRST;            // Use SMCLK, keep SW reset
-  UCB0BR0 = I2C_DIV;                             
-  UCB0BR1 = 0;
+  UCB0BR0 = I2C_DIV & 0xff;                             
+  UCB0BR1 = I2C_DIV >> 8;
   UCB0I2CSA = 0x48;                         // Slave Address is 048h
   UCB0CTL1 &= ~UCSWRST;                     // Clear SW reset, resume operation
   UCB0IE |= UCTXIE;                         // Enable TX interrupt
