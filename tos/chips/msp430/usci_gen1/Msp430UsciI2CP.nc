@@ -139,9 +139,13 @@ implementation {
 					   uint8_t* buf ) 
   {
     uint8_t counter = 0xFF;
-    if ( call Usci.getStat() & UCBBUSY ){
+
+    if ( flags & I2C_RESTART){
+      //Restart: bus is supposed to be busy
+    } else if (call Usci.getStat() & UCBBUSY ){
       return EBUSY;
     }
+
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -178,15 +182,15 @@ implementation {
         call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
       }
     } else if (m_flags & I2C_RESTART) {
-      //TODO: test
       /* set slave address */
       //UCB0I2CSA = addr;
       call UsciB.setI2csa(addr);
 
+      //clear TR bit, start
       /* UCTXSTT - generate START condition */
       //UCB0CTL1 |= UCTXSTT;
-      call Usci.setCtl1(call Usci.getCtl1() | UCTXSTT);
-
+      call Usci.setCtl1((call Usci.getCtl1() & ~UCTR) | UCTXSTT);
+      //TODO: not seeing stop bit on scope
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) ) {
         /* wait until START bit has been transmitted */
@@ -255,9 +259,11 @@ implementation {
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
-
-    if ( call Usci.getStat() & UCBBUSY )
+   if (flags & I2C_RESTART){
+      //continued, so we don't check for BUSY.
+    } else if ( call Usci.getStat() & UCBBUSY ){
       return EBUSY;
+    }
       
     m_buf = buf;
     m_len = len;
@@ -331,7 +337,8 @@ implementation {
         //to slave mode.
         slaveIdle();
       }else {
-        //TODO: test restart
+        printf("restart\n\r");
+        //so, we just don't send the STOP bit.
       }
 
       //disable tx interrupt, we're DONE 
