@@ -155,6 +155,8 @@ implementation {
 
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START) {
+      //TODO: if reset can be removed, can we consolidate this with
+      //the repeated-start?
       call Usci.enterResetMode_();
       call Usci.setCtl0(call Usci.getCtl0() | UCMST);
       call Usci.leaveResetMode_();
@@ -190,7 +192,11 @@ implementation {
       /* UCTXSTT - generate START condition */
       //UCB0CTL1 |= UCTXSTT;
       call Usci.setCtl1((call Usci.getCtl1() & ~UCTR) | UCTXSTT);
-      //TODO: not seeing stop bit on scope
+
+      //enable i2c arbitration interrupts, rx 
+      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
+      call Usci.setIe( call Usci.getIe() | RXIE_MASK );
+
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) ) {
         /* wait until START bit has been transmitted */
