@@ -42,6 +42,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
 
   void setState(uint8_t s){
     atomic{
+      printf("I2CDiscoverableRequesterP: %x -> %x\n\r", state, s);
       state = s;
     }
   }
@@ -86,6 +87,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
 
 
   async event void I2CSlave.slaveStart(bool generalCall){
+    printf("%s: %x \n\r", __FUNCTION__, generalCall);
     isGC = generalCall;
     setAddrNeeded = FALSE;
     resetNeeded = FALSE;
@@ -94,6 +96,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
 
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
+    printf("%s: \n\r", __FUNCTION__);
     isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
@@ -129,6 +132,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   }
 
   task void requestLocalAddrTask(){
+    printf("%s: \n\r", __FUNCTION__);
     //first, try to write your globally-unique ID to the master, with RESTART 
     //  - Succeeds: you've got the bus, so read from next-local-addr
     //  register
@@ -137,8 +141,10 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     //  - fails: something's wrong
     if (SUCCESS ==  call I2CPacket.write(I2C_START|I2C_RESTART,
         masterAddr, sizeof(_reservation), _reservation.data)){
+      printf("claiming\n\r");
       setState(S_CLAIMING_BUS);
     } else {
+      printf("failed\n\r");
       //TODO: EBUSY = go back to wait, fail = error?
       setState(S_ERROR);
     }
@@ -157,6 +163,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
+    printf("%s: \n\r", __FUNCTION__);
     switch(stateTmp){
       case S_CLAIMING_BUS:
         if(error == SUCCESS){
@@ -195,6 +202,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
 
 
   task void processSlaveReceive(){
+    printf("%s: \n\r", __FUNCTION__);
     call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     atomic{
       if (isGC){
@@ -218,6 +226,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   }
 
   async event void I2CSlave.slaveStop(){
+    printf("%s: \n\r", __FUNCTION__);
     if (isReceive){
       post processSlaveReceive();
     } else {

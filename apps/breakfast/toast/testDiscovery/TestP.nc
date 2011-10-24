@@ -26,7 +26,7 @@ module TestP{
 
   task void status(){
     printGlobalAddr();
-    //TODO: other status?
+    printf("Local addr: %x\n\r", localAddr);
   }
 
   event void Boot.booted(){
@@ -36,13 +36,11 @@ module TestP{
   }
 
   task void startTask(){
-    printf("Starting discoverable: %x\n\r", 
-      call DiscoverableSplitControl.start());
+      printf("%s: %s\n\r", __FUNCTION__, decodeError(call DiscoverableSplitControl.start())); 
   }
 
   task void stopTask(){
-    printf("Stopping discoverable: %x\n\r", 
-      call DiscoverableSplitControl.stop());
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(call DiscoverableSplitControl.stop()));
   }
 
   task void startDiscoverer(){
@@ -93,16 +91,16 @@ module TestP{
   }
 
   event void DiscoverableSplitControl.startDone(error_t error){
-    printf("Start done: %x local address: %x\n\r", 
-      error, call I2CDiscoverable.getLocalAddr());
+    printf("Start done: %s local address: %x\n\r", 
+      decodeError(error), call I2CDiscoverable.getLocalAddr());
   }
 
   event void DiscoverableSplitControl.stopDone(error_t error){
-    printf("Stop done: %x\n\r", error);
+    printf("Stop done: %s\n\r", decodeError(error));
   }
 
   event void DiscovererSplitControl.startDone(error_t error){
-    printf("%s: \n\r", __FUNCTION__);
+    printf("Discoverer SplitControl.startDone %s: \n\r", decodeError(error));
   }
 
   event void DiscovererSplitControl.stopDone(error_t error){

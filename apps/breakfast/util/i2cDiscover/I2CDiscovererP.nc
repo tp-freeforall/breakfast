@@ -18,23 +18,27 @@ generic module I2CDiscovererP(){
   bool resetNeeded;
   uint8_t state;
   bool isReceive;
-  uint8_t announcement;
+  uint8_t txByte;
 
   enum{
-    S_ERROR,
-    S_INIT,
-    S_OFF,
-    S_ANNOUNCING,
-    S_WAITING,
-    S_ASSIGNING,
-    S_RESPONDING,
-    S_RECEIVING,
+    S_INIT= 0,
+    S_OFF = 1,
+    S_ANNOUNCING = 2,
+    S_ANNOUNCED = 10,
+    S_RESETTING = 8,
+    S_SETTING = 9,
+    S_WAITING = 3,
+    S_ASSIGNING = 4,
+    S_RESPONDING = 5,
+    S_RECEIVING = 6,
+    S_ERROR = 7,
   };
 
   task void announce();
 
   void setState(uint8_t s){
     atomic{
+      printf("I2CDiscovererP %x -> %x\n\r", state, s);
       state = s;
     }
   }
@@ -47,6 +51,7 @@ generic module I2CDiscovererP(){
   discoverer_register_union_t reg;
 
   command error_t SplitControl.start(){
+    printf("%s: \n\r", __FUNCTION__);
     if ( SUCCESS == call Resource.request()){
       setState(S_INIT);
       //register setup is : cmd [globalAddr] localAddr
@@ -58,30 +63,79 @@ generic module I2CDiscovererP(){
   }
 
   event void Resource.granted(){
+    printf("%s: \n\r", __FUNCTION__);
     localAddr = signal I2CDiscoverer.getLocalAddr();
     call I2CSlave.setOwnAddress(localAddr);
     post announce();
   }
 
   task void announce(){
-    announcement = (localAddr << 1) | 0x01;
-    if( SUCCESS != call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &announcement)){
-      setState(S_ERROR);
+    error_t err;
+    printf("announce");
+    txByte = (localAddr << 1) | 0x01;
+    atomic{
+      err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
+      if( err != SUCCESS){
+        setState(S_ERROR);
+      }else {
+        setState(S_ANNOUNCING);
+      }
+    }
+    //deal with race condition: writing a single byte is damn fast--
+    //if we check state then it will likely already have been modified
+    //in the writeDone event
+    if (err != SUCCESS){
       signal SplitControl.startDone(FAIL);
-    }else {
-      setState(S_ANNOUNCING);
+    }
+  }
+
+  task void resetTask(){
+    error_t err;
+    txByte = I2C_GC_RESET_PROGRAM_ADDR;
+    atomic{
+      err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
+      if (err != SUCCESS){
+        setState(S_ERROR);
+      } else {
+        setState(S_RESETTING);
+      }
+    }
+  }
+
+  task void setTask(){
+    error_t err;
+    txByte = I2C_GC_PROGRAM_ADDR;
+    atomic{
+      err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
+      if (err != SUCCESS){
+        setState(S_ERROR);
+      } else {
+        setState(S_SETTING);
+      }
     }
   }
 
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
+    //TODO: this is getting signalled before the call to write completes.
     atomic stateTmp = state;
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
     switch(stateTmp){
       case S_ANNOUNCING:
         if(error == SUCCESS){
-          setState(S_WAITING);
+          setState(S_ANNOUNCED);
+          post resetTask();
         } else if (error == ENOACK){
           //TODO: nobody home, we're done
+        } else {
+          setState(S_ERROR);
+        }
+        break;
+      case S_RESETTING:
+        //fall-through
+      case S_SETTING:
+        if(error == SUCCESS){
+          setState(S_WAITING);
         } else {
           setState(S_ERROR);
         }
@@ -175,6 +229,9 @@ generic module I2CDiscovererP(){
         signal I2CDiscoverer.discovered(&reg);
         reg.val.localAddr++;
       }
+      //continue
+      //TODO: set timeout, we might be done
+      post setTask();
     }else{
       setState(S_ERROR);
     } 
