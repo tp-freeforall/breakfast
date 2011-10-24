@@ -1,10 +1,10 @@
-module I2CDiscoverableRegisterP{
+module I2CDiscovererRegisterP{
   uses interface I2CRegister;
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface SplitControl as RegisterSplitControl;
   uses interface Resource as MasterResource;
-  provides interface SplitControl as DiscoverableSplitControl;
-  provides interface I2CDiscoverable;
+  provides interface SplitControl as DiscovererSplitControl;
+  provides interface I2CDiscoverer;
 } implementation {
   enum{
     S_INIT,

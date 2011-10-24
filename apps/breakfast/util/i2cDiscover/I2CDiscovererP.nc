@@ -9,7 +9,6 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
   uses interface Timer<TMilli>;
   //TODO: should provide Msp430UsciConfigure: set UCMM!
 } implementation {
-  uint8_t reg[I2C_DISCOVERABLE_REGISTERS_SIZE];
   uint8_t pos;
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
@@ -35,26 +34,25 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
     atomic return s == state;
   }
 
-  
   typedef struct {
-    uint8_t pos;
     uint8_t cmd;
     uint8_t globalAddr[globalAddrLength];
-  } discoverable_reservation_msg_t;
+    uint8_t localAddr;
+  } discoverer_register_t;
 
   typedef union{
-    discoverable_reservation_msg_t msg;
-    uint8_t data[0];
-  } discoverable_reservation_t;
-
-  discoverable_reservation_t _reservation;
+    discoverer_register_t register;
+    uint8_t data[sizeof(discoverer_register_t)];
+  } discoverer_register_union_t;
+  
+  discoverer_register_union_t reg;
+  
 
   command error_t SplitControl.start(){
     if ( SUCCESS == call Resource.request()){
       setState(S_INIT);
-      //TODO: put this in a structure
       //register setup is : cmd [globalAddr] localAddr
-      reg[globalAddrLength] = I2C_FIRST_DISCOVERABLE_ADDR;
+      reg.register.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
       return SUCCESS;
     } else {
       return FAIL;
@@ -110,13 +108,15 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
       case S_ASSIGNING:
         //we expect the master to read one byte (their local address)
         //  then stop.
+        setState(S_RESPONDING);
         break;
       default:
         setState(S_ERROR);
     }
   }
 
-  async event error_t I2CSlave.slaveReceive(uint8_t data){
+  async event bool I2CSlave.slaveReceiveRequested(){
+    uint8_t data = call I2CSlave.slaveReceive();
     if (isGC){
       //first byte ends with 1: own-address announcement from master
       if (data & 0x01){
@@ -130,7 +130,7 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
             setAddrNeeded = TRUE;
             break;
           default://everything else: forbidden!
-            return EINVAL;
+            setState(S_ERROR);
         }
       }
     } else {
@@ -138,25 +138,19 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
         //first byte: offset
         pos = data;
       } else {
-        //everything else: write it to buffer if space permits
-        if (pos+transCount <= I2C_DISCOVERABLE_REGISTERS_SIZE){
-          reg[pos + transCount - 1] = data;
-        } else {
-          return ESIZE;
-        }
+        //everything else: write it to buffer (circular)
+        reg.data[(pos + transCount - 1)%sizeof(discoverer_register_t)] = data;
       }
     }
     transCount++;
-    return SUCCESS;
+    return TRUE;
   }
 
-  async event uint8_t I2CSlave.slaveTransmit(){
+  async event uint8_t I2CSlave.slaveTransmitRequested(){
     isReceive=FALSE;
-    if(pos + transCount <= I2C_DISCOVERABLE_REGISTERS_SIZE){
-      return reg[pos + (transCount++) -1];
-    } else {
-      return 0xff;
-    }
+    //return from buf (circular)
+    call I2CSlave.slaveTransmit(reg.data[(pos++)%sizeof(discoverer_register_t)]);
+    return TRUE;
   }
 
 
