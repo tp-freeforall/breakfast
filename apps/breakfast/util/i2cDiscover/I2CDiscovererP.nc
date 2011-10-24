@@ -21,17 +21,17 @@ generic module I2CDiscovererP(){
   uint8_t txByte;
 
   enum{
-    S_INIT= 0,
-    S_OFF = 1,
-    S_ANNOUNCING = 2,
-    S_ANNOUNCED = 10,
-    S_RESETTING = 8,
-    S_SETTING = 9,
-    S_WAITING = 3,
-    S_ASSIGNING = 4,
-    S_RESPONDING = 5,
-    S_RECEIVING = 6,
-    S_ERROR = 7,
+    S_INIT= 0x00,
+    S_OFF = 0x01,
+    S_ANNOUNCING = 0x02,
+    S_ANNOUNCED = 0x0a,
+    S_RESETTING = 0x08,
+    S_SETTING = 0x09,
+    S_WAITING = 0x03,
+    S_ASSIGNING = 0x04,
+    S_RESPONDING = 0x05,
+    S_RECEIVING = 0x06,
+    S_ERROR = 0x07,
   };
 
   task void announce();

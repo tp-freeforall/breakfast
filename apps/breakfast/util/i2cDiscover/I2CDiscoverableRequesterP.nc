@@ -32,12 +32,12 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   bool isReceive;
 
   enum{
-    S_WAITING,
-    S_CLAIMING_BUS,
-    S_READING_ADDR,
-    S_ASSIGNED,
-    S_ERROR,
-    S_OFF,
+    S_WAITING = 0x00,
+    S_CLAIMING_BUS = 0x01,
+    S_READING_ADDR = 0x02,
+    S_ASSIGNED = 0x03,
+    S_ERROR = 0x04,
+    S_OFF = 0x05,
   };
 
   void setState(uint8_t s){
@@ -132,6 +132,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   }
 
   task void requestLocalAddrTask(){
+    error_t err;
     printf("%s: \n\r", __FUNCTION__);
     //first, try to write your globally-unique ID to the master, with RESTART 
     //  - Succeeds: you've got the bus, so read from next-local-addr
@@ -139,21 +140,24 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     //  - write succeeds, but get an EBUSY in writeDone: try again
     //    next time
     //  - fails: something's wrong
-    if (SUCCESS ==  call I2CPacket.write(I2C_START|I2C_RESTART,
-        masterAddr, sizeof(_reservation), _reservation.data)){
-      printf("claiming\n\r");
-      setState(S_CLAIMING_BUS);
-    } else {
-      printf("failed\n\r");
-      //TODO: EBUSY = go back to wait, fail = error?
-      setState(S_ERROR);
+    atomic{
+      err = call I2CPacket.write(I2C_START|I2C_RESTART, masterAddr, sizeof(_reservation), _reservation.data);
+      if (err == SUCCESS){
+        setState(S_CLAIMING_BUS);
+      } else {
+        //TODO: EBUSY = go back to wait, fail = error?
+        setState(S_ERROR);
+      }
     }
     
   }
 
   task void readLocalAddr(){
-    if (SUCCESS == call I2CPacket.read(I2C_STOP, masterAddr,
-        2, (uint8_t*)(&localAddr))){
+    error_t err;
+    printf("%s: \n\r", __FUNCTION__);
+    err = call I2CPacket.read(I2C_STOP, masterAddr, 2, (uint8_t*)(&localAddr));
+    printf("%s:read %s\n\r", __FUNCTION__, decodeError(err));
+    if (err == SUCCESS){
       setState(S_READING_ADDR);
     } else {
       setState(S_ERROR);
@@ -173,6 +177,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
         }
         break;
       default:
+        printf("bad state:%x \n\r", stateTmp);
         setState(S_ERROR);
     }
   }

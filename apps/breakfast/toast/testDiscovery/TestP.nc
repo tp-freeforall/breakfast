@@ -73,10 +73,11 @@ module TestP{
         break;
       case 'g':
         globalAddr[GLOBAL_ADDR_LENGTH - 1] ++;
-        printGlobalAddr();
+        post status();
         break;
       case 'l':
         localAddr++;
+        post status();
         break;
       case '?':
         post status();
