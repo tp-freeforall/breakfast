@@ -465,8 +465,10 @@ implementation {
       /* START condition */
       else if (call Usci.getStat() & UCSTTIFG) 
       {
-        /* disable START interrupt, enable STOP interrupt */
-        call UsciB.setI2cie((call UsciB.getI2cie() | UCSTPIE) & ~UCSTTIE);
+        //clear start flag, but leave enabled (repeated start)
+        //enable stop interrupt
+        call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
+        call UsciB.setI2cie(call UsciB.getI2cie() | UCSTPIE);
         //enable RX/TX interrupts
         call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
