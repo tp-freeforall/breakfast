@@ -90,6 +90,7 @@ generic module I2CDiscovererP(){
 
   task void resetTask(){
     error_t err;
+    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     txByte = I2C_GC_RESET_PROGRAM_ADDR;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
@@ -103,6 +104,7 @@ generic module I2CDiscovererP(){
 
   task void setTask(){
     error_t err;
+    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     txByte = I2C_GC_PROGRAM_ADDR;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
@@ -232,7 +234,7 @@ generic module I2CDiscovererP(){
 
   async event void I2CSlave.slaveStop(){
     printf("%s: \n\r", __FUNCTION__);
-    if (checkState(S_ASSIGNING)){
+    if (checkState(S_RESPONDING)){
       //TODO: check command should be done when requester is reading
       //from reg...
       if (reg.val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
@@ -240,7 +242,6 @@ generic module I2CDiscovererP(){
         reg.val.localAddr++;
       }
       //continue
-      //TODO: set timeout, we might be done
       post setTask();
     }else{
       setState(S_ERROR);
@@ -265,15 +266,7 @@ generic module I2CDiscovererP(){
   }
 
   event void Timer.fired(){
-    if (call Resource.isOwner()){
-      if (call Resource.release() == SUCCESS){
-        signal SplitControl.startDone(ENOACK);
-      }else{
-        signal SplitControl.startDone(FAIL);
-      }
-    } else {
-      signal SplitControl.startDone(FAIL);
-    }
+    signal SplitControl.startDone(SUCCESS);
   }
 
 }
