@@ -55,12 +55,12 @@ generic module I2CDiscoverableRequesterP(){
     uint8_t pos;
     uint8_t cmd;
     uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
-  } discoverable_reservation_msg_t;
+  } __attribute__((__packed__)) discoverable_reservation_msg_t;
 
   typedef union{
     discoverable_reservation_msg_t msg;
-    uint8_t data[0];
-  } discoverable_reservation_t;
+    uint8_t data[sizeof(discoverable_reservation_msg_t)];
+  } __attribute__((__packed__)) discoverable_reservation_t;
 
   discoverable_reservation_t _reservation;
 

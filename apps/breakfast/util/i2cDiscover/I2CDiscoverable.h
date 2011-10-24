@@ -10,7 +10,7 @@
 #define I2C_INVALID_MASTER 0xffff
 #define I2C_DISCOVERABLE_UNASSIGNED 0xfffe
 
-#define I2C_FIRST_DISCOVERABLE_ADDR 0xdc
+#define I2C_FIRST_DISCOVERABLE_ADDR 0x00dc
 #define I2C_GC_ADDR 0x00
 #define I2C_DISCOVERABLE_REQUEST_ADDR 0xad
 
@@ -21,11 +21,11 @@
     uint8_t cmd;
     uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
     uint16_t localAddr;
-  } discoverer_register_t;
+  } __attribute__((__packed__)) discoverer_register_t;
 
   typedef union{
     discoverer_register_t val;
     uint8_t data[sizeof(discoverer_register_t)];
-  } discoverer_register_union_t;
+  } __attribute__((__packed__)) discoverer_register_union_t;
 
 #endif
