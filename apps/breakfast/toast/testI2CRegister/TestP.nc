@@ -78,19 +78,6 @@ module TestP{
     txPkt.msg.body.data[0] = 'a';
     txPkt.msg.body.data[1] = 'b';
     slaveAddr = 'A';
-    printf("&txPkt: %p\n\r", &txPkt);
-    printf("&txPkt.msg: %p\n\r", &txPkt.msg);
-    printf("&txPkt.msg.pos: %p\n\r", &txPkt.msg.pos);
-    printf("&txPkt.msg.body: %p\n\r", &txPkt.msg.body);
-    printf("&txPkt.msg.body.cmd: %p\n\r", &txPkt.msg.body.cmd);
-    printf("&txPkt.msg.body.data: %p\n\r", &txPkt.msg.body.data);
-    printf("&txPkt.data: %p\n\r", &txPkt.data);
-    printf("txPkt.data: %p\n\r", txPkt.data);
-    for(i = 0; i< sizeof(txPkt.msg); i++){
-      p = ((uint8_t*)&txPkt)+i;
-      printf("txPkt[%d](%p): %x\n\r", i, p, *p);
-    }
-
   }
 
   task void receiver(){
@@ -153,6 +140,9 @@ module TestP{
         break;
       case '\r':
         printf("\n\r");
+        break;
+      case '?':
+        status();
         break;
       default:
         printf("%c", byte);
