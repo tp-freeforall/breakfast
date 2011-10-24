@@ -4,11 +4,14 @@ interface I2CSlave{
   command error_t disableGeneralCall();
 
   //signalled when a byte is sitting in the RXBUF
-  // return TRUE if it should be acknowledged, FALSE if it should be
-  //   NACKed
-  // if you return TRUE, you MUST follow with a call to slaveReceive
-  // at some point, preferably very soon.
+  //returns TRUE: The signalled code called slaveReceive to read from
+  //  the RXBUF already.
+  //returns FALSE: The signalled code is not ready to read from the
+  //  RXBUF yet. If false is returned, the signalled code MUST call
+  //  slaveReceive to read the byte from the buffer. Until this
+  //  occurs, the bus will be stalled. 
   async event bool slaveReceiveRequested();
+
   //retrieve the byte from the RXBUF. Should be called only once
   // for each time that slaveReceiveRequested() is signalled
   async command uint8_t slaveReceive();
