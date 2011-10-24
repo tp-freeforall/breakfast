@@ -5,7 +5,7 @@ configuration TestAppC{
   components PlatformSerialC;
   components SerialPrintfC;
 
-  components new I2CDiscoverableC(GLOBAL_ADDR_LENGTH);
+  components new I2CDiscoverableC();
   components new I2CDiscovererC();
 
   TestP.Boot -> MainC.Boot;

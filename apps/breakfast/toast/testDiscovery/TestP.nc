@@ -12,16 +12,15 @@ module TestP{
 } implementation {
   uint8_t rxByte;
   uint16_t localAddr;
-  norace uint8_t globalAddr[GLOBAL_ADDR_LENGTH];
+  norace uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
 
 
   void printGlobalAddr(){
     uint8_t i;
-    printf("Global addr:");
-    for(i = 0; i< GLOBAL_ADDR_LENGTH; i++){
-      printf("%x ", globalAddr[i]);
+    printf("Global addr:\n\r");
+    for(i = 0; i< I2C_GLOBAL_ADDR_LENGTH; i++){
+      printf("[%x] %x\n\r", i, globalAddr[i]);
     }
-    printf("\n\r");
   }
 
   task void status(){
@@ -72,7 +71,7 @@ module TestP{
         post stopDiscoverer();
         break;
       case 'g':
-        globalAddr[GLOBAL_ADDR_LENGTH - 1] ++;
+        globalAddr[I2C_GLOBAL_ADDR_LENGTH - 1] ++;
         post status();
         break;
       case 'l':

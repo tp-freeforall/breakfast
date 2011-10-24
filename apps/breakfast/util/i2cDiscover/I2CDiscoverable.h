@@ -20,7 +20,7 @@
   typedef struct {
     uint8_t cmd;
     uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
-    uint8_t localAddr;
+    uint16_t localAddr;
   } discoverer_register_t;
 
   typedef union{

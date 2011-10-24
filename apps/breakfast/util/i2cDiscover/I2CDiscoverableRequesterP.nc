@@ -13,7 +13,7 @@
  * 
 **/
 //TODO: ten-bit addresses: should be parameterized
-generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
+generic module I2CDiscoverableRequesterP(){
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface I2CSlave;
   uses interface Resource;
@@ -54,7 +54,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   typedef struct {
     uint8_t pos;
     uint8_t cmd;
-    uint8_t globalAddr[globalAddrLength];
+    uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
   } discoverable_reservation_msg_t;
 
   typedef union{
@@ -69,7 +69,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
       setState(S_WAITING);
       _reservation.msg.pos = 0;
       _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
-      memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), globalAddrLength);
+      memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
       return SUCCESS;
     } else {
       return FAIL;
@@ -140,6 +140,7 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     //  - write succeeds, but get an EBUSY in writeDone: try again
     //    next time
     //  - fails: something's wrong
+    printf("fixin' to write %x bytes from %p (base %p)\n\r", sizeof(_reservation), _reservation.data, &_reservation);
     atomic{
       err = call I2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
       if (err == SUCCESS){
