@@ -82,7 +82,7 @@ generic module I2CDiscoverableRequesterP(){
     setState(S_WAITING);
     call I2CSlave.setOwnAddress(I2C_DISCOVERABLE_UNASSIGNED);
     call I2CSlave.enableGeneralCall();
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
+    call Timer.startOneShot(I2C_DISCOVERY_INITIAL_TIMEOUT);
   }
 
 
@@ -211,15 +211,19 @@ generic module I2CDiscoverableRequesterP(){
 
   task void processSlaveReceive(){
     printf("%s: \n\r", __FUNCTION__);
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     atomic{
       if (isGC){
         if(resetNeeded){
+          printf("RESET\n\r");
           localAddr = I2C_DISCOVERABLE_UNASSIGNED;
           setState(S_WAITING);
           resetNeeded = FALSE;
         }
         if(setAddrNeeded && localAddr == I2C_DISCOVERABLE_UNASSIGNED && masterAddr != I2C_INVALID_MASTER){
+          //TODO: this could probably be much shorter, no longer
+          //waiting undefined time for start of the process, but
+          //waiting for a single assignment to complete
+          call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
           setAddrNeeded = FALSE;
           post requestLocalAddrTask();
         }

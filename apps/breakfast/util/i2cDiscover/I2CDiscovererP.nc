@@ -118,7 +118,6 @@ generic module I2CDiscovererP(){
 
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
-    //TODO: this is getting signalled before the call to write completes.
     atomic stateTmp = state;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
     switch(stateTmp){
