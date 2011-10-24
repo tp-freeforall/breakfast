@@ -1,4 +1,17 @@
 #include "I2CDiscoverable.h"
+/**
+ * - should receive master address, then reset/set cmd. When
+ *   this is received, try to claim the bus by writing to the bus
+ *   head via requestLocalAddr task (does not send stop condition). Attempt to
+ *   write pos 0, cmd = "claim", data = global address
+ * - when this write completes, either we get SUCCESS, at which point
+ *   we try to read the next byte from the bus head (our local
+ *   address), or we get something else and go back to sitting around
+ *   waiting for a reset/set.
+ * - if we manage to read from the bus head, then signal startDone to
+ *   indicate that we have a local address now.
+ * 
+**/
 //TODO: ten-bit addresses: should be parameterized
 generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   uses interface I2CPacket<TI2CBasicAddr>;
@@ -9,8 +22,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   uses interface Timer<TMilli>;
   //TODO: should provide Msp430UsciConfigure: set UCMM!
 } implementation {
-  uint8_t reg[I2C_DISCOVERABLE_REGISTERS_SIZE];
-  uint8_t pos;
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
   uint16_t localAddr = I2C_DISCOVERABLE_UNASSIGNED;
@@ -23,7 +34,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   enum{
     S_WAITING,
     S_CLAIMING_BUS,
-    S_ZEROING_MASTER,
     S_READING_ADDR,
     S_ASSIGNED,
     S_ERROR,
@@ -39,7 +49,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
   bool checkState(uint8_t s){
     atomic return s == state;
   }
-
   
   typedef struct {
     uint8_t pos;
@@ -83,7 +92,8 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     transCount = 0;
   }
 
-  async event error_t I2CSlave.slaveReceive(uint8_t data){
+  async event bool I2CSlave.slaveReceiveRequested(){
+    uint8_t data = call I2CSlave.slaveReceive();
     isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
@@ -104,33 +114,18 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
             setAddrNeeded = TRUE;
             break;
           default://everything else: forbidden!
-            return EINVAL;
+            setState(S_ERROR);
         }
       }
-    } else {
-      if(transCount == 0){
-        //first byte: offset
-        pos = data;
-      } else {
-        //everything else: write it to buffer if space permits
-        if (pos+transCount <= I2C_DISCOVERABLE_REGISTERS_SIZE){
-          reg[pos + transCount - 1] = data;
-        } else {
-          return ESIZE;
-        }
-      }
-    }
-    transCount++;
-    return SUCCESS;
+    } 
+    return TRUE;
   }
 
-  async event uint8_t I2CSlave.slaveTransmit(){
+  async event bool I2CSlave.slaveTransmitRequested(){
     isReceive=FALSE;
-    if(pos + transCount <= I2C_DISCOVERABLE_REGISTERS_SIZE){
-      return reg[pos + (transCount++) -1];
-    } else {
-      return 0xff;
-    }
+    setState(S_ERROR);
+    call I2CSlave.slaveTransmit(0xff);
+    return TRUE;
   }
 
   task void requestLocalAddrTask(){
@@ -150,17 +145,6 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     
   }
 
-  task void zeroMaster(){
-    _reservation.msg.pos = 0x00;
-    //write position only
-    if (SUCCESS == call I2CPacket.write(I2C_RESTART,
-        masterAddr, 1, _reservation.data)){
-      setState(S_ZEROING_MASTER);
-    }else{
-      setState(S_ERROR);
-    }
-  }
-
   task void readLocalAddr(){
     if (SUCCESS == call I2CPacket.read(I2C_STOP, masterAddr,
         2, (uint8_t*)(&localAddr))){
@@ -176,16 +160,9 @@ generic module I2CDiscoverableRequesterP(uint8_t globalAddrLength){
     switch(stateTmp){
       case S_CLAIMING_BUS:
         if(error == SUCCESS){
-          post zeroMaster();
-        } else {
-          setState(S_WAITING);
-        }
-        break;
-      case S_ZEROING_MASTER:
-        if (error == SUCCESS){
           post readLocalAddr();
         } else {
-          setState(S_ERROR);
+          setState(S_WAITING);
         }
         break;
       default:
