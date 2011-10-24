@@ -1,6 +1,6 @@
 #include "I2CDiscoverable.h"
 //TODO: ten-bit addresses: should be parameterized
-generic module I2CDiscovererP(uint8_t globalAddrLength){
+generic module I2CDiscovererP(){
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface I2CSlave;
   uses interface Resource;
@@ -18,11 +18,20 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
   bool resetNeeded;
   uint8_t state;
   bool isReceive;
+  uint8_t announcement;
 
   enum{
     S_ERROR,
+    S_INIT,
     S_OFF,
+    S_ANNOUNCING,
+    S_WAITING,
+    S_ASSIGNING,
+    S_RESPONDING,
+    S_RECEIVING,
   };
+
+  task void announce();
 
   void setState(uint8_t s){
     atomic{
@@ -33,26 +42,15 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
   bool checkState(uint8_t s){
     atomic return s == state;
   }
-
-  typedef struct {
-    uint8_t cmd;
-    uint8_t globalAddr[globalAddrLength];
-    uint8_t localAddr;
-  } discoverer_register_t;
-
-  typedef union{
-    discoverer_register_t register;
-    uint8_t data[sizeof(discoverer_register_t)];
-  } discoverer_register_union_t;
   
+  //TODO: should be buffer swap
   discoverer_register_union_t reg;
-  
 
   command error_t SplitControl.start(){
     if ( SUCCESS == call Resource.request()){
       setState(S_INIT);
       //register setup is : cmd [globalAddr] localAddr
-      reg.register.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
+      atomic reg.val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
       return SUCCESS;
     } else {
       return FAIL;
@@ -66,8 +64,8 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
   }
 
   task void announce(){
-    reg[0] = (localAddr << 1) | 0x01;
-    if( SUCCESS != call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, reg)){
+    announcement = (localAddr << 1) | 0x01;
+    if( SUCCESS != call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &announcement)){
       setState(S_ERROR);
       signal SplitControl.startDone(FAIL);
     }else {
@@ -169,33 +167,14 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
   }
 
 
-  task void processSlaveReceive(){
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
-    atomic{
-      if (isGC){
-        if(resetNeeded){
-          localAddr = I2C_DISCOVERABLE_UNASSIGNED;
-          setState(S_WAITING);
-          resetNeeded = FALSE;
-        }
-        if(setAddrNeeded && localAddr == I2C_DISCOVERABLE_UNASSIGNED && masterAddr != I2C_INVALID_MASTER){
-          setAddrNeeded = FALSE;
-          post requestLocalAddrTask();
-        }
-      }else{
-        //nothin'
-      }
-    }
-  }
-
-  task void processSlaveTransmit(){
-    //nothin'
-  }
-
   async event void I2CSlave.slaveStop(){
     if (checkState(S_RECEIVING)){
-      signal I2CDiscoverer.transactionEnd(reg);
-      reg[globalAddrLength]++;
+      //TODO: check command should be done when requester is reading
+      //from reg...
+      if (reg.val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
+        signal I2CDiscoverer.discovered(&reg);
+        reg.val.localAddr++;
+      }
     }else{
       setState(S_ERROR);
     } 
@@ -230,8 +209,5 @@ generic module I2CDiscovererP(uint8_t globalAddrLength){
     }
   }
 
-  command uint16_t I2CDiscoverable.getLocalAddr(){
-    return localAddr;
-  }
 }
 

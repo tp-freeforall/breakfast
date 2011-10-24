@@ -1,15 +1,19 @@
 #include <stdio.h>
-
+#include "decodeError.h"
 module TestP{
   uses interface Boot;
   uses interface SplitControl as DiscoverableSplitControl;
   uses interface I2CDiscoverable;
+  uses interface SplitControl as DiscovererSplitControl;
+  uses interface I2CDiscoverer;
   uses interface UartStream;
   uses interface UartByte;
   uses interface StdControl as UartControl;
 } implementation {
   uint8_t rxByte;
+  uint16_t localAddr;
   norace uint8_t globalAddr[GLOBAL_ADDR_LENGTH];
+
 
   void printGlobalAddr(){
     uint8_t i;
@@ -18,6 +22,11 @@ module TestP{
       printf("%x ", globalAddr[i]);
     }
     printf("\n\r");
+  }
+
+  task void status(){
+    printGlobalAddr();
+    //TODO: other status?
   }
 
   event void Boot.booted(){
@@ -36,6 +45,16 @@ module TestP{
       call DiscoverableSplitControl.stop());
   }
 
+  task void startDiscoverer(){
+    error_t error = call DiscovererSplitControl.start();
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
+  }
+
+  task void stopDiscoverer(){
+    error_t error = call DiscovererSplitControl.stop();
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+  }
+
   async event void UartStream.receivedByte(uint8_t byte){
     atomic rxByte = byte;
     switch(rxByte){
@@ -49,11 +68,20 @@ module TestP{
         post stopTask();
         break;
       case 'm':
-        printf("TODO: discoverer.\n\r");
+        post startDiscoverer();
+        break;
+      case 'M':
+        post stopDiscoverer();
         break;
       case 'g':
         globalAddr[GLOBAL_ADDR_LENGTH - 1] ++;
         printGlobalAddr();
+        break;
+      case 'l':
+        localAddr++;
+        break;
+      case '?':
+        post status();
         break;
       case '\r':
         printf("\n\r");
@@ -71,6 +99,22 @@ module TestP{
 
   event void DiscoverableSplitControl.stopDone(error_t error){
     printf("Stop done: %x\n\r", error);
+  }
+
+  event void DiscovererSplitControl.startDone(error_t error){
+    printf("%s: \n\r", __FUNCTION__);
+  }
+
+  event void DiscovererSplitControl.stopDone(error_t error){
+    printf("%s: \n\r", __FUNCTION__);
+  }
+  
+  event uint16_t I2CDiscoverer.getLocalAddr(){
+    return localAddr;
+  }
+
+  async event void I2CDiscoverer.discovered(discoverer_register_union_t* discovery){
+    printf("%s: \n\r", __FUNCTION__);
   }
 
   event uint8_t* I2CDiscoverable.getGlobalAddr(){
