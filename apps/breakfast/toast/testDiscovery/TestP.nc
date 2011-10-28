@@ -29,6 +29,7 @@ module TestP{
   }
 
   event void Boot.booted(){
+    globalAddr[I2C_GLOBAL_ADDR_LENGTH - 1] = GLOBAL_ADDR_LSB;
     call UartControl.start();
     printf("I2C Discovery Test\n\r");
     printGlobalAddr();
