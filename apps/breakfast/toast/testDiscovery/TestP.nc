@@ -14,6 +14,8 @@ module TestP{
   uint16_t localAddr;
   norace uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
 
+  task void startTask();
+
 
   void printGlobalAddr(){
     uint8_t i;
@@ -33,6 +35,9 @@ module TestP{
     call UartControl.start();
     printf("I2C Discovery Test\n\r");
     printGlobalAddr();
+    if(AUTO_SLAVE){
+      post startTask();
+    }
   }
 
   task void startTask(){
@@ -94,6 +99,9 @@ module TestP{
   event void DiscoverableSplitControl.startDone(error_t error){
     printf("Start done: %s local address: %x\n\r", 
       decodeError(error), call I2CDiscoverable.getLocalAddr());
+    if (error == ENOACK && AUTO_SLAVE){
+      post startTask();
+    }
   }
 
   event void DiscoverableSplitControl.stopDone(error_t error){
