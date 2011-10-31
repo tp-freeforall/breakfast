@@ -10,6 +10,7 @@ generic configuration I2CDiscoverableC(){
   I2CDiscoverableP.I2CSlave -> Msp430I2C0C;
   I2CDiscoverableP.Resource -> Msp430I2C0C;
   I2CDiscoverableP.Timer -> TimerMilliC;
+  Msp430I2C0C.Msp430UsciConfigure -> I2CDiscoverableP.Msp430UsciConfigure;
   
   I2CDiscoverable = I2CDiscoverableP;
   SplitControl = I2CDiscoverableP;

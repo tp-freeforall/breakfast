@@ -20,7 +20,7 @@ generic module I2CDiscoverableRequesterP(){
   provides interface I2CDiscoverable;
   provides interface SplitControl;
   uses interface Timer<TMilli>;
-  //TODO: should provide Msp430UsciConfigure: set UCMM!
+  provides interface Msp430UsciConfigure;
 } implementation {
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
@@ -277,5 +277,20 @@ generic module I2CDiscoverableRequesterP(){
 
   command uint16_t I2CDiscoverable.getLocalAddr(){
     return localAddr;
+  }
+
+  const msp430_usci_config_t _config = {
+    ctl0: UCSYNC|UCMODE_3|UCMM,
+    ctl1: UCSSEL_2,
+    br0:  0x08,
+    br1:  0x00,
+    mctl: 0x00,
+    i2coa: I2C_DISCOVERABLE_UNASSIGNED,
+  };
+
+
+
+  async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
+    return &_config;
   }
 }
