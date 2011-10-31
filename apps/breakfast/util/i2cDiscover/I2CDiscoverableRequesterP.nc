@@ -288,8 +288,6 @@ generic module I2CDiscoverableRequesterP(){
     i2coa: I2C_DISCOVERABLE_UNASSIGNED,
   };
 
-
-
   async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
     return &_config;
   }

@@ -5,9 +5,8 @@ generic module I2CDiscovererP(){
   uses interface I2CSlave;
   uses interface Resource;
   provides interface I2CDiscoverer;
-  provides interface SplitControl;
   uses interface Timer<TMilli>;
-  //TODO: should provide Msp430UsciConfigure: set UCMM!
+  provides interface Msp430UsciConfigure;
 } implementation {
   uint8_t pos;
   uint8_t transCount;
@@ -16,7 +15,6 @@ generic module I2CDiscovererP(){
   bool isGC;
   bool setAddrNeeded;
   bool resetNeeded;
-  uint8_t state;
   bool isReceive;
   uint8_t txByte;
 
@@ -33,7 +31,14 @@ generic module I2CDiscovererP(){
     S_ERROR = 0x07,
   };
 
+  uint8_t state = S_OFF;
+
   task void announce();
+  task void signalDone();
+
+  task void restartTimeout(){
+    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
+  }
 
   void setState(uint8_t s){
     atomic{
@@ -49,17 +54,22 @@ generic module I2CDiscovererP(){
   //TODO: should be buffer swap
   discoverer_register_union_t reg;
 
-  command error_t SplitControl.start(){
+  command error_t I2CDiscoverer.startDiscovery(){
     printf("%s: \n\r", __FUNCTION__);
-    if ( SUCCESS == call Resource.request()){
-      setState(S_INIT);
-      //register setup is : cmd [globalAddr] localAddr
-      atomic reg.val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
-      return SUCCESS;
+    if(checkState(S_OFF)){
+      if ( SUCCESS == call Resource.request()){
+        setState(S_INIT);
+        //register setup is : cmd [globalAddr] localAddr
+        atomic reg.val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
+        return SUCCESS;
+      } else {
+        return FAIL;
+      }
     } else {
-      return FAIL;
+      return EALREADY;
     }
   }
+
 
   event void Resource.granted(){
     printf("%s: \n\r", __FUNCTION__);
@@ -74,47 +84,53 @@ generic module I2CDiscovererP(){
     txByte = (localAddr << 1) | 0x01;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
+      if (err == SUCCESS) {
+        post restartTimeout();
+        setState(S_ANNOUNCING);
+      }
+      //TODO: handle EBUSY for lost arbitration
       if( err != SUCCESS){
         setState(S_ERROR);
-      }else {
-        setState(S_ANNOUNCING);
       }
     }
     //deal with race condition: writing a single byte is damn fast--
     //if we check state then it will likely already have been modified
     //in the writeDone event
     if (err != SUCCESS){
-      signal SplitControl.startDone(FAIL);
+      post signalDone();
     }
   }
 
   task void resetTask(){
     error_t err;
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     txByte = I2C_GC_RESET_PROGRAM_ADDR;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
-      if (err != SUCCESS){
-        setState(S_ERROR);
-      } else {
+      if (err == SUCCESS){
+        post restartTimeout();
         setState(S_RESETTING);
       }
+      //TODO: deal with EBUSY (arbitration lost)
+      if (err != SUCCESS){
+        setState(S_ERROR);
+      } 
     }
   }
 
   task void setTask(){
     error_t err;
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     txByte = I2C_GC_PROGRAM_ADDR;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
       if (err != SUCCESS){
         setState(S_ERROR);
       } else {
+        post restartTimeout();
         setState(S_SETTING);
       }
     }
   }
+
 
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
@@ -126,7 +142,7 @@ generic module I2CDiscovererP(){
           setState(S_ANNOUNCED);
           post resetTask();
         } else if (error == ENOACK){
-          //TODO: nobody home, we're done
+          post signalDone();
         } else {
           setState(S_ERROR);
         }
@@ -145,13 +161,12 @@ generic module I2CDiscovererP(){
     }
   }
 
-  task void startRound(){
-  }
 
   async event void I2CSlave.slaveStart(bool generalCall){
     isGC = generalCall;
     transCount = 0;
     printf("slave start %x \n\r", generalCall);
+    post restartTimeout();
     switch(state){
       case S_WAITING:
         //we expect the master to write the CLAIM cmd, then their global address from
@@ -214,18 +229,12 @@ generic module I2CDiscovererP(){
   }
 
 
-  task void assignedTask(){
-    printf("%s: \n\r", __FUNCTION__);
-    call Timer.stop();
-    signal SplitControl.startDone(SUCCESS);
-  }
-
   async event void I2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     printf("%s: \n\r", __FUNCTION__);
     atomic stateTmp = state;
     switch(stateTmp){
-     default:
+      default:
         setState(S_ERROR);
     }
   }
@@ -247,25 +256,28 @@ generic module I2CDiscovererP(){
     } 
   }
 
-  task void signalStopDone(){
-    signal SplitControl.stopDone(SUCCESS);
-  }
-
-  command error_t SplitControl.stop(){
-    if (call Resource.isOwner()){
-      if(call Resource.release() == SUCCESS){
-        post signalStopDone();
-        return SUCCESS;
-      }else {
-        return FAIL;
-      }
-    } else {
-      return EALREADY;
-    }
+  task void signalDone(){
+    call Resource.release();
+    call Timer.stop();
+    setState(S_OFF);
+    signal I2CDiscoverer.discoveryDone(SUCCESS);
   }
 
   event void Timer.fired(){
-    signal SplitControl.startDone(SUCCESS);
+    post signalDone();
+  }
+
+  const msp430_usci_config_t _config = {
+    ctl0: UCSYNC|UCMODE_3|UCMM,
+    ctl1: UCSSEL_2,
+    br0:  0x08,
+    br1:  0x00,
+    mctl: 0x00,
+    i2coa: I2C_INVALID_MASTER,
+  };
+
+  async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
+    return &_config;
   }
 
 }

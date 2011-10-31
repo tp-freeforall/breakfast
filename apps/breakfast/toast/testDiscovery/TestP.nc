@@ -4,14 +4,13 @@ module TestP{
   uses interface Boot;
   uses interface SplitControl as DiscoverableSplitControl;
   uses interface I2CDiscoverable;
-  uses interface SplitControl as DiscovererSplitControl;
   uses interface I2CDiscoverer;
   uses interface UartStream;
   uses interface UartByte;
   uses interface StdControl as UartControl;
 } implementation {
   uint8_t rxByte;
-  uint16_t localAddr;
+  uint16_t localAddr = GLOBAL_ADDR_LSB;
   norace uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
 
   task void startTask();
@@ -49,13 +48,8 @@ module TestP{
   }
 
   task void startDiscoverer(){
-    error_t error = call DiscovererSplitControl.start();
+    error_t error = call I2CDiscoverer.startDiscovery();
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
-  }
-
-  task void stopDiscoverer(){
-    error_t error = call DiscovererSplitControl.stop();
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
   async event void UartStream.receivedByte(uint8_t byte){
@@ -72,9 +66,6 @@ module TestP{
         break;
       case 'm':
         post startDiscoverer();
-        break;
-      case 'M':
-        post stopDiscoverer();
         break;
       case 'g':
         globalAddr[I2C_GLOBAL_ADDR_LENGTH - 1] ++;
@@ -108,11 +99,7 @@ module TestP{
     printf("Stop done: %s\n\r", decodeError(error));
   }
 
-  event void DiscovererSplitControl.startDone(error_t error){
-    printf("Discoverer SplitControl.startDone %s: \n\r", decodeError(error));
-  }
-
-  event void DiscovererSplitControl.stopDone(error_t error){
+  event void I2CDiscoverer.discoveryDone(error_t error){
     printf("%s: \n\r", __FUNCTION__);
   }
   

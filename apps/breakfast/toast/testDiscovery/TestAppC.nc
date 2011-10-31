@@ -15,7 +15,6 @@ configuration TestAppC{
   TestP.UartByte -> PlatformSerialC.UartByte;
   TestP.UartControl -> SerialPrintfC.StdControl;
 
-  TestP.DiscovererSplitControl -> I2CDiscovererC;
   TestP.I2CDiscoverer -> I2CDiscovererC;
   
 }
