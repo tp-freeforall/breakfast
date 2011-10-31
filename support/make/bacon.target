@@ -14,7 +14,7 @@ PFLAGS += -DSURF_REV_$(SURF_REV) -DBACON -I$(TOS_ROOT)/tinyos/tos/platforms/baco
 PFLAGS += -DPLATFORM_HAS_FLASH=$(HAS_FLASH)
 
 MSP_BSL ?= $(TOSROOT)/bin/cc430-bsl
-MSP_BSL_FLAGS += --noadg715 -S 115200
+MSP_BSL_FLAGS += --noadg715 --invertRTS  -S 115200
 
 VOLUME_FILE = volumes-stm25p.xml
 VOLUME_ALLOCATOR ?= tos-storage-stm25p

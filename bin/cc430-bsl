@@ -195,7 +195,10 @@ class LowLevel:
     def SetRSTn(self, level):
         """map RSTn (mcu) to RTSn (serial)"""
         debug(4, "SetRSTn %d"%level)
-        self.SetRTS(level)
+        if self.invertRTS:
+            self.SetRTS( not level)
+        else:
+            self.SetRTS(level)
 
     def SetTEST(self, level):
         """map TEST (mcu) to DTRn (serial)"""
@@ -1085,6 +1088,7 @@ def main():
     bsl.errataJTAG20Resolved = False
     bsl.dedicatedJTAG = False
     bsl.pauseBSLEntry = False
+    bsl.invertRTS = False
     # bsl.maxData
     # bsl.fastrx
     # bsl.speed
@@ -1103,7 +1107,8 @@ def main():
              "surf", "fastrx", "max-baud", "masserase", "program",
              "bslversion", "wipe-info=", "infoerase", "upload=", "size=", "hex", "bin",
              "noadg715", "errataJTAG20Resolved", "dedicatedJTAG",
-             "pauseBSLEntry", "go=","reset", "wait", "enterbsl", "nospeed"]
+             "pauseBSLEntry", "go=","reset", "wait", "enterbsl",
+             "nospeed", "invertRTS"]
         )
     except getopt.GetoptError:
         # print help information and exit:
@@ -1203,6 +1208,8 @@ def main():
             bsl.pauseBSLEntry = True
         elif o in ("--enterbsl"):
             enterbsl = True
+        elif o in ("--invertRTS"):
+            bsl.invertRTS = True
         elif o in ("--nospeed"):
             bsl.speed = None
         else:
