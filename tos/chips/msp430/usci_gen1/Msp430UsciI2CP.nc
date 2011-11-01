@@ -140,12 +140,6 @@ implementation {
   {
     uint8_t counter = 0xFF;
 
-    if ( flags & I2C_RESTART){
-      //Restart: bus is supposed to be busy
-    } else if (call Usci.getStat() & UCBBUSY ){
-      return EBUSY;
-    }
-
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -162,7 +156,13 @@ implementation {
       call Usci.leaveResetMode_();
       // set slave address 
       call UsciB.setI2csa(addr);
-      //clear TR bit, set start condition
+      //check bus status at the latest point possible.
+      if ( call Usci.getStat() & UCBBUSY ){
+        //if the bus is busy, bail out real quick
+        slaveIdle();
+        return EBUSY;
+      }
+       //clear TR bit, set start condition
       call Usci.setCtl1( (call Usci.getCtl1()&(~UCTR))  | UCTXSTT);
 
 
@@ -265,12 +265,6 @@ implementation {
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
-   if (flags & I2C_RESTART){
-      //continued, so we don't check for BUSY.
-    } else if ( call Usci.getStat() & UCBBUSY ){
-      return EBUSY;
-    }
-      
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -298,6 +292,13 @@ implementation {
 
       // set slave address 
       call UsciB.setI2csa(addr);
+
+      //check bus status at the latest point possible.
+      if ( call Usci.getStat() & UCBBUSY ){
+        //if the bus is busy, bail out real quick
+        slaveIdle();
+        return EBUSY;
+      }
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
       //enable relevant state interrupts
