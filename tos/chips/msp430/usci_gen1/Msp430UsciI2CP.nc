@@ -1,3 +1,4 @@
+#include <stdio.h>
 /*
  * Copyright (c) 2005-2006 Arch Rock Corporation
  * All rights reserved.
@@ -355,7 +356,7 @@ implementation {
       }
     } else{
       //send the next char
-      //printf("[%x]=%x\n\r", m_pos, m_buf[m_pos]);
+      printf("[%x]=%x\n\r", m_pos, m_buf[m_pos]);
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
     }
   }
@@ -413,6 +414,7 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
+    printf("SI %x %x %x %x\n\r", iv, call Usci.getCtl0(), call Usci.getStat());
     if (call Usci.getCtl0() & UCMST){
       /* no acknowledgement */
       if (call Usci.getStat() & UCNACKIFG) {

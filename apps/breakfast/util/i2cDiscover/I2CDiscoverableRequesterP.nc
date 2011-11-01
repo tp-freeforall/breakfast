@@ -144,8 +144,10 @@ generic module I2CDiscoverableRequesterP(){
     atomic{
       err = call I2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
       if (err == SUCCESS){
+        printf("CLAIMING\n\r");
         setState(S_CLAIMING_BUS);
       } else {
+        printf("ERROR\n\r");
         //TODO: EBUSY = go back to wait, fail = error?
         setState(S_ERROR);
       }
