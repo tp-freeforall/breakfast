@@ -149,10 +149,10 @@ generic module I2CDiscoverableRequesterP(){
     atomic{
       err = call I2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
       if (err == SUCCESS){
-        printf("CLAIM\n\r");
+        //printf("CLAIM\n\r");
         setState(S_CLAIMING_BUS);
       } else {
-        printf("RLE: ERROR\n\r");
+        //printf("RLE: ERROR\n\r");
         //TODO: EBUSY = go back to wait, fail = error?
         setState(S_ERROR);
       }
@@ -162,10 +162,10 @@ generic module I2CDiscoverableRequesterP(){
 
   task void readLocalAddr(){
     error_t err;
-    printf("%s: \n\r", __FUNCTION__);
+    //printf("%s: \n\r", __FUNCTION__);
     //restart: don't check for EBUSY
     err = call I2CPacket.read(I2C_RESTART | I2C_STOP, masterAddr, 2, (uint8_t*)(&localAddr));
-    printf("%s:read %s\n\r", __FUNCTION__, decodeError(err));
+//    printf("%s:read %s\n\r", __FUNCTION__, decodeError(err));
     if (err == SUCCESS){
       setState(S_READING_ADDR);
     } else {
@@ -176,7 +176,7 @@ generic module I2CDiscoverableRequesterP(){
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
-    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
+//    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
     switch(stateTmp){
       case S_CLAIMING_BUS:
         if(error == SUCCESS){
@@ -186,7 +186,7 @@ generic module I2CDiscoverableRequesterP(){
         }
         break;
       default:
-        printf("bad state:%x \n\r", stateTmp);
+//        printf("bad state:%x \n\r", stateTmp);
         setState(S_ERROR);
     }
   }
@@ -199,7 +199,7 @@ generic module I2CDiscoverableRequesterP(){
   async event void I2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
-    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
+//    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
     switch(stateTmp){
       case S_READING_ADDR:
         if (error == SUCCESS){

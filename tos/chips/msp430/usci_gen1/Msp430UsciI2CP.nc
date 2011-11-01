@@ -301,7 +301,7 @@ implementation {
       }
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
-      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
+//      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
       //enable tx interrupts 
@@ -372,7 +372,7 @@ implementation {
     } else{
       //send the next char
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
-      printf("[%x]=%x ", m_pos-1, m_buf[m_pos-1]);
+//      printf("[%x]=%x ", m_pos-1, m_buf[m_pos-1]);
     }
   }
 
@@ -432,9 +432,9 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-    if(call Usci.getStat() & UCALIFG){
-      printf("AL!");
-    }
+//    if(call Usci.getStat() & UCALIFG){
+//      printf("AL!");
+//    }
     if (call Usci.getCtl0() & UCMST){
       /* no acknowledgement */
       if (call Usci.getStat() & UCNACKIFG) {
