@@ -42,7 +42,7 @@ generic module I2CDiscovererP(){
 
   void setState(uint8_t s){
     atomic{
-      printf("I2CDiscovererP %x -> %x\n\r", state, s);
+//      printf("I2CDiscovererP %x -> %x\n\r", state, s);
       state = s;
     }
   }
@@ -55,7 +55,7 @@ generic module I2CDiscovererP(){
   discoverer_register_union_t reg;
 
   command error_t I2CDiscoverer.startDiscovery(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
       if ( SUCCESS == call Resource.request()){
         setState(S_INIT);
@@ -72,7 +72,7 @@ generic module I2CDiscovererP(){
 
 
   event void Resource.granted(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     localAddr = signal I2CDiscoverer.getLocalAddr();
     call I2CSlave.setOwnAddress(localAddr);
     post announce();
@@ -80,7 +80,7 @@ generic module I2CDiscovererP(){
 
   task void announce(){
     error_t err;
-    printf("announce");
+//    printf("announce");
     txByte = (localAddr << 1) | 0x01;
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
@@ -135,7 +135,7 @@ generic module I2CDiscovererP(){
   async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
+//    printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
     switch(stateTmp){
       case S_ANNOUNCING:
         if(error == SUCCESS){
@@ -165,7 +165,7 @@ generic module I2CDiscovererP(){
   async event void I2CSlave.slaveStart(bool generalCall){
     isGC = generalCall;
     transCount = 0;
-    printf("slave start %x \n\r", generalCall);
+//    printf("slave start %x \n\r", generalCall);
     post restartTimeout();
     switch(state){
       case S_WAITING:
@@ -185,7 +185,7 @@ generic module I2CDiscovererP(){
 
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
-    printf("%s: %x\n\r", __FUNCTION__, data);
+//    printf("%s: %x\n\r", __FUNCTION__, data);
     if (isGC){
       //first byte ends with 1: own-address announcement from master
       if (data & 0x01){
@@ -206,9 +206,9 @@ generic module I2CDiscovererP(){
       if(transCount == 0){
         //first byte: offset
         pos = data;
-        printf("pos: %x", pos);
+//        printf("pos: %x", pos);
       } else {
-        printf("writing %x to %x (actually %x)\n\r", data, pos, pos%sizeof(discoverer_register_t));
+//        printf("writing %x to %x (actually %x)\n\r", data, pos, pos%sizeof(discoverer_register_t));
         //everything else: write it to buffer (circular)
         reg.data[(pos++)%sizeof(discoverer_register_t)] = data;
       }
@@ -219,10 +219,10 @@ generic module I2CDiscovererP(){
 
   async event uint8_t I2CSlave.slaveTransmitRequested(){
     isReceive=FALSE;
-    printf("%s: [%x (%x)] = %x\n\r", __FUNCTION__, 
-      pos,
-      pos%sizeof(discoverer_register_t), 
-      reg.data[pos%sizeof(discoverer_register_t)]);
+//    printf("%s: [%x (%x)] = %x\n\r", __FUNCTION__, 
+//      pos,
+//      pos%sizeof(discoverer_register_t), 
+//      reg.data[pos%sizeof(discoverer_register_t)]);
     //return from buf (circular)
     call I2CSlave.slaveTransmit(reg.data[(pos++)%sizeof(discoverer_register_t)]);
     return TRUE;
@@ -231,7 +231,7 @@ generic module I2CDiscovererP(){
 
   async event void I2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     atomic stateTmp = state;
     switch(stateTmp){
       default:
@@ -241,7 +241,7 @@ generic module I2CDiscovererP(){
 
 
   async event void I2CSlave.slaveStop(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     if (checkState(S_RESPONDING)){
       //TODO: check command should be done when requester is reading
       //from reg...
