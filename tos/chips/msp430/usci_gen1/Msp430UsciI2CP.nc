@@ -301,6 +301,7 @@ implementation {
       }
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
+      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
       //enable tx interrupts 
@@ -328,6 +329,19 @@ implementation {
   void nextWrite()
   {
     uint16_t counter = 0xFFFF;
+    //Hey, now here's a fun thing to do:
+    //  It seems like if two masters set START at almost the same
+    //  time, they both get the TX interrupt, so both write their 0th
+    //  byte into the TX buffer. However, only one of them actually
+    //  writes it out, and no arbitration-loss interrupt is raised for
+    //  the "slow" one. When the "fast" one finishes its transaction,
+    //  the slow one gets a second TX interrupt, which would cause us
+    //  to skip over the first byte by accident. This checks for the
+    //  issue and rewinds the buffer position to 0 if it applies.  I
+    //  make no guarantees about how stable this behavior is.
+    if ( call Usci.getCtl1() & UCTXSTT){
+      m_pos = 0;
+    }
     /* all bytes sent */
     if ( m_pos == m_len ) {
       /* not setting STOP bit allows restarting transfer */
@@ -357,8 +371,8 @@ implementation {
       }
     } else{
       //send the next char
-      printf("[%x]=%x\n\r", m_pos, m_buf[m_pos]);
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
+      printf("[%x]=%x ", m_pos-1, m_buf[m_pos-1]);
     }
   }
 
@@ -368,6 +382,9 @@ implementation {
   {
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
+//      printf("S%x", call Usci.getStat());
+//      printf("I%x", 0x0f&call UsciB.getI2cie());
+//      printf("C%x", 0x0f&call Usci.getCtl1());
       nextWrite();
     } else {
       if(signal I2CSlave.slaveTransmitRequested[call ArbiterInfo.userId()]()){
@@ -415,7 +432,9 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-//    printf("SI %x %x %x %x\n\r", iv, call Usci.getCtl0(), call Usci.getStat());
+    if(call Usci.getStat() & UCALIFG){
+      printf("AL!");
+    }
     if (call Usci.getCtl0() & UCMST){
       /* no acknowledgement */
       if (call Usci.getStat() & UCNACKIFG) {

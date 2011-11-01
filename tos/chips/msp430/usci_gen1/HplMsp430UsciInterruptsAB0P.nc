@@ -36,6 +36,7 @@ module HplMsp430UsciInterruptsAB0P {
 
     //UCALIFG, UCNACKIFG, UCSTTIFG, UCSTPIFG 
     //  -> B0State(UCB0STAT)
+    //TODO: should be 0x0f & UCB0I2CIE & UCB0STAT
     }else if(UCB0I2CIE & UCB0STAT ){
       //P6OUT = 0x08;
       signal InterruptsUCB0State.interrupted(UCB0STAT);  
