@@ -19,6 +19,7 @@ generic module I2CDiscovererP(){
   bool resetNeeded;
   bool isReceive;
   uint8_t txByte;
+  bool discovered;
 
   enum{
     S_INIT= 0x00,
@@ -39,12 +40,13 @@ generic module I2CDiscovererP(){
   task void signalDone();
 
   task void restartTimeout(){
+    printf("RESTART\n\r");
     call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
   }
 
   void setState(uint8_t s){
     atomic{
-      printf("D %x->%x\n\r", state, s);
+//      printf("D %x->%x\n\r", state, s);
       state = s;
     }
   }
@@ -60,6 +62,7 @@ generic module I2CDiscovererP(){
 //    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
       if ( SUCCESS == call Resource.request()){
+        discovered = FALSE;
         setState(S_INIT);
         //register setup is : cmd [globalAddr] localAddr
         atomic reg->val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
@@ -170,7 +173,7 @@ generic module I2CDiscovererP(){
     isGC = generalCall;
     transCount = 0;
 //    printf("slave start %x \n\r", generalCall);
-    post restartTimeout();
+    //post restartTimeout();
     switch(state){
       case S_WAITING:
         //we expect the master to write the CLAIM cmd, then their global address from
@@ -246,7 +249,6 @@ generic module I2CDiscovererP(){
   }
 
   task void checkQueueTask();
-
   task void discoveredTask(){
     discoverer_register_union_t* tmp;
     bool empty; 
@@ -256,6 +258,8 @@ generic module I2CDiscovererP(){
       atomic {
         tmp = call Queue.dequeue();
       }
+      printf("DISCOVERED\n\r");
+      discovered = TRUE;
       tmp = signal I2CDiscoverer.discovered(tmp);
       atomic {
         call Pool.put(tmp);
@@ -279,7 +283,7 @@ generic module I2CDiscovererP(){
     uint16_t nextAddr;
 //    printf("%s: \n\r", __FUNCTION__);
     if (checkState(S_RESPONDING)){
-      printf("SIGNAL\n\r");
+//      printf("SIGNAL\n\r");
       //TODO: check command should be done when requester is reading
       //from reg...
       //TODO: this should be split-phase: just grab an item from the
@@ -298,7 +302,7 @@ generic module I2CDiscovererP(){
       setState(S_WAITING);
       //post setTask();
     }else{
-      printf("NO SIGNAL\n\r");
+//      printf("NO SIGNAL\n\r");
       setState(S_ERROR);
     } 
   }
@@ -311,7 +315,14 @@ generic module I2CDiscovererP(){
   }
 
   event void Timer.fired(){
-    post signalDone();
+    if(discovered){
+      discovered = FALSE;
+      printf("AGAIN\n\r");
+      post setTask();
+    } else {
+      printf("NO MORE\n\r");
+      post signalDone();
+    }
   }
 
   const msp430_usci_config_t _config = {
