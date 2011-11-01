@@ -42,7 +42,7 @@ generic module I2CDiscoverableRequesterP(){
 
   void setState(uint8_t s){
     atomic{
-      printf("DAble: %x->%x\n\r", state, s);
+      //printf("DAble: %x->%x\n\r", state, s);
       state = s;
     }
   }
@@ -216,7 +216,7 @@ generic module I2CDiscoverableRequesterP(){
     atomic{
       if (isGC){
         if(resetNeeded){
-          printf("RESET\n\r");
+          //printf("RESET\n\r");
           localAddr = I2C_DISCOVERABLE_UNASSIGNED;
           setState(S_WAITING);
           resetNeeded = FALSE;
