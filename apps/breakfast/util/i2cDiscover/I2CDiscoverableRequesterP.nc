@@ -236,10 +236,10 @@ generic module I2CDiscoverableRequesterP(){
           call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
           setAddrNeeded = FALSE;
 //          post requestLocalAddrTask();
-          //delay for up to half discovery-round timeout
+          //delay for a while.
           //This is an ugly hack to deal with the issue regarding
           //near-simultaneous starts
-          call RandomizeTimer.startOneShot(call Random.rand16() % (I2C_DISCOVERY_ROUND_TIMEOUT >> 1));
+          call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
         }
       }else{
         //nothin'

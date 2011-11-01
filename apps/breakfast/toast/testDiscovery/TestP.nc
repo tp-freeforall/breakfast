@@ -107,14 +107,16 @@ module TestP{
     return localAddr;
   }
 
-  async event void I2CDiscoverer.discovered(discoverer_register_union_t* discovery){
+  event discoverer_register_union_t* I2CDiscoverer.discovered(discoverer_register_union_t* discovery){
     uint8_t i;
-    printf("%s: \n\r", __FUNCTION__);
-    printf("  Global: ");
+    //printf("%s: \n\r", __FUNCTION__);
+    //printf("  Global: ");
+    printf(" ");
     for(i = 0; i < I2C_GLOBAL_ADDR_LENGTH; i++){
       printf("%x", discovery->val.globalAddr[i]);
     }
-    printf("  Local: %x\n\r", discovery->val.localAddr);
+    printf("l: %x\n\r", discovery->val.localAddr);
+    return discovery;
   }
 
   event uint8_t* I2CDiscoverable.getGlobalAddr(){

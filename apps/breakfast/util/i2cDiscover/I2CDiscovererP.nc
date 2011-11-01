@@ -7,6 +7,8 @@ generic module I2CDiscovererP(){
   provides interface I2CDiscoverer;
   uses interface Timer<TMilli>;
   provides interface Msp430UsciConfigure;
+  uses interface Pool<discoverer_register_union_t>;
+  uses interface Queue<discoverer_register_union_t*>;
 } implementation {
   uint8_t pos;
   uint8_t transCount;
@@ -42,7 +44,7 @@ generic module I2CDiscovererP(){
 
   void setState(uint8_t s){
     atomic{
-//      printf("I2CDiscovererP %x -> %x\n\r", state, s);
+      printf("D %x->%x\n\r", state, s);
       state = s;
     }
   }
@@ -51,8 +53,8 @@ generic module I2CDiscovererP(){
     atomic return s == state;
   }
   
-  //TODO: should be buffer swap
-  discoverer_register_union_t reg;
+  discoverer_register_union_t _reg;
+  discoverer_register_union_t* reg = &_reg;
 
   command error_t I2CDiscoverer.startDiscovery(){
 //    printf("%s: \n\r", __FUNCTION__);
@@ -60,7 +62,7 @@ generic module I2CDiscovererP(){
       if ( SUCCESS == call Resource.request()){
         setState(S_INIT);
         //register setup is : cmd [globalAddr] localAddr
-        atomic reg.val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
+        atomic reg->val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
         return SUCCESS;
       } else {
         return FAIL;
@@ -123,8 +125,10 @@ generic module I2CDiscovererP(){
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
       if (err != SUCCESS){
+        printf("NO SET %s\n\r", decodeError(err));
         setState(S_ERROR);
       } else {
+        printf("Setting\n\r");
         post restartTimeout();
         setState(S_SETTING);
       }
@@ -210,7 +214,7 @@ generic module I2CDiscovererP(){
       } else {
 //        printf("writing %x to %x (actually %x)\n\r", data, pos, pos%sizeof(discoverer_register_t));
         //everything else: write it to buffer (circular)
-        reg.data[(pos++)%sizeof(discoverer_register_t)] = data;
+        reg->data[(pos++)%sizeof(discoverer_register_t)] = data;
       }
     }
     transCount++;
@@ -224,7 +228,9 @@ generic module I2CDiscovererP(){
 //      pos%sizeof(discoverer_register_t), 
 //      reg.data[pos%sizeof(discoverer_register_t)]);
     //return from buf (circular)
-    call I2CSlave.slaveTransmit(reg.data[(pos++)%sizeof(discoverer_register_t)]);
+    //TODO: check command should be done when requester is reading
+    //from reg...
+    call I2CSlave.slaveTransmit(reg->data[(pos++)%sizeof(discoverer_register_t)]);
     return TRUE;
   }
 
@@ -239,19 +245,60 @@ generic module I2CDiscovererP(){
     }
   }
 
+  task void checkQueueTask();
 
+  task void discoveredTask(){
+    discoverer_register_union_t* tmp;
+    bool empty; 
+    atomic empty = call Queue.empty();
+
+    if(! empty){
+      atomic {
+        tmp = call Queue.dequeue();
+      }
+      tmp = signal I2CDiscoverer.discovered(tmp);
+      atomic {
+        call Pool.put(tmp);
+      }
+      atomic{
+        if(! call Queue.empty()){
+          //allow other operations to interleave
+          post checkQueueTask();
+        }
+      }
+    }
+  }
+
+  task void checkQueueTask(){
+    post discoveredTask();
+  }
+
+  //TODO: fix the warnings about async calls to queue/pool. Everything
+  //else is atomic access so I think that we're cool.
   async event void I2CSlave.slaveStop(){
+    uint16_t nextAddr;
 //    printf("%s: \n\r", __FUNCTION__);
     if (checkState(S_RESPONDING)){
+      printf("SIGNAL\n\r");
       //TODO: check command should be done when requester is reading
       //from reg...
-      if (reg.val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
-        signal I2CDiscoverer.discovered(&reg);
-        reg.val.localAddr++;
+      //TODO: this should be split-phase: just grab an item from the
+      //pool here, post a task to dequeue/signal and refill the pool.
+      if (reg->val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
+        nextAddr = reg->val.localAddr + 1;
+        call Queue.enqueue(reg);
+        reg = call Pool.get();
+        reg->val.localAddr = nextAddr;
+        post checkQueueTask();
       }
+
+      //TODO: this should just take place at the end of the discovery
+      //round: we now expect EVERYBODY to report in a single round.
       //continue
-      post setTask();
+      setState(S_WAITING);
+      //post setTask();
     }else{
+      printf("NO SIGNAL\n\r");
       setState(S_ERROR);
     } 
   }
