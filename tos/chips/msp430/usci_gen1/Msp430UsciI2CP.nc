@@ -414,7 +414,7 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-    printf("SI %x %x %x %x\n\r", iv, call Usci.getCtl0(), call Usci.getStat());
+//    printf("SI %x %x %x %x\n\r", iv, call Usci.getCtl0(), call Usci.getStat());
     if (call Usci.getCtl0() & UCMST){
       /* no acknowledgement */
       if (call Usci.getStat() & UCNACKIFG) {

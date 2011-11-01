@@ -42,7 +42,7 @@ generic module I2CDiscoverableRequesterP(){
 
   void setState(uint8_t s){
     atomic{
-      printf("I2CDiscoverableRequesterP: %x -> %x\n\r", state, s);
+      printf("DAble: %x->%x\n\r", state, s);
       state = s;
     }
   }
@@ -87,7 +87,7 @@ generic module I2CDiscoverableRequesterP(){
 
 
   async event void I2CSlave.slaveStart(bool generalCall){
-    printf("%s: %x \n\r", __FUNCTION__, generalCall);
+    //printf("%s: %x \n\r", __FUNCTION__, generalCall);
     isGC = generalCall;
     setAddrNeeded = FALSE;
     resetNeeded = FALSE;
@@ -96,7 +96,7 @@ generic module I2CDiscoverableRequesterP(){
 
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
-    printf("%s: \n\r", __FUNCTION__);
+    //printf("%s: \n\r", __FUNCTION__);
     isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
@@ -133,18 +133,18 @@ generic module I2CDiscoverableRequesterP(){
 
   task void requestLocalAddrTask(){
     error_t err;
-    printf("%s: \n\r", __FUNCTION__);
+    //printf("%s: \n\r", __FUNCTION__);
     //first, try to write your globally-unique ID to the master, with RESTART 
     //  - Succeeds: you've got the bus, so read from next-local-addr
     //  register
     //  - write succeeds, but get an EBUSY in writeDone: try again
     //    next time
     //  - fails: something's wrong
-    printf("fixin' to write %x bytes from %p (base %p)\n\r", sizeof(_reservation), _reservation.data, &_reservation);
+    //printf("fixin' to write %x bytes from %p (base %p)\n\r", sizeof(_reservation), _reservation.data, &_reservation);
     atomic{
       err = call I2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
       if (err == SUCCESS){
-        printf("CLAIMING\n\r");
+        printf("CLAIM\n\r");
         setState(S_CLAIMING_BUS);
       } else {
         printf("ERROR\n\r");
@@ -212,7 +212,7 @@ generic module I2CDiscoverableRequesterP(){
 
 
   task void processSlaveReceive(){
-    printf("%s: \n\r", __FUNCTION__);
+    //printf("%s: \n\r", __FUNCTION__);
     atomic{
       if (isGC){
         if(resetNeeded){
@@ -240,7 +240,7 @@ generic module I2CDiscoverableRequesterP(){
   }
 
   async event void I2CSlave.slaveStop(){
-    printf("%s: \n\r", __FUNCTION__);
+    //printf("%s: \n\r", __FUNCTION__);
     if (isReceive){
       post processSlaveReceive();
     } else {
