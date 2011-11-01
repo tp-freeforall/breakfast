@@ -20,6 +20,8 @@ generic module I2CDiscoverableRequesterP(){
   provides interface I2CDiscoverable;
   provides interface SplitControl;
   uses interface Timer<TMilli>;
+  uses interface Timer<TMilli> as RandomizeTimer;
+  uses interface Random;
   provides interface Msp430UsciConfigure;
 } implementation {
   uint8_t transCount;
@@ -210,6 +212,9 @@ generic module I2CDiscoverableRequesterP(){
     }
   }
 
+  event void RandomizeTimer.fired(){
+    post requestLocalAddrTask();
+  }
 
   task void processSlaveReceive(){
     //printf("%s: \n\r", __FUNCTION__);
@@ -228,6 +233,10 @@ generic module I2CDiscoverableRequesterP(){
           call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
           setAddrNeeded = FALSE;
           post requestLocalAddrTask();
+//          //delay for up to half discovery-round timeout
+//          //This is an ugly hack to deal with the issue regarding
+//          //near-simultaneous starts
+//          call RandomizeTimer.startOneShot(call Random.rand16() % (I2C_DISCOVERY_ROUND_TIMEOUT >> 1));
         }
       }else{
         //nothin'
