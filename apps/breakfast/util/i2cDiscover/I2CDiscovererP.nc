@@ -40,7 +40,7 @@ generic module I2CDiscovererP(){
   task void signalDone();
 
   task void restartTimeout(){
-    printf("RESTART\n\r");
+//    printf("RESTART\n\r");
     call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
   }
 
@@ -131,7 +131,7 @@ generic module I2CDiscovererP(){
         printf("NO SET %s\n\r", decodeError(err));
         setState(S_ERROR);
       } else {
-        printf("Setting\n\r");
+//        printf("Setting\n\r");
         post restartTimeout();
         setState(S_SETTING);
       }
@@ -258,7 +258,7 @@ generic module I2CDiscovererP(){
       atomic {
         tmp = call Queue.dequeue();
       }
-      printf("DISCOVERED\n\r");
+//      printf("DISCOVERED\n\r");
       discovered = TRUE;
       tmp = signal I2CDiscoverer.discovered(tmp);
       atomic {
@@ -317,10 +317,10 @@ generic module I2CDiscovererP(){
   event void Timer.fired(){
     if(discovered){
       discovered = FALSE;
-      printf("AGAIN\n\r");
+//      printf("AGAIN\n\r");
       post setTask();
     } else {
-      printf("NO MORE\n\r");
+//      printf("NO MORE\n\r");
       post signalDone();
     }
   }
