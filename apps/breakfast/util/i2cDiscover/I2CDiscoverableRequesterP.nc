@@ -22,6 +22,7 @@ generic module I2CDiscoverableRequesterP(){
   uses interface Timer<TMilli>;
   uses interface Timer<TMilli> as RandomizeTimer;
   uses interface Random;
+  uses interface ParameterInit<uint16_t> as RandomInit;
   provides interface Msp430UsciConfigure;
 } implementation {
   uint8_t transCount;
@@ -72,6 +73,8 @@ generic module I2CDiscoverableRequesterP(){
       _reservation.msg.pos = 0;
       _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
       memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
+      //TODO: should randomize with hash of the whole address
+      call RandomInit.init(_reservation.msg.globalAddr[I2C_GLOBAL_ADDR_LENGTH-1]);
       return SUCCESS;
     } else {
       return FAIL;
@@ -149,7 +152,7 @@ generic module I2CDiscoverableRequesterP(){
         printf("CLAIM\n\r");
         setState(S_CLAIMING_BUS);
       } else {
-        printf("ERROR\n\r");
+        printf("RLE: ERROR\n\r");
         //TODO: EBUSY = go back to wait, fail = error?
         setState(S_ERROR);
       }
@@ -232,11 +235,11 @@ generic module I2CDiscoverableRequesterP(){
           //waiting for a single assignment to complete
           call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
           setAddrNeeded = FALSE;
-          post requestLocalAddrTask();
-//          //delay for up to half discovery-round timeout
-//          //This is an ugly hack to deal with the issue regarding
-//          //near-simultaneous starts
-//          call RandomizeTimer.startOneShot(call Random.rand16() % (I2C_DISCOVERY_ROUND_TIMEOUT >> 1));
+//          post requestLocalAddrTask();
+          //delay for up to half discovery-round timeout
+          //This is an ugly hack to deal with the issue regarding
+          //near-simultaneous starts
+          call RandomizeTimer.startOneShot(call Random.rand16() % (I2C_DISCOVERY_ROUND_TIMEOUT >> 1));
         }
       }else{
         //nothin'

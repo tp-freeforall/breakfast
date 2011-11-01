@@ -14,6 +14,7 @@ generic configuration I2CDiscoverableC(){
   I2CDiscoverableP.Timer -> TimerMilliC;
   I2CDiscoverableP.RandomizeTimer -> RandomizeTimer;
   I2CDiscoverableP.Random -> RandomC;
+  I2CDiscoverableP.RandomInit -> RandomC.SeedInit;
   Msp430I2C0C.Msp430UsciConfigure -> I2CDiscoverableP.Msp430UsciConfigure;
   
   I2CDiscoverable = I2CDiscoverableP;
