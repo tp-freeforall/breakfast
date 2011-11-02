@@ -30,6 +30,8 @@ module TestP{
   }
 
   event void Boot.booted(){
+    P5SEL = BIT4|BIT5|BIT6;
+    P5DIR = BIT4|BIT5|BIT6;
     globalAddr[I2C_GLOBAL_ADDR_LENGTH - 1] = GLOBAL_ADDR_LSB;
     call UartControl.start();
     printf("I2C Discovery Test\n\r");
