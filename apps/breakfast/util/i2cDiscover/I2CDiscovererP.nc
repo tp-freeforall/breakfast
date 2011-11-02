@@ -20,6 +20,7 @@ generic module I2CDiscovererP(){
   bool isReceive;
   uint8_t txByte;
   bool discovered;
+  bool reset;
 
   enum{
     S_INIT= 0x00,
@@ -58,7 +59,7 @@ generic module I2CDiscovererP(){
   discoverer_register_union_t _reg;
   discoverer_register_union_t* reg = &_reg;
 
-  command error_t I2CDiscoverer.startDiscovery(){
+  command error_t I2CDiscoverer.startDiscovery(bool reset_){
 //    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
       if ( SUCCESS == call Resource.request()){
@@ -66,6 +67,7 @@ generic module I2CDiscovererP(){
         setState(S_INIT);
         //register setup is : cmd [globalAddr] localAddr
         atomic reg->val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
+        reset = reset_;
         return SUCCESS;
       } else {
         return FAIL;
@@ -147,7 +149,11 @@ generic module I2CDiscovererP(){
       case S_ANNOUNCING:
         if(error == SUCCESS){
           setState(S_ANNOUNCED);
-          post resetTask();
+          if (reset){
+            post resetTask();
+          } else {
+            post setTask();
+          }
         } else if (error == ENOACK){
           post signalDone();
         } else {

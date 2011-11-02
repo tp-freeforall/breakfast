@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include "decodeError.h"
+#include "I2CDiscoverable.h"
 module TestP{
   uses interface Boot;
-  uses interface SplitControl as DiscoverableSplitControl;
   uses interface I2CDiscoverable;
   uses interface I2CDiscoverer;
   uses interface UartStream;
@@ -11,7 +11,9 @@ module TestP{
 } implementation {
   uint8_t rxByte;
   uint16_t localAddr = GLOBAL_ADDR_LSB;
+  uint16_t myLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
   norace uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
+  bool reset = TRUE;
 
   task void startTask();
 
@@ -42,16 +44,14 @@ module TestP{
   }
 
   task void startTask(){
-      printf("%s: %s\n\r", __FUNCTION__, decodeError(call DiscoverableSplitControl.start())); 
+    //TODO: read myLocalAddr back from flash.
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(call I2CDiscoverable.startDiscoverable(myLocalAddr))); 
   }
 
-  task void stopTask(){
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(call DiscoverableSplitControl.stop()));
-  }
 
   task void startDiscoverer(){
-    error_t error = call I2CDiscoverer.startDiscovery();
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(error)); 
+    error_t error = call I2CDiscoverer.startDiscovery(reset);
+    printf("%s: %x %s\n\r", __FUNCTION__, reset, decodeError(error)); 
   }
 
   async event void UartStream.receivedByte(uint8_t byte){
@@ -63,10 +63,12 @@ module TestP{
       case 's':
         post startTask();
         break;
-      case 'S':
-        post stopTask();
+      case 'M':
+        reset = TRUE;
+        post startDiscoverer();
         break;
       case 'm':
+        reset = FALSE;
         post startDiscoverer();
         break;
       case 'g':
@@ -89,16 +91,12 @@ module TestP{
     }
   }
 
-  event void DiscoverableSplitControl.startDone(error_t error){
-    printf("Start done: %s local address: %x\n\r", 
-      decodeError(error), call I2CDiscoverable.getLocalAddr());
+  event void I2CDiscoverable.endDiscoverable(error_t error, uint16_t lastLocalAddr){
+    printf("Start done: %s local address: %x\n\r", decodeError(error), lastLocalAddr);
+    myLocalAddr = lastLocalAddr;
     if (error == ENOACK && AUTO_SLAVE){
       post startTask();
     }
-  }
-
-  event void DiscoverableSplitControl.stopDone(error_t error){
-    printf("Stop done: %s\n\r", decodeError(error));
   }
 
   event void I2CDiscoverer.discoveryDone(error_t error){

@@ -9,7 +9,6 @@ configuration TestAppC{
   components new I2CDiscovererC();
 
   TestP.Boot -> MainC.Boot;
-  TestP.DiscoverableSplitControl -> I2CDiscoverableC;
   TestP.I2CDiscoverable -> I2CDiscoverableC;
   TestP.UartStream -> PlatformSerialC.UartStream;
   TestP.UartByte -> PlatformSerialC.UartByte;

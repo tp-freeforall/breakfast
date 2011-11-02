@@ -18,7 +18,6 @@ generic module I2CDiscoverableRequesterP(){
   uses interface I2CSlave;
   uses interface Resource;
   provides interface I2CDiscoverable;
-  provides interface SplitControl;
   uses interface Timer<TMilli>;
   uses interface Timer<TMilli> as RandomizeTimer;
   uses interface Random;
@@ -27,7 +26,7 @@ generic module I2CDiscoverableRequesterP(){
 } implementation {
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
-  uint16_t localAddr = I2C_DISCOVERABLE_UNASSIGNED;
+  uint16_t lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
   bool isGC;
   bool setAddrNeeded;
   bool resetNeeded;
@@ -67,12 +66,13 @@ generic module I2CDiscoverableRequesterP(){
 
   discoverable_reservation_t _reservation;
 
-  command error_t SplitControl.start(){
+  command error_t I2CDiscoverable.startDiscoverable(uint16_t lastLocalAddr_){
     if ( SUCCESS == call Resource.request()){
       setState(S_WAITING);
       _reservation.msg.pos = 0;
       _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
       memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
+      lastLocalAddr = lastLocalAddr_;
       //TODO: should randomize with hash of the whole address
       call RandomInit.init(_reservation.msg.globalAddr[I2C_GLOBAL_ADDR_LENGTH-1]);
       return SUCCESS;
@@ -164,7 +164,7 @@ generic module I2CDiscoverableRequesterP(){
     error_t err;
     //printf("%s: \n\r", __FUNCTION__);
     //restart: don't check for EBUSY
-    err = call I2CPacket.read(I2C_RESTART | I2C_STOP, masterAddr, 2, (uint8_t*)(&localAddr));
+    err = call I2CPacket.read(I2C_RESTART | I2C_STOP, masterAddr, 2, (uint8_t*)(&lastLocalAddr));
 //    printf("%s:read %s\n\r", __FUNCTION__, decodeError(err));
     if (err == SUCCESS){
       setState(S_READING_ADDR);
@@ -193,7 +193,9 @@ generic module I2CDiscoverableRequesterP(){
 
   task void assignedTask(){
     call Timer.stop();
-    signal SplitControl.startDone(SUCCESS);
+    call Resource.release();
+    setState(S_OFF);
+    signal I2CDiscoverable.endDiscoverable(SUCCESS, lastLocalAddr);
   }
 
   async event void I2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
@@ -225,11 +227,11 @@ generic module I2CDiscoverableRequesterP(){
       if (isGC){
         if(resetNeeded){
           //printf("RESET\n\r");
-          localAddr = I2C_DISCOVERABLE_UNASSIGNED;
+          lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
           setState(S_WAITING);
           resetNeeded = FALSE;
         }
-        if(setAddrNeeded && localAddr == I2C_DISCOVERABLE_UNASSIGNED && masterAddr != I2C_INVALID_MASTER){
+        if(setAddrNeeded && lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED && masterAddr != I2C_INVALID_MASTER){
           //TODO: this could probably be much shorter, no longer
           //waiting undefined time for start of the process, but
           //waiting for a single assignment to complete
@@ -260,37 +262,20 @@ generic module I2CDiscoverableRequesterP(){
     }
   }
 
-  task void signalStopDone(){
-    signal SplitControl.stopDone(SUCCESS);
-  }
-
-  command error_t SplitControl.stop(){
-    if (call Resource.isOwner()){
-      if(call Resource.release() == SUCCESS){
-        post signalStopDone();
-        return SUCCESS;
-      }else {
-        return FAIL;
-      }
-    } else {
-      return EALREADY;
-    }
-  }
-
   event void Timer.fired(){
     if (call Resource.isOwner()){
       if (call Resource.release() == SUCCESS){
-        signal SplitControl.startDone(ENOACK);
+        signal I2CDiscoverable.endDiscoverable(ENOACK, lastLocalAddr);
       }else{
-        signal SplitControl.startDone(FAIL);
+        signal I2CDiscoverable.endDiscoverable(FAIL, lastLocalAddr);
       }
     } else {
-      signal SplitControl.startDone(FAIL);
+      signal I2CDiscoverable.endDiscoverable(FAIL, lastLocalAddr);
     }
   }
 
-  command uint16_t I2CDiscoverable.getLocalAddr(){
-    return localAddr;
+  command uint16_t I2CDiscoverable.getLastLocalAddr(){
+    return lastLocalAddr;
   }
 
   const msp430_usci_config_t _config = {

@@ -1,5 +1,4 @@
 generic configuration I2CDiscoverableC(){
-  provides interface SplitControl;
   provides interface I2CDiscoverable;
 } implementation {
   components new Msp430UsciI2CB0C() as Msp430I2C0C;
@@ -18,5 +17,4 @@ generic configuration I2CDiscoverableC(){
   Msp430I2C0C.Msp430UsciConfigure -> I2CDiscoverableP.Msp430UsciConfigure;
   
   I2CDiscoverable = I2CDiscoverableP;
-  SplitControl = I2CDiscoverableP;
 }
