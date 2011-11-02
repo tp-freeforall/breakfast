@@ -50,4 +50,7 @@ configuration PlatformUsciInitC {
   SpiB0C.SOMI -> GIO.UCB0SOMI;
   SpiB0C.CLK -> GIO.UCB0CLK;
 
+  components Msp430UsciI2CB0P as I2CB0C;
+  I2CB0C.SDA -> GIO.UCB0SDA;
+  I2CB0C.SCL -> GIO.UCB0SCL;
 }
