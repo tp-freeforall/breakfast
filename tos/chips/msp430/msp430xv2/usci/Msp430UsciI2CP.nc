@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 /* Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
@@ -256,7 +258,7 @@ generic module Msp430UsciI2CP () @safe() {
     m_flags = flags;
     m_pos = 0;
     m_action = MASTER_WRITE;
-
+    printf("%s: \n\r", __FUNCTION__);
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
@@ -285,6 +287,7 @@ generic module Msp430UsciI2CP () @safe() {
         slaveIdle();
         return EBUSY;
       }
+      printf("generating start\n\r");
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);

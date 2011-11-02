@@ -39,6 +39,7 @@
 
 configuration PlatformUsciInitC {
 } implementation {
+  //TODO: software init must port-map B0SCL to 2.7/B0SDA to 2.6
   components HplMsp430GeneralIOC as GIO;
 
   components Msp430UsciUartA0P as UartA0C;

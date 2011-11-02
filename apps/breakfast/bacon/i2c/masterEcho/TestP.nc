@@ -10,6 +10,11 @@ module TestP{
   uses interface UartStream;
   uses interface StdControl as UartControl;
 } implementation {
+  norace uint8_t cmd_buf[20];
+  norace uint8_t pos = 0;
+
+  uint16_t slaveAddr;
+
   event void Boot.booted(){
     call Leds.set(0);
     call UartControl.start();
@@ -17,10 +22,6 @@ module TestP{
     call Resource.request();
   }
 
-  norace uint8_t cmd_buf[20];
-  norace uint8_t pos = 0;
-
-  uint16_t slaveAddr;
 
   task void processBuffer(){
     cmd_buf[pos] = 0x00;
