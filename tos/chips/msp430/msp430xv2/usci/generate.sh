@@ -62,5 +62,5 @@ clone_mode_modules () {
 # Clone the mode-specific configurations
 clone_mode_modules Uart ${A_MODULES}
 clone_mode_modules Spi ${B_MODULES} ${A_MODULES}
-# clone_mode_modules I2c ${B_MODULES}
+clone_mode_modules I2C ${B_MODULES}
 

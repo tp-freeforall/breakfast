@@ -79,7 +79,7 @@ implementation with proper the non-generic interrupt implementation.
 Uart Mode Support
 -----------------
 
-Msp430UsciP.nc is a maintained generic module that supports parameterized
+Msp430UsciUartP.nc is a maintained generic module that supports parameterized
 versions of the standard UART interfaces, relative to an externally provided
 USCI interface.
 
