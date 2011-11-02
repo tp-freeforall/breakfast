@@ -153,7 +153,6 @@ generic module Msp430UsciI2CP () @safe() {
     unconfigure_();
   }
   
-  //END USCI_GEN1 PORTED CODE
   /*************************************************************************/
   async command error_t I2CBasicAddr.read[uint8_t client]( i2c_flags_t flags,
 					   uint16_t addr, uint8_t len, 
@@ -176,7 +175,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl0(call Usci.getCtl0() | UCMST);
       call Usci.leaveResetMode_();
       // set slave address 
-      call UsciB.setI2csa(addr);
+      call Usci.setI2csa(addr);
       //check bus status at the latest point possible.
       if ( call Usci.getStat() & UCBBUSY ){
         //if the bus is busy, bail out real quick
@@ -188,8 +187,7 @@ generic module Msp430UsciI2CP () @safe() {
 
 
       //enable i2c arbitration interrupts, rx 
-      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK );
+      call Usci.setIe( (call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE |UCALIE |UCRXIE);
 
       /* if only reading 1 byte, STOP bit must be set right after
        * START condition is triggered */
@@ -207,7 +205,7 @@ generic module Msp430UsciI2CP () @safe() {
     } else if (m_flags & I2C_RESTART) {
       /* set slave address */
       //UCB0I2CSA = addr;
-      call UsciB.setI2csa(addr);
+      call Usci.setI2csa(addr);
 
       //clear TR bit, start
       /* UCTXSTT - generate START condition */
@@ -215,8 +213,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl1((call Usci.getCtl1() & ~UCTR) | UCTXSTT);
 
       //enable i2c arbitration interrupts, rx 
-      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      call Usci.setIe( call Usci.getIe() | RXIE_MASK );
+      call Usci.setIe( (call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE |UCALIE |UCRXIE);
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
       if ( (m_len == 1) && (m_flags & I2C_STOP) ) {
@@ -274,11 +271,11 @@ generic module Msp430UsciI2CP () @safe() {
       slaveIdle();
 
       //disable the rx interrupt 
-      call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
+      call Usci.setIe(call Usci.getIe() & ~UCRXIE);
       if (counter > 0x01){
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_pos, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( SUCCESS, call Usci.getI2csa(), m_pos, m_buf );
       } else {
-        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa() , m_pos, m_buf );
+        signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( FAIL, call Usci.getI2csa() , m_pos, m_buf );
       }
     }
   }
@@ -312,7 +309,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.leaveResetMode_();
 
       // set slave address 
-      call UsciB.setI2csa(addr);
+      call Usci.setI2csa(addr);
 
       //check bus status at the latest point possible.
       if ( call Usci.getStat() & UCBBUSY ){
@@ -323,16 +320,14 @@ generic module Msp430UsciI2CP () @safe() {
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
-      //enable relevant state interrupts
-      call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
-      //enable tx interrupts 
-      call Usci.setIe( call Usci.getIe() | TXIE_MASK);
+      //enable relevant state interrupts and TX
+      call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE | UCALIE | UCTXIE);
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
     {
       // set slave address 
-      call UsciB.setI2csa(addr);
+      call Usci.setI2csa(addr);
 
       /* UCTR - set transmit */
       /* UCTXSTT - generate START condition */
@@ -345,7 +340,6 @@ generic module Msp430UsciI2CP () @safe() {
     }
     return SUCCESS;    
   }
-
 
   void nextWrite()
   {
@@ -383,12 +377,12 @@ generic module Msp430UsciI2CP () @safe() {
       }
 
       //disable tx interrupt, we're DONE 
-      call Usci.setIe(call Usci.getIe() & ~TXIE_MASK );
+      call Usci.setIe(call Usci.getIe() & ~UCTXIE );
       /* fail gracefully */      
       if (counter > 0x01){
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call UsciB.getI2csa(), m_len, m_buf );
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( SUCCESS, call Usci.getI2csa(), m_len, m_buf );
       } else{
-        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, call UsciB.getI2csa(), m_len, m_buf );
+        signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( FAIL, call Usci.getI2csa(), m_len, m_buf );
       }
     } else{
       //send the next char
@@ -397,8 +391,64 @@ generic module Msp430UsciI2CP () @safe() {
     }
   }
 
-  /***************************************************************************/
 
+  async command void I2CSlave.slaveTransmit[uint8_t clientId](uint8_t data){
+    //TODO: safety
+    //write it, reenable interrupt (if it was disabled)
+    call Usci.setTxbuf(data);
+    call Usci.setIe(call Usci.getIe() | UCTXIE);
+  }
+
+
+  async command uint8_t I2CSlave.slaveReceive[uint8_t client](){
+    //re-enable rx interrupt, read the byte
+    call Usci.setIe(call Usci.getIe() | UCRXIE);
+    return call Usci.getRxbuf();
+  }
+  
+
+  //defaults
+  default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
+  default async event void I2CBasicAddr.writeDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
+  default async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration[uint8_t client](){
+    return &msp430_usci_i2c_default_config;
+  }
+
+  /***** Slave-mode functions ***/
+  command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
+  {
+    //retain UCGCEN bit
+    call Usci.setI2coa( (call Usci.getI2coa() & UCGCEN) | addr);
+    return SUCCESS;
+  }
+
+  command error_t I2CSlave.enableGeneralCall[uint8_t client](){
+    if (UCGCEN & (call Usci.getI2coa())){
+      return EALREADY;
+    }else {
+      call Usci.setI2coa(UCGCEN | (call Usci.getI2coa()));
+      return SUCCESS;
+    }
+  }
+
+  command error_t I2CSlave.disableGeneralCall[uint8_t client](){
+    if (UCGCEN & ~(call Usci.getI2coa())){
+      return EALREADY;
+    }else{
+      call Usci.setI2coa(~UCGCEN & (call Usci.getI2coa()));
+      return SUCCESS;
+    }
+  }
+
+  //END USCI_GEN1 PORTED CODE
+  default async event bool I2CSlave.slaveReceiveRequested[uint8_t client]() { return FALSE; }
+  default async event bool I2CSlave.slaveTransmitRequested[uint8_t client]() { return FALSE; }
+
+  default async event void I2CSlave.slaveStart[uint8_t client](bool isGeneralCall) { ; }
+  default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
+
+
+  /***************************************************************************/
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
     /* if master mode */
@@ -420,13 +470,6 @@ generic module Msp430UsciI2CP () @safe() {
     }
   }
 
-  async command void I2CSlave.slaveTransmit[uint8_t clientId](uint8_t data){
-    //TODO: safety
-    //write it, reenable interrupt (if it was disabled)
-    call Usci.setTxbuf(data);
-    call Usci.setIe(call Usci.getIe() | TXIE_MASK);
-  }
-
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
     /* if master mode */
@@ -444,12 +487,6 @@ generic module Msp430UsciI2CP () @safe() {
     }
   }
 
-  async command uint8_t I2CSlave.slaveReceive[uint8_t client](){
-    //re-enable rx interrupt, read the byte
-    call Usci.setIe(call Usci.getIe() | RXIE_MASK);
-    return call Usci.getRxbuf();
-  }
-  
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
@@ -523,50 +560,4 @@ generic module Msp430UsciI2CP () @safe() {
     }
   }
 
-  //defaults
-  default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
-  default async event void I2CBasicAddr.writeDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
-  default async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration[uint8_t client](){
-    return &msp430_usci_i2c_default_config;
-  }
-
-  /***** Slave-mode functions ***/
-  command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
-  {
-    //retain UCGCEN bit
-    call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
-    return SUCCESS;
-  }
-
-  command error_t I2CSlave.enableGeneralCall[uint8_t client](){
-    pdbg(1);
-    showRegisters();
-    if (UCGCEN & (call UsciB.getI2coa())){
-      return EALREADY;
-    }else {
-      call UsciB.setI2coa(UCGCEN | (call UsciB.getI2coa()));
-      pdbg(2);
-      showRegisters();
-      return SUCCESS;
-    }
-  }
-
-  command error_t I2CSlave.disableGeneralCall[uint8_t client](){
-    if (UCGCEN & ~(call UsciB.getI2coa())){
-      return EALREADY;
-    }else{
-      call UsciB.setI2coa(~UCGCEN & (call UsciB.getI2coa()));
-      return SUCCESS;
-    }
-  }
-
-
-  default async event bool I2CSlave.slaveReceiveRequested[uint8_t client]() { return FALSE; }
-  default async event bool I2CSlave.slaveTransmitRequested[uint8_t client]() { return FALSE; }
-
-  default async event void I2CSlave.slaveStart[uint8_t client](bool isGeneralCall) { ; }
-  default async event void I2CSlave.slaveStop[uint8_t client]() { ; }
-
-
-  //TODO: port from usci_gen1 implementation
 }

@@ -1,6 +1,7 @@
 configuration Msp430UsciI2CB0P {
   provides {
-    //TODO: I2C interfaces
+    interface I2CPacket<TI2CBasicAddr>[uint8_t client];
+    interface I2CSlave[uint8_t client];
     interface ResourceConfigure[uint8_t client];
     interface Msp430UsciError[uint8_t client];
   }
@@ -22,8 +23,8 @@ configuration Msp430UsciI2CB0P {
 
   Msp430UsciConfigure = I2CC;
   ResourceConfigure = I2CC;
-  UartStream = I2CC;
-  UartByte = I2CC;
+  I2CPacket = I2CC;
+  I2CSlave = I2CC;
   Msp430UsciError = I2CC;
   SCL = I2CC.SCL;
   SDA = I2CC.SDA;

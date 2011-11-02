@@ -61,5 +61,5 @@ generic configuration Msp430UsciI2CB0C() {
   Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
   Msp430UsciError = I2CP.Msp430UsciError[CLIENT_ID];
 
-  UsciC.ResourceConfigure[CLIENT_ID] -> I2CC.ResourceConfigure[CLIENT_ID];
+  UsciC.ResourceConfigure[CLIENT_ID] -> I2CP.ResourceConfigure[CLIENT_ID];
 }
