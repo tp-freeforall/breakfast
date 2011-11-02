@@ -14,6 +14,7 @@ module TestP{
   uint16_t myLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
   norace uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
   bool reset = TRUE;
+  norace uint16_t startAddr = I2C_FIRST_DISCOVERABLE_ADDR;
 
   task void startTask();
 
@@ -50,7 +51,7 @@ module TestP{
 
 
   task void startDiscoverer(){
-    error_t error = call I2CDiscoverer.startDiscovery(reset);
+    error_t error = call I2CDiscoverer.startDiscovery(reset, startAddr);
     printf("%s: %x %s\n\r", __FUNCTION__, reset, decodeError(error)); 
   }
 
@@ -116,6 +117,7 @@ module TestP{
       printf("%x", discovery->val.globalAddr[i]);
     }
     printf("l: %x\n\r", discovery->val.localAddr);
+    startAddr = discovery->val.localAddr + 1;
     return discovery;
   }
 

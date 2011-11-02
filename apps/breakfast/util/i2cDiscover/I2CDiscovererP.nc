@@ -59,14 +59,17 @@ generic module I2CDiscovererP(){
   discoverer_register_union_t _reg;
   discoverer_register_union_t* reg = &_reg;
 
-  command error_t I2CDiscoverer.startDiscovery(bool reset_){
+  command error_t I2CDiscoverer.startDiscovery(bool reset_, uint16_t addrStart){
 //    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
       if ( SUCCESS == call Resource.request()){
         discovered = FALSE;
         setState(S_INIT);
         //register setup is : cmd [globalAddr] localAddr
-        atomic reg->val.localAddr = I2C_FIRST_DISCOVERABLE_ADDR;
+        if (addrStart == 0x0000){
+          addrStart = I2C_FIRST_DISCOVERABLE_ADDR;
+        }
+        atomic reg->val.localAddr = addrStart;
         reset = reset_;
         return SUCCESS;
       } else {
