@@ -102,7 +102,7 @@ generic module I2CDiscoverableRequesterP(){
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
     //printf("%s: \n\r", __FUNCTION__);
-    printf("RX %x\n\r", data);
+    //printf("RX %x\n\r", data);
     isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
