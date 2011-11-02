@@ -92,9 +92,9 @@ module TestP{
   }
 
   event void I2CDiscoverable.endDiscoverable(error_t error, uint16_t lastLocalAddr){
-    printf("Start done: %s local address: %x\n\r", decodeError(error), lastLocalAddr);
+    printf("End Discoverable: %s local address: %x\n\r", decodeError(error), lastLocalAddr);
     myLocalAddr = lastLocalAddr;
-    if (error == ENOACK && AUTO_SLAVE){
+    if (AUTO_SLAVE){
       post startTask();
     }
   }

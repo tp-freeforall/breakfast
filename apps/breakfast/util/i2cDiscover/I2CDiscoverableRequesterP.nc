@@ -102,6 +102,7 @@ generic module I2CDiscoverableRequesterP(){
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
     //printf("%s: \n\r", __FUNCTION__);
+    printf("RX %x\n\r", data);
     isReceive=TRUE;
     if (isGC){
       //first byte ends with 1: own-address announcement from master
@@ -114,11 +115,14 @@ generic module I2CDiscoverableRequesterP(){
           setState(S_ERROR);
         }
       } else {
+        //printf("Set flags\n\r");
         switch(data){
           case 0x06:    //reset + set addr
+            //printf("reset needed\n\r");
             resetNeeded = TRUE;
             //fall-through
           case 0x04:    //set addr
+            //printf("set needed\n\r");
             setAddrNeeded = TRUE;
             break;
           default://everything else: forbidden!
@@ -226,12 +230,15 @@ generic module I2CDiscoverableRequesterP(){
     atomic{
       if (isGC){
         if(resetNeeded){
-          //printf("RESET\n\r");
+          printf("RESET\n\r");
           lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
           setState(S_WAITING);
           resetNeeded = FALSE;
         }
-        if(setAddrNeeded && lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED && masterAddr != I2C_INVALID_MASTER){
+        if(setAddrNeeded 
+            && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
+            && (masterAddr != I2C_INVALID_MASTER)){
+          printf("SET\n\r");
           //TODO: this could probably be much shorter, no longer
           //waiting undefined time for start of the process, but
           //waiting for a single assignment to complete
@@ -242,6 +249,8 @@ generic module I2CDiscoverableRequesterP(){
           //This is an ugly hack to deal with the issue regarding
           //near-simultaneous starts
           call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
+        } else {
+          printf("IGNORE: %x %x %x\n\r", setAddrNeeded, lastLocalAddr, masterAddr);
         }
       }else{
         //nothin'

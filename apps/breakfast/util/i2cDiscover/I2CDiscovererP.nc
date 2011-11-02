@@ -114,6 +114,7 @@ generic module I2CDiscovererP(){
     atomic{
       err = call I2CPacket.write(I2C_START|I2C_STOP, I2C_GC_ADDR, 1, &txByte);
       if (err == SUCCESS){
+        printf("RESET\n\r");
         post restartTimeout();
         setState(S_RESETTING);
       }
@@ -133,7 +134,7 @@ generic module I2CDiscovererP(){
         printf("NO SET %s\n\r", decodeError(err));
         setState(S_ERROR);
       } else {
-//        printf("Setting\n\r");
+        printf("SET\n\r");
         post restartTimeout();
         setState(S_SETTING);
       }
