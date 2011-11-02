@@ -26,7 +26,7 @@ generic module I2CDiscoverableRequesterP(){
 } implementation {
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
-  uint16_t lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
+  norace uint16_t lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
   bool isGC;
   bool setAddrNeeded;
   bool resetNeeded;
@@ -225,49 +225,61 @@ generic module I2CDiscoverableRequesterP(){
     post requestLocalAddrTask();
   }
 
-  task void processSlaveReceive(){
-    //printf("%s: \n\r", __FUNCTION__);
-    atomic{
-      if (isGC){
-        if(resetNeeded){
-          printf("RESET\n\r");
-          lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
-          setState(S_WAITING);
-          resetNeeded = FALSE;
-        }
-        if(setAddrNeeded 
-            && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
-            && (masterAddr != I2C_INVALID_MASTER)){
-          printf("SET\n\r");
-          //TODO: this could probably be much shorter, no longer
-          //waiting undefined time for start of the process, but
-          //waiting for a single assignment to complete
-          call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
-          setAddrNeeded = FALSE;
-//          post requestLocalAddrTask();
-          //delay for a while.
-          //This is an ugly hack to deal with the issue regarding
-          //near-simultaneous starts
-          call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
-        } else {
-          printf("IGNORE: %x %x %x\n\r", setAddrNeeded, lastLocalAddr, masterAddr);
-        }
-      }else{
-        //nothin'
-      }
-    }
+//  task void processSlaveReceive(){
+//    //printf("%s: \n\r", __FUNCTION__);
+//    atomic{
+//      if (isGC){
+//        if(resetNeeded){
+//          printf("RESET\n\r");
+//          lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
+//          setState(S_WAITING);
+//          resetNeeded = FALSE;
+//        }
+//        if(setAddrNeeded 
+//            && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
+//            && (masterAddr != I2C_INVALID_MASTER)){
+//          printf("SET\n\r");
+//
+//          call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
+//          setAddrNeeded = FALSE;
+////          post requestLocalAddrTask();
+//          //delay for a while.
+//          //This is an ugly hack to deal with the issue regarding
+//          //near-simultaneous starts
+//          call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
+//        } else {
+//          printf("IGNORE: %x %x %x\n\r", setAddrNeeded, lastLocalAddr, masterAddr);
+//        }
+//      }else{
+//        //nothin'
+//      }
+//    }
+//  }
+  
+  task void setTimers(){
+    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
+    call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
   }
 
-  task void processSlaveTransmit(){
-    //nothin'
-  }
-
+  //OK: initial announcement causes SR task to get posted.  Conditions
+  //hold for it to be ignored (it's not a reset or setAddr)
+  //the second message (set or reset) is either missed or causes a
+  //re-post, which doesn't do us much good.
   async event void I2CSlave.slaveStop(){
     //printf("%s: \n\r", __FUNCTION__);
-    if (isReceive){
-      post processSlaveReceive();
+    if (isReceive && isGC && (resetNeeded || setAddrNeeded)){
+      if (resetNeeded){
+        lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
+        resetNeeded = FALSE;
+      }
+      if (setAddrNeeded 
+          && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
+          && (masterAddr != I2C_INVALID_MASTER)){
+        setAddrNeeded = FALSE;
+        post setTimers();
+      }
     } else {
-      post processSlaveTransmit();
+      //no other conditions handled
     }
   }
 

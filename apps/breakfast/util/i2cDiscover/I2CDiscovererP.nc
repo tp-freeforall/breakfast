@@ -20,7 +20,7 @@ generic module I2CDiscovererP(){
   bool isReceive;
   uint8_t txByte;
   bool discovered;
-  bool reset;
+  norace bool reset;
 
   enum{
     S_INIT= 0x00,
