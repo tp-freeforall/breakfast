@@ -231,9 +231,11 @@ generic module I2CDiscovererP(){
 //      pos%sizeof(discoverer_register_t), 
 //      reg.data[pos%sizeof(discoverer_register_t)]);
     //return from buf (circular)
-    //TODO: check command should be done when requester is reading
-    //from reg...
-    call I2CSlave.slaveTransmit(reg->data[(pos++)%sizeof(discoverer_register_t)]);
+    if (reg->val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
+      call I2CSlave.slaveTransmit(reg->data[(pos++)%sizeof(discoverer_register_t)]);
+    } else {
+      call I2CSlave.slaveTransmit(0xff);
+    }
     return TRUE;
   }
 
@@ -283,11 +285,6 @@ generic module I2CDiscovererP(){
     uint16_t nextAddr;
 //    printf("%s: \n\r", __FUNCTION__);
     if (checkState(S_RESPONDING)){
-//      printf("SIGNAL\n\r");
-      //TODO: check command should be done when requester is reading
-      //from reg...
-      //TODO: this should be split-phase: just grab an item from the
-      //pool here, post a task to dequeue/signal and refill the pool.
       if (reg->val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
         nextAddr = reg->val.localAddr + 1;
         call Queue.enqueue(reg);
@@ -296,11 +293,7 @@ generic module I2CDiscovererP(){
         post checkQueueTask();
       }
 
-      //TODO: this should just take place at the end of the discovery
-      //round: we now expect EVERYBODY to report in a single round.
-      //continue
       setState(S_WAITING);
-      //post setTask();
     }else{
 //      printf("NO SIGNAL\n\r");
       setState(S_ERROR);
