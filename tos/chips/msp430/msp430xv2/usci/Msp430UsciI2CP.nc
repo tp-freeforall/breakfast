@@ -87,7 +87,7 @@ generic module Msp430UsciI2CP () @safe() {
   uses interface LocalTime<TMilli> as LocalTime_bms;
 
 } implementation {
-
+  //END USCI_GEN1 ported/tested
   enum{
     SLAVE = 0,
     MASTER_READ = 1,
@@ -123,7 +123,6 @@ generic module Msp430UsciI2CP () @safe() {
     return SUCCESS;
   }
 
-  //END USCI_GEN1 PORTED CODE
 
   error_t slaveIdle(){
     //only reset if we are master: if we are already slave we don't
@@ -133,7 +132,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
       call Usci.leaveResetMode_();
     }
-    call UsciB.setI2cie(UCSTTIE);
+    call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCSTTIE);
     m_action = SLAVE;
     return SUCCESS;
   }
@@ -154,6 +153,7 @@ generic module Msp430UsciI2CP () @safe() {
     unconfigure_();
   }
   
+  //END USCI_GEN1 PORTED CODE
   /*************************************************************************/
   async command error_t I2CBasicAddr.read[uint8_t client]( i2c_flags_t flags,
 					   uint16_t addr, uint8_t len, 

@@ -83,6 +83,11 @@ implementation {
 
   async command uint16_t Usci.getCtlw0() { return UCmxCTLW0; }
   async command void Usci.setCtlw0(uint16_t v) { UCmxCTLW0 = v; }
+  //TODO: Byte access to these registers, is cool, right?
+  async command uint8_t Usci.getCtl0() { return UCmxCTL0; }
+  async command void Usci.setCtl0(uint8_t v) { UCmxCTL0 = v; }
+  async command uint8_t Usci.getCtl1() { return UCmxCTL1; }
+  async command void Usci.setCtl1(uint8_t v) { UCmxCTL1 = v; }
   async command uint16_t Usci.getBrw() { return UCmxBRW; }
   async command void Usci.setBrw(uint16_t v) { UCmxBRW = v; }
   async command uint8_t Usci.getMctl() { return UCmxMCTL; }

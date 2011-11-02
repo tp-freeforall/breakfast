@@ -79,7 +79,31 @@ interface HplMsp430Usci {
    * This register is present on all USCI modules.
    */
   async command void setCtlw0(uint16_t v);
+
+  /**
+   * Reads the UCmxCTL0 Control register.
+   * This register is present on all USCI modules, and is used in all modes.
+   */
+  async command uint8_t getCtl0();
   
+  /**
+   * Writes the UCmxCTL0 Control register.
+   * This register is present on all USCI modules.
+   */
+  async command void setCtl0(uint8_t v);
+   
+  /**
+   * Reads the UCmxCTL1 Control register.
+   * This register is present on all USCI modules, and is used in all modes.
+   */
+  async command uint8_t getCtl1();
+  
+  /**
+   * Writes the UCmxCTL1 Control register.
+   * This register is present on all USCI modules.
+   */
+  async command void setCtl1(uint8_t v);
+
   /**
    * Reads the UCmxBRW Baud Rate Control registers.
    * This register is present on all USCI modules.
