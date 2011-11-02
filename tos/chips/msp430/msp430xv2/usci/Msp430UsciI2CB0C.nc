@@ -39,11 +39,13 @@
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 generic configuration Msp430UsciI2CB0C() {
-  provides {
-    interface Resource;
-    //TODO: I2C packet/slave interfaces
-    interface Msp430UsciError;
-  }
+  provides interface Resource;
+  provides interface ResourceRequested;
+  provides interface I2CPacket<TI2CBasicAddr>;
+  provides interface I2CSlave;
+  provides interface Msp430UsciError;
+
+  uses interface Msp430UsciConfigure;
 } implementation {
   enum {
     CLIENT_ID = unique(MSP430_USCI_B0_RESOURCE),
@@ -51,10 +53,13 @@ generic configuration Msp430UsciI2CB0C() {
 
   components Msp430UsciB0P as UsciC;
   Resource = UsciC.Resource[CLIENT_ID];
+  ResourceRequested = UsciC.ResourceRequested[CLIENT_ID];
 
-  components Msp430UsciI2CB0P as I2CC;
-  //TODO: wire in I2C interfaces
-  Msp430UsciError = I2CC.Msp430UsciError[CLIENT_ID];
+  components Msp430UsciI2CB0P as I2CP;
+  I2CPacket = I2CP.I2CPacket[CLIENT_ID];
+  I2CSlave = I2CP.I2CSlave[CLIENT_ID];
+  Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
+  Msp430UsciError = I2CP.Msp430UsciError[CLIENT_ID];
 
   UsciC.ResourceConfigure[CLIENT_ID] -> I2CC.ResourceConfigure[CLIENT_ID];
 }
