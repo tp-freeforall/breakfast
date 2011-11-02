@@ -30,45 +30,13 @@
  */
 
 #include "msp430usci.h"
-
-/**
- * Implement the UART-related interfaces for a MSP430 USCI module
- * instance.
+/*
+ * port of usci gen 1 implementation of i2c
  *
- * Interrupt Management
- * --------------------
- *
- * Upon grant of the USCI in UART mode to a client, interrupts are
- * turned off.
- *
- * On the MSP430, when the TX interrupt is raised the MCU
- * automatically clears the UCTXIFG bit that indicates that the TXBUF
- * is available for writing characters.  Rather than maintain local
- * state managed by cooperation between the TX interrupt handler and
- * the send code, we leave the TX interrupt disabled and rely on the
- * UCTXIFG flag to indicate that single-byte transmission is
- * permitted.
- *
- * An exception to this is in support of the UartSerial.send()
- * function.  The transmit interrupt is enabled when the outgoing
- * message is provided; subsequent sends are interrupt-driven, and the
- * interrupt is disabled just prior to transmitting the last character
- * of the packet.  This leaves the UCTXIFG flag set upon completion of
- * the transfer.
- *
- * The receive interrupt is enabled upon configuration.  It is
- * controlled using the UartStream functions.  While a buffered
- * receive operation is active, received characters will be stored and
- * no notification provided until the full packet has been received.
- * If no buffered receive operation is active, the receivedByte()
- * event will be signaled for each received character.
- *
- * As with the transmit interrupt, MCU execution of the receive
- * interrupt clears the UCRXIFG flag, making interrupt-driven
- * reception fundamentally incompatible with the busy-waiting
- * UartByte.receive() method.
- *
- * @author Peter A. Bigot <pab@peoplepowerco.com> */
+ * @author Doug Carlson <carlson@cs.jhu.edu>
+ * @author Marcus Chang <marcus.chang@gmail.com>
+ * @author Peter A. Bigot <pab@peoplepowerco.com> 
+ */
 generic module Msp430UsciI2CP () @safe() {
   provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr[uint8_t client];
   provides interface I2CSlave[uint8_t client];
@@ -449,7 +417,24 @@ generic module Msp430UsciI2CP () @safe() {
 
 
   /***************************************************************************/
-  async event void TXInterrupts.interrupted(uint8_t iv) 
+  void TXInterrupts_interrupted(uint8_t iv);
+  void RXInterrupts_interrupted(uint8_t iv);
+  void StateInterrupts_interrupted(uint8_t iv);
+
+  async event void Interrupts.interrupted(uint8_t iv){
+    //TODO: dispatch to rx/tx/state interrupt
+    if(iv & (UCNACKIFG | UCALIFG | UCSTPIFG | UCSTTIFG)){
+      StateInterrupts_interrupted(iv);
+    } else if(iv & UCRXIFG){
+      RXInterrupts_interrupted(iv);
+    } else if(iv & UCTXIFG){
+      TXInterrupts_interrupted(iv);
+    } else {
+      //error
+    }
+  }
+
+  void TXInterrupts_interrupted(uint8_t iv) 
   {
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
@@ -465,12 +450,12 @@ generic module Msp430UsciI2CP () @safe() {
       }else{
         //false= "I need to pause for a second"
         //disable TX interrupt.
-        call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
+        call Usci.setIe(call Usci.getIe() & ~UCTXIE);
       }
     }
   }
 
-  async event void RXInterrupts.interrupted(uint8_t iv) 
+  void RXInterrupts_interrupted(uint8_t iv) 
   {
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
@@ -482,12 +467,12 @@ generic module Msp430UsciI2CP () @safe() {
       } else {
         //FALSE: disable the RX interrupt, since the client needs to
         //do some work
-        call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
+        call Usci.setIe(call Usci.getIe() & ~UCRXIE);
       }
     }
   }
 
-  async event void StateInterrupts.interrupted(uint8_t iv) 
+  void StateInterrupts_interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
 //    if(call Usci.getStat() & UCALIFG){
@@ -515,9 +500,9 @@ generic module Msp430UsciI2CP () @safe() {
         //another master addressed us as a slave. However, this should
         //manifest as an AL interrupt, not a NACK interrupt.
         if (call Usci.getCtl1() & UCTR){
-          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
+          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
         }else {
-          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call UsciB.getI2csa(), m_len, m_buf );
+          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
         }
       } 
     } else {
@@ -531,9 +516,9 @@ generic module Msp430UsciI2CP () @safe() {
         call Usci.setStat(call Usci.getStat() & ~(UCALIFG));
         //TODO: more descriptive error? I guess EBUSY is fair.
         if(lastAction == MASTER_WRITE){
-          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf );
+          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf );
         } else if(lastAction == MASTER_READ){
-          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( EBUSY, call UsciB.getI2csa(), m_len, m_buf);
+          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf);
         }
         //once this returns, we should get another interrupt for STT
         //if we are addressed. Otherwise, we're just chillin' in idle
@@ -543,7 +528,7 @@ generic module Msp430UsciI2CP () @safe() {
       else if (call Usci.getStat() & UCSTPIFG) 
       {
         /* disable STOP interrupt, enable START interrupt */
-        call UsciB.setI2cie((call UsciB.getI2cie() | UCSTTIE) & ~UCSTPIE);
+        call Usci.setIe((call Usci.getIe() | UCSTTIE) & ~UCSTPIE);
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
       }
       /* START condition */
@@ -551,10 +536,9 @@ generic module Msp430UsciI2CP () @safe() {
       {
         //clear start flag, but leave enabled (repeated start)
         //enable stop interrupt
-        call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
-        call UsciB.setI2cie(call UsciB.getI2cie() | UCSTPIE);
         //enable RX/TX interrupts
-        call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
+        call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
+        call Usci.setIe(call Usci.getIe() | UCSTPIE | UCRXIE | UCTXIE);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
       }
     }
