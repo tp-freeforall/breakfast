@@ -78,10 +78,7 @@ implementation {
    * Button
    * Rf1a
    *
-   * The following components require wiring initialization, but no
-   * code initialization:
-   * Usci */
-
+  */
   components PlatformPinsC;
   PlatformP.PlatformPins -> PlatformPinsC;
   
@@ -89,7 +86,7 @@ implementation {
   PlatformP.PlatformLed -> PlatformLedC;
   
   components PlatformUsciInitC;
-  // No code initialization required; just connect the pins
+  PlatformP.Usci -> PlatformUsciInitC.Init;
 
   components Msp430PmmC;
   PlatformP.Msp430Pmm -> Msp430PmmC;

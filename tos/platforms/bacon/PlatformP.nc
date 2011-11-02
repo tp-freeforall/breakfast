@@ -44,6 +44,7 @@ module PlatformP {
     interface Init as Apds9007;
     interface Init as PlatformBusPower;
     interface Init as BatteryVoltage;
+    interface Init as Usci;
     
 #if PLATFORM_HAS_FLASH
     interface Init as PlatformFlash;
@@ -68,7 +69,7 @@ implementation {
     call PlatformLed.init();
     call Msp430Pmm.init();
     call PlatformClock.init();
-
+    call Usci.init();
     call PlatformBusPower.init();
     call PlatformCC1190.init();
     call OneWire.init();

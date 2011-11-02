@@ -33,13 +33,19 @@
 
 /**
  * Connect the appropriate pins for USCI support on a CC430.
+ * Additionally, expose an Init interface so that we have a
+ * well-defined place to do port-mapping
  *
  * @author Peter A. Bigot <pab@peoplepowerco.com>
+ * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
 configuration PlatformUsciInitC {
+  provides interface Init;
 } implementation {
-  //TODO: software init must port-map B0SCL to 2.7/B0SDA to 2.6
+  components PlatformUsciInitP;
+  Init = PlatformUsciInitP;
+
   components HplMsp430GeneralIOC as GIO;
 
   components Msp430UsciUartA0P as UartA0C;
@@ -52,6 +58,6 @@ configuration PlatformUsciInitC {
   SpiB0C.CLK -> GIO.UCB0CLK;
 
   components Msp430UsciI2CB0P as I2CB0C;
-  I2CB0C.SDA -> GIO.UCB0SDA;
-  I2CB0C.SCL -> GIO.UCB0SCL;
+  I2CB0C.SDA -> GIO.Port26;
+  I2CB0C.SCL -> GIO.Port27;
 }
