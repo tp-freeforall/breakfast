@@ -64,6 +64,8 @@ implementation {
 #define UCmxCTL1 (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x00)) // yes, ctl1 is at offset zero
 #define UCmxCTL0 (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x01)) // yes, ctl1 is at offset zero
 #define UCmxBRW (*TCAST(volatile uint16_t* ONE, UCmxCTLW0_ + 0x06))
+#define UCmxBR0 (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x06))
+#define UCmxBR1 (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x07))
 #define UCmxMCTL (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x08))
 #define UCmxSTAT (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x0a))
 #define UCmxRXBUF (*TCAST(volatile uint8_t* ONE, UCmxCTLW0_ + 0x0c))
@@ -81,15 +83,14 @@ implementation {
 
   async command uint8_t Usci.getModuleIdentifier() { return USCI_ID; }
 
-  async command uint16_t Usci.getCtlw0() { return UCmxCTLW0; }
-  async command void Usci.setCtlw0(uint16_t v) { UCmxCTLW0 = v; }
-  //TODO: Byte access to these registers, is cool, right?
   async command uint8_t Usci.getCtl0() { return UCmxCTL0; }
   async command void Usci.setCtl0(uint8_t v) { UCmxCTL0 = v; }
   async command uint8_t Usci.getCtl1() { return UCmxCTL1; }
   async command void Usci.setCtl1(uint8_t v) { UCmxCTL1 = v; }
-  async command uint16_t Usci.getBrw() { return UCmxBRW; }
-  async command void Usci.setBrw(uint16_t v) { UCmxBRW = v; }
+  async command uint16_t Usci.getBr0() { return UCmxBR0; }
+  async command void Usci.setBr0(uint16_t v) { UCmxBR0 = v; }
+  async command uint16_t Usci.getBr1() { return UCmxBR1; }
+  async command void Usci.setBr1(uint16_t v) { UCmxBR1 = v; }
   async command uint8_t Usci.getMctl() { return UCmxMCTL; }
   async command void Usci.setMctl(uint8_t v) { UCmxMCTL = v; }
   async command uint8_t Usci.getStat() { return UCmxSTAT; }
@@ -135,9 +136,10 @@ implementation {
       return;
     }
     call Usci.enterResetMode_();
-    //TODO: word vs. byte access
-    UCmxCTLW0 = config->ctlw0 + UCSWRST;
-    UCmxBRW = config->brw;
+
+    UCmxCTLW0 = ((config->ctl0) << 8) + (config->ctl1) + UCSWRST;
+    UCmxBRW = ((config->br1) << 8 )+ config->br0;
+    UCmxBR1 = config->br1;
     UCmxMCTL = config->mctl;
     if (! leave_in_reset) {
       call Usci.leaveResetMode_();

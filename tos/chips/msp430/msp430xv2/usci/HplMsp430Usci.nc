@@ -69,18 +69,6 @@ interface HplMsp430Usci {
    * Read and write the module registers. */
 
   /**
-   * Reads the UCmxCTLW0 Control register.
-   * This register is present on all USCI modules, and is used in all modes.
-   */
-  async command uint16_t getCtlw0();
-  
-  /**
-   * Writes the UCmxCTLW0 Control register.
-   * This register is present on all USCI modules.
-   */
-  async command void setCtlw0(uint16_t v);
-
-  /**
    * Reads the UCmxCTL0 Control register.
    * This register is present on all USCI modules, and is used in all modes.
    */
@@ -105,17 +93,29 @@ interface HplMsp430Usci {
   async command void setCtl1(uint8_t v);
 
   /**
-   * Reads the UCmxBRW Baud Rate Control registers.
+   * Reads the UCmxBR0 Baud Rate Control registers.
    * This register is present on all USCI modules.
    */
-  async command uint16_t getBrw();
+  async command uint16_t getBr0();
   
   /**
-   * Writes the UCmxBRW Baud Rate Control registers.
+   * Writes the UCmxBR0 Baud Rate Control registers.
    * This register is present on all USCI modules.
    */
-  async command void setBrw(uint16_t v);
+  async command void setBr0(uint16_t v);
+
+  /**
+   * Reads the UCmxBR1 Baud Rate Control registers.
+   * This register is present on all USCI modules.
+   */
+  async command uint16_t getBr1();
   
+  /**
+   * Writes the UCmxBR1 Baud Rate Control registers.
+   * This register is present on all USCI modules.
+   */
+  async command void setBr1(uint16_t v);
+   
   /**
    * Reads the USCmBxMCTL Modulation Control register.
    * This register is present on all USCI modules except I2C.

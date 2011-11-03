@@ -75,8 +75,8 @@ generic module Msp430UsciI2CP () @safe() {
     printf("---\n\r");
     printf(" CTL0: %x\n\r", call Usci.getCtl0());
     printf(" CTL1: %x\n\r", call Usci.getCtl1());
-    printf(" CTLW: %x\n\r", call Usci.getCtlw0());
-    printf(" BRw:  %x\n\r", call Usci.getBrw());
+    //printf(" CTLW: %x\n\r", call Usci.getCtlw0());
+    //printf(" BRw:  %x\n\r", call Usci.getBrw());
     printf(" OA:   %x\n\r", call Usci.getI2coa());
     printf(" SA:   %x\n\r", call Usci.getI2csa());
     printf(" IE:   %x\n\r", call Usci.getIe());
