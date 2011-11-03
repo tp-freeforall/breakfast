@@ -31,6 +31,9 @@ typedef struct msp430_usci_config_t {
   uint16_t i2coa;
 } msp430_usci_config_t;
 
+//see note in Msp430UsciI2CP.nc I2CBasicAddr.read
+#define I2C_ONE_BYTE_READ_COUNTER 0x500
+
 #ifndef TOS_DEFAULT_BAUDRATE
 #define TOS_DEFAULT_BAUDRATE 115200
 #endif /* TOS_DEFAULT_BAUDRATE */
@@ -80,7 +83,7 @@ msp430_usci_config_t msp430_usci_i2c_default_config = {
   ctlw0: ((UCSYNC|UCMODE_3|UCMM) << 8 )| UCSSEL_2,
   brw:  0x08,
   mctl: 0x00,
-  i2coa: 'A',
+  i2coa: 'a',
 };
 
 enum {

@@ -1,4 +1,3 @@
-#include <stdio.h>
 /*
  * Copyright (c) 2005-2006 Arch Rock Corporation
  * All rights reserved.
@@ -28,15 +27,13 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
- */
-
-/**
  * @author Jonathan Hui <jhui@archrock.com>
  * @author Marcus Chang <marcus.chang@cs.jhu.edu>
  * @author Doug Carlson <carlson@cs.jhu.edu>
  * @version $Revision$ $Date$
  */
 #include <I2C.h>
+#include <stdio.h>
 
 generic module Msp430UsciI2CP(uint8_t TXIE_MASK, uint8_t RXIE_MASK, uint8_t TXIFG_MASK, uint8_t RXIFG_MASK) {
   
@@ -138,7 +135,11 @@ implementation {
 					   uint16_t addr, uint8_t len, 
 					   uint8_t* buf ) 
   {
-    uint8_t counter = 0xFF;
+    //According to TI, we can just poll until the start condition
+    //clears.  But we're nervous and want to bail out if it doesn't
+    //clear fast enough.  This is how many times we loop before we
+    //bail out.
+    uint16_t counter = I2C_ONE_BYTE_READ_COUNTER;
 
     m_buf = buf;
     m_len = len;

@@ -33,6 +33,9 @@ typedef struct msp430_usci_config_t {
   uint16_t i2coa;
 } msp430_usci_config_t;
 
+//see note in Msp430UsciI2CP.nc I2CBasicAddr.read
+#define I2C_ONE_BYTE_READ_COUNTER 0xE00
+
 #ifndef TOS_DEFAULT_BAUDRATE
 #define TOS_DEFAULT_BAUDRATE 115200
 #endif /* TOS_DEFAULT_BAUDRATE */

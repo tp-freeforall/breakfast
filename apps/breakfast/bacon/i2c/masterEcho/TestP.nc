@@ -12,6 +12,7 @@ module TestP{
 } implementation {
   norace uint8_t cmd_buf[20];
   norace uint8_t pos = 0;
+  norace uint8_t slavePos = 0;
 
   uint16_t slaveAddr;
 
@@ -44,6 +45,22 @@ module TestP{
           )
         );
         break; 
+      case 'r':
+        slaveAddr = cmd_buf[1];
+        printf("Read: %s\n\r",
+          decodeError(
+            call I2CPacket.read(I2C_START|I2C_STOP,
+              slaveAddr,
+              pos - 2,
+              cmd_buf
+            )
+          )
+        );
+        break;
+      case 'o':
+        printf("Set own address: %x\n\r", cmd_buf[1]);
+        call I2CSlave.setOwnAddress(cmd_buf[1]);
+        break;
       default:
         printf("Unknown command %c\n\r", cmd_buf[0]);
         break;
@@ -80,24 +97,36 @@ module TestP{
   }
 
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t len, uint8_t* data){
+    uint8_t i;
+    printf("ReadDone: %s %x %x: ", decodeError(error), addr, len);
+    for(i=0; i < len; i++){
+      printf("%c", data[i]);
+    }
+    printf("\n\r");
   }
 
   async event bool I2CSlave.slaveReceiveRequested() {
-    //TODO: handle appropriately
-    call I2CSlave.slaveReceive();
+    cmd_buf[slavePos++] = call I2CSlave.slaveReceive();
     return TRUE;
   }
 
   async event bool I2CSlave.slaveTransmitRequested(){
-    //TODO: handle appropriately
-    call I2CSlave.slaveTransmit(0xff);
+    call I2CSlave.slaveTransmit(cmd_buf[(slavePos++)%pos]);
     return TRUE;
   }
 
   async event void I2CSlave.slaveStart(bool isGeneralCall){
+    printf("Slave Start\n\r");
+    slavePos = 0;
   }
 
   async event void I2CSlave.slaveStop(){
+    uint8_t i;
+    printf("Slave stop: ");
+    for(i = 0; i < slavePos; i++){
+      printf("%c", cmd_buf[i]);
+    }
+    printf("\n\r");
   }
 
   async event void UartStream.receiveDone(uint8_t* buf, uint16_t len, error_t err){}

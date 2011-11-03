@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 /* Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
@@ -29,16 +27,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
  *
- */
-
-#include "msp430usci.h"
-/*
  * port of usci gen 1 implementation of i2c
  *
  * @author Doug Carlson <carlson@cs.jhu.edu>
  * @author Marcus Chang <marcus.chang@gmail.com>
  * @author Peter A. Bigot <pab@peoplepowerco.com> 
  */
+
+#include <stdio.h>
+#include "msp430usci.h"
+
 generic module Msp430UsciI2CP () @safe() {
   provides interface I2CPacket<TI2CBasicAddr> as I2CBasicAddr[uint8_t client];
   provides interface I2CSlave[uint8_t client];
@@ -88,12 +86,12 @@ generic module Msp430UsciI2CP () @safe() {
   }
 
   error_t configure_(const msp430_usci_config_t* config){
-    printf("config:\n\r");
-    printf("ctlw0= %x\n\r", config->ctlw0);
-    printf("brw=   %x\n\r", config->brw);
-    printf("mctl=  %x\n\r", config->mctl);
-    printf("i2coa= %x\n\r", config->i2coa);
-    printRegisters();
+//    printf("config:\n\r");
+//    printf("ctlw0= %x\n\r", config->ctlw0);
+//    printf("brw=   %x\n\r", config->brw);
+//    printf("mctl=  %x\n\r", config->mctl);
+//    printf("i2coa= %x\n\r", config->i2coa);
+//    printRegisters();
     if(! config){
       return FAIL;
     }
@@ -107,17 +105,17 @@ generic module Msp430UsciI2CP () @safe() {
     call Usci.setI2coa(config->i2coa);
     call Usci.leaveResetMode_();
 
-    //enable slave-start interrupt
+    //enable slave-start interrupt, clear the rest
     call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCSTTIE);
-    printf("end config\n\r");
-    printRegisters();
-    printf("port mapping registers\n\r");
-    printf("P1MAP2: %x\n\r", P1MAP2);
-    printf("P1MAP3: %x\n\r", P1MAP3);
-    printf("P2MAP6: %x\n\r", P2MAP6);
-    printf("P2MAP7: %x\n\r", P2MAP7);
-    printf("P2SEL: %x\n\r", P2SEL);
-    printf("P2DIR: %x\n\r", P2DIR);
+//    printf("end config\n\r");
+//    printRegisters();
+//    printf("port mapping registers\n\r");
+//    printf("P1MAP2: %x\n\r", P1MAP2);
+//    printf("P1MAP3: %x\n\r", P1MAP3);
+//    printf("P2MAP6: %x\n\r", P2MAP6);
+//    printf("P2MAP7: %x\n\r", P2MAP7);
+//    printf("P2SEL: %x\n\r", P2SEL);
+//    printf("P2DIR: %x\n\r", P2DIR);
     return SUCCESS;
   }
 
@@ -130,6 +128,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl0(call Usci.getCtl0() & ~UCMST);
       call Usci.leaveResetMode_();
     }
+    //enable slave-start, clear the rest
     call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCSTTIE);
     m_action = SLAVE;
     return SUCCESS;
@@ -156,7 +155,11 @@ generic module Msp430UsciI2CP () @safe() {
 					   uint16_t addr, uint8_t len, 
 					   uint8_t* buf ) 
   {
-    uint8_t counter = 0xFF;
+    //According to TI, we can just poll until the start condition
+    //clears.  But we're nervous and want to bail out if it doesn't
+    //clear fast enough.  This is how many times we loop before we
+    //bail out.
+    uint16_t counter = I2C_ONE_BYTE_READ_COUNTER;
 
     m_buf = buf;
     m_len = len;
@@ -184,7 +187,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl1( (call Usci.getCtl1()&(~UCTR))  | UCTXSTT);
 
 
-      //enable i2c arbitration interrupts, rx 
+      //enable i2c arbitration interrupts, rx, clear the rest
       call Usci.setIe( (call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE |UCALIE |UCRXIE);
 
       /* if only reading 1 byte, STOP bit must be set right after
@@ -210,7 +213,7 @@ generic module Msp430UsciI2CP () @safe() {
       //UCB0CTL1 |= UCTXSTT;
       call Usci.setCtl1((call Usci.getCtl1() & ~UCTR) | UCTXSTT);
 
-      //enable i2c arbitration interrupts, rx 
+      //enable i2c arbitration interrupts, rx, clear the rest
       call Usci.setIe( (call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE |UCALIE |UCRXIE);
 
       /* if only reading 1 byte, STOP bit must be set right after START bit */
@@ -286,8 +289,8 @@ generic module Msp430UsciI2CP () @safe() {
     m_flags = flags;
     m_pos = 0;
     m_action = MASTER_WRITE;
-    printf("%s: start\n\r", __FUNCTION__);
-    printRegisters();
+//    printf("%s: start\n\r", __FUNCTION__);
+//    printRegisters();
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
@@ -316,13 +319,13 @@ generic module Msp430UsciI2CP () @safe() {
         slaveIdle();
         return EBUSY;
       }
-      printf("generating start\n\r");
+//      printf("generating start\n\r");
       // UCTXSTT - generate START condition 
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
-      //enable relevant state interrupts and TX
+      //enable relevant state interrupts and TX, clear the rest
       call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE | UCALIE | UCTXIE);
-      printRegisters();
+//      printRegisters();
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
@@ -339,8 +342,8 @@ generic module Msp430UsciI2CP () @safe() {
       // continue writing next byte 
       nextWrite();
     }
-    printf("done\n\r");
-    printRegisters();
+//    printf("done\n\r");
+//    printRegisters();
     return SUCCESS;    
   }
 
@@ -357,8 +360,8 @@ generic module Msp430UsciI2CP () @safe() {
     //  to skip over the first byte by accident. This checks for the
     //  issue and rewinds the buffer position to 0 if it applies.  I
     //  make no guarantees about how stable this behavior is.
-    printf("NW\n\r");
-    printRegisters();
+//    printf("NW\n\r");
+//    printRegisters();
     if ( call Usci.getCtl1() & UCTXSTT){
       m_pos = 0;
     }
@@ -392,7 +395,7 @@ generic module Msp430UsciI2CP () @safe() {
     } else{
       //send the next char
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
-      printf("[%x]=%x\n\r", m_pos-1, m_buf[m_pos-1]);
+//      printf("[%x]=%x\n\r", m_pos-1, m_buf[m_pos-1]);
     }
   }
 
@@ -464,7 +467,7 @@ generic module Msp430UsciI2CP () @safe() {
   void STT_interrupt();
 
   async event void Interrupts.interrupted(uint8_t iv){
-    printf("Interrupt: %x\n\r", iv);
+    printf("I: %x\n\r", iv);
     switch(iv){
       case USCI_I2C_UCALIFG:
         AL_interrupt();
@@ -492,7 +495,7 @@ generic module Msp430UsciI2CP () @safe() {
 
   void TXInterrupts_interrupted(uint8_t iv) 
   {
-    printf("TXI %x\n\r", iv);
+//    printf("TXI %x\n\r", iv);
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
 //      printf("S%x", call Usci.getStat());
@@ -514,7 +517,7 @@ generic module Msp430UsciI2CP () @safe() {
 
   void RXInterrupts_interrupted(uint8_t iv) 
   {
-    printf("RXI %x\n\r", iv);
+//    printf("RXI %x\n\r", iv);
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
