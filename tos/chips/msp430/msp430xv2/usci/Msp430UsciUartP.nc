@@ -304,6 +304,9 @@ generic module Msp430UsciUartP () @safe() {
     /* Transmit the character.  Note that it hasn't actually gone out
      * over the wire until UCBUSY on UCmxSTAT is cleared. */
     call Usci.setTxbuf(byte);
+    //wait until it's actually sent.
+    while(call Usci.getStat() & UCBUSY){
+    }
     return SUCCESS;
   }
 
