@@ -55,7 +55,6 @@ generic module Msp430UsciI2CP () @safe() {
   uses interface LocalTime<TMilli> as LocalTime_bms;
 
 } implementation {
-  //END USCI_GEN1 ported/tested
   enum{
     SLAVE = 0,
     MASTER_READ = 1,
@@ -580,6 +579,12 @@ generic module Msp430UsciI2CP () @safe() {
   void STP_interrupt(){
     /* disable STOP interrupt, enable START interrupt */
     call Usci.setIe((call Usci.getIe() | UCSTTIE) & ~UCSTPIE);
+    //this is ugly: the stop interrupt has higher priority than RX.
+    //This is in place so that we make sure that the RX gets handled
+    //before the stop.
+    if (call Usci.getIfg() & UCRXIFG){
+      RXInterrupts_interrupted(call Usci.getIfg());
+    }
     signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
   }
   
