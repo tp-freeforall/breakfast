@@ -9,5 +9,6 @@ module PlatformUsciInitP{
       P2MAP7 = PM_UCB0SCL;
       PMAPPWD = 0x0;
     }
+    return SUCCESS;
   }
 }

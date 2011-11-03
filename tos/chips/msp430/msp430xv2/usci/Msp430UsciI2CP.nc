@@ -74,7 +74,26 @@ generic module Msp430UsciI2CP () @safe() {
   void nextWrite();
   void signalDone( error_t error );
 
+  void printRegisters(){
+    printf("---\n\r");
+    printf(" CTL0: %x\n\r", call Usci.getCtl0());
+    printf(" CTL1: %x\n\r", call Usci.getCtl1());
+    printf(" CTLW: %x\n\r", call Usci.getCtlw0());
+    printf(" BRw:  %x\n\r", call Usci.getBrw());
+    printf(" OA:   %x\n\r", call Usci.getI2coa());
+    printf(" SA:   %x\n\r", call Usci.getI2csa());
+    printf(" IE:   %x\n\r", call Usci.getIe());
+    printf(" IFG:  %x\n\r", call Usci.getIfg());
+    printf("---\n\r");
+  }
+
   error_t configure_(const msp430_usci_config_t* config){
+    printf("config:\n\r");
+    printf("ctlw0= %x\n\r", config->ctlw0);
+    printf("brw=   %x\n\r", config->brw);
+    printf("mctl=  %x\n\r", config->mctl);
+    printf("i2coa= %x\n\r", config->i2coa);
+    printRegisters();
     if(! config){
       return FAIL;
     }
@@ -90,6 +109,8 @@ generic module Msp430UsciI2CP () @safe() {
 
     //enable slave-start interrupt
     call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCSTTIE);
+    printf("end config\n\r");
+    printRegisters();
     return SUCCESS;
   }
 
@@ -258,7 +279,8 @@ generic module Msp430UsciI2CP () @safe() {
     m_flags = flags;
     m_pos = 0;
     m_action = MASTER_WRITE;
-    printf("%s: \n\r", __FUNCTION__);
+    printf("%s: start\n\r", __FUNCTION__);
+    printRegisters();
     /* check if this is a new connection or a continuation */
     if (m_flags & I2C_START)
     {
@@ -293,6 +315,7 @@ generic module Msp430UsciI2CP () @safe() {
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts and TX
       call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE | UCALIE | UCTXIE);
+      printRegisters();
     } 
     /* is this a restart or a direct continuation */
     else if (m_flags & I2C_RESTART)
@@ -309,6 +332,8 @@ generic module Msp430UsciI2CP () @safe() {
       // continue writing next byte 
       nextWrite();
     }
+    printf("done\n\r");
+    printRegisters();
     return SUCCESS;    
   }
 
@@ -382,6 +407,7 @@ generic module Msp430UsciI2CP () @safe() {
   default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async event void I2CBasicAddr.writeDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration[uint8_t client](){
+    printf("Using default i2c config\n\r");
     return &msp430_usci_i2c_default_config;
   }
 

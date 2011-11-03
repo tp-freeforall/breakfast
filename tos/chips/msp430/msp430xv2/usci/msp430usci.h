@@ -74,9 +74,10 @@ msp430_usci_config_t msp430_usci_spi_default_config = {
   mctl : 0                      /* Always 0 in SPI mode */
 };
 
-//TODO: check that these are defined relative to word register, not byte
+//the flags are defined relative to the byte register, so we need to
+//  shift the ones from ctl0 8.
 msp430_usci_config_t msp430_usci_i2c_default_config = {
-  ctlw0: UCSYNC|UCMODE_3|UCMM| UCSSEL_2,
+  ctlw0: ((UCSYNC|UCMODE_3|UCMM) << 8 )| UCSSEL_2,
   brw:  0x08,
   mctl: 0x00,
   i2coa: 'A',
