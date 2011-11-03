@@ -111,6 +111,13 @@ generic module Msp430UsciI2CP () @safe() {
     call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCSTTIE);
     printf("end config\n\r");
     printRegisters();
+    printf("port mapping registers\n\r");
+    printf("P1MAP2: %x\n\r", P1MAP2);
+    printf("P1MAP3: %x\n\r", P1MAP3);
+    printf("P2MAP6: %x\n\r", P2MAP6);
+    printf("P2MAP7: %x\n\r", P2MAP7);
+    printf("P2SEL: %x\n\r", P2SEL);
+    printf("P2DIR: %x\n\r", P2DIR);
     return SUCCESS;
   }
 
@@ -350,6 +357,8 @@ generic module Msp430UsciI2CP () @safe() {
     //  to skip over the first byte by accident. This checks for the
     //  issue and rewinds the buffer position to 0 if it applies.  I
     //  make no guarantees about how stable this behavior is.
+    printf("NW\n\r");
+    printRegisters();
     if ( call Usci.getCtl1() & UCTXSTT){
       m_pos = 0;
     }
@@ -383,7 +392,7 @@ generic module Msp430UsciI2CP () @safe() {
     } else{
       //send the next char
       call Usci.setTxbuf(m_buf[ m_pos++ ]);
-//      printf("[%x]=%x ", m_pos-1, m_buf[m_pos-1]);
+      printf("[%x]=%x\n\r", m_pos-1, m_buf[m_pos-1]);
     }
   }
 
@@ -451,20 +460,29 @@ generic module Msp430UsciI2CP () @safe() {
   void StateInterrupts_interrupted(uint8_t iv);
 
   async event void Interrupts.interrupted(uint8_t iv){
-    //TODO: dispatch to rx/tx/state interrupt
-    if(iv & (UCNACKIFG | UCALIFG | UCSTPIFG | UCSTTIFG)){
-      StateInterrupts_interrupted(iv);
-    } else if(iv & UCRXIFG){
-      RXInterrupts_interrupted(iv);
-    } else if(iv & UCTXIFG){
-      TXInterrupts_interrupted(iv);
-    } else {
-      //error
+    printf("Interrupt: %x\n\r", iv);
+    switch(iv){
+      case USCI_I2C_UCALIFG:
+      case USCI_I2C_UCNACKIFG:
+      case USCI_I2C_UCSTTIFG:
+      case USCI_I2C_UCSTPIFG:
+        StateInterrupts_interrupted(call Usci.getIfg());
+        break;
+      case USCI_I2C_UCRXIFG:
+        RXInterrupts_interrupted(call Usci.getIfg());
+        break;
+      case USCI_I2C_UCTXIFG:
+        TXInterrupts_interrupted(call Usci.getIfg());
+        break;
+      default:
+        //error
+        break;
     }
   }
 
   void TXInterrupts_interrupted(uint8_t iv) 
   {
+    printf("TXI %x\n\r", iv);
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
 //      printf("S%x", call Usci.getStat());
@@ -486,6 +504,7 @@ generic module Msp430UsciI2CP () @safe() {
 
   void RXInterrupts_interrupted(uint8_t iv) 
   {
+    printf("RXI %x\n\r", iv);
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
@@ -504,6 +523,7 @@ generic module Msp430UsciI2CP () @safe() {
   void StateInterrupts_interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
+    printf("SI %x\n\r", iv);
 //    if(call Usci.getStat() & UCALIFG){
 //      printf("AL!");
 //    }
