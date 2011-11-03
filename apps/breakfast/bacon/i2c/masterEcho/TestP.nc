@@ -35,6 +35,10 @@ module TestP{
         break;
       case 'w':
         slaveAddr = cmd_buf[1];
+        //'0' -> general call
+        if (slaveAddr == '0'){
+          slaveAddr = 0x00;
+        }
         printf("Write: %s\n\r", 
           decodeError(
             call I2CPacket.write(I2C_START|I2C_STOP, 
@@ -60,6 +64,14 @@ module TestP{
       case 'o':
         printf("Set own address: %x\n\r", cmd_buf[1]);
         call I2CSlave.setOwnAddress(cmd_buf[1]);
+        break;
+      case 'g':
+        printf("enable general call\n\r");
+        call I2CSlave.enableGeneralCall();
+        break;
+      case 'G':
+        printf("disable general call\n\r");
+        call I2CSlave.disableGeneralCall();
         break;
       default:
         printf("Unknown command %c\n\r", cmd_buf[0]);
