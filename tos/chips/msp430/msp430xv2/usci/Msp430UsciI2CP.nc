@@ -458,15 +458,25 @@ generic module Msp430UsciI2CP () @safe() {
   void TXInterrupts_interrupted(uint8_t iv);
   void RXInterrupts_interrupted(uint8_t iv);
   void StateInterrupts_interrupted(uint8_t iv);
+  void NACK_interrupt();
+  void AL_interrupt();
+  void STP_interrupt();
+  void STT_interrupt();
 
   async event void Interrupts.interrupted(uint8_t iv){
     printf("Interrupt: %x\n\r", iv);
     switch(iv){
       case USCI_I2C_UCALIFG:
+        AL_interrupt();
+        break;
       case USCI_I2C_UCNACKIFG:
+        NACK_interrupt();
+        break;
       case USCI_I2C_UCSTTIFG:
+        STT_interrupt();
+        break;
       case USCI_I2C_UCSTPIFG:
-        StateInterrupts_interrupted(call Usci.getIfg());
+        STP_interrupt();
         break;
       case USCI_I2C_UCRXIFG:
         RXInterrupts_interrupted(call Usci.getIfg());
@@ -520,77 +530,64 @@ generic module Msp430UsciI2CP () @safe() {
     }
   }
 
-  void StateInterrupts_interrupted(uint8_t iv) 
-  {
-    uint8_t counter = 0xFF;
-    printf("SI %x\n\r", iv);
-//    if(call Usci.getStat() & UCALIFG){
-//      printf("AL!");
-//    }
-    if (call Usci.getCtl0() & UCMST){
-      /* no acknowledgement */
-      if (call Usci.getStat() & UCNACKIFG) {
-        //This occurs during write and read when no ack is received.
-        /* set stop bit */
-        call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
-  
-        /* wait until STOP bit has been transmitted */
-        while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
-          counter--;
-        }
-        call Usci.enterResetMode_();
-        call Usci.leaveResetMode_();
-        //back to slave idle mode
-        slaveIdle();
-  
-        //signal appropriate event depending on whether we were
-        //transmitting or receiving
-        //Note that TR will be cleared if we lost MM arbitration because
-        //another master addressed us as a slave. However, this should
-        //manifest as an AL interrupt, not a NACK interrupt.
-        if (call Usci.getCtl1() & UCTR){
-          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
-        }else {
-          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
-        }
-      } 
-    } else {
-      //slave-specific
-      /* arbitration lost (we USED TO be master)*/
-      if (call Usci.getStat() & UCALIFG) 
-      {
-        uint8_t lastAction = m_action;
-        slaveIdle();
-        //clear AL flag
-        call Usci.setStat(call Usci.getStat() & ~(UCALIFG));
-        //TODO: more descriptive error? I guess EBUSY is fair.
-        if(lastAction == MASTER_WRITE){
-          signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf );
-        } else if(lastAction == MASTER_READ){
-          signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf);
-        }
-        //once this returns, we should get another interrupt for STT
-        //if we are addressed. Otherwise, we're just chillin' in idle
-        //slave mode as per usual.
-      }
-      /* STOP condition */
-      else if (call Usci.getStat() & UCSTPIFG) 
-      {
-        /* disable STOP interrupt, enable START interrupt */
-        call Usci.setIe((call Usci.getIe() | UCSTTIE) & ~UCSTPIE);
-        signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
-      }
-      /* START condition */
-      else if (call Usci.getStat() & UCSTTIFG) 
-      {
-        //clear start flag, but leave enabled (repeated start)
-        //enable stop interrupt
-        //enable RX/TX interrupts
-        call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
-        call Usci.setIe(call Usci.getIe() | UCSTPIE | UCRXIE | UCTXIE);
-        signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
-      }
+
+  void NACK_interrupt(){
+    uint8_t counter = 0xff;
+    //This occurs during write and read when no ack is received.
+    /* set stop bit */
+    call Usci.setCtl1(call Usci.getCtl1() | UCTXSTP);
+
+    /* wait until STOP bit has been transmitted */
+    while ((call Usci.getCtl1() & UCTXSTP) && (counter > 0x01)){
+      counter--;
+    }
+    call Usci.enterResetMode_();
+    call Usci.leaveResetMode_();
+    //back to slave idle mode
+    slaveIdle();
+
+    //signal appropriate event depending on whether we were
+    //transmitting or receiving
+    //Note that TR will be cleared if we lost MM arbitration because
+    //another master addressed us as a slave. However, this should
+    //manifest as an AL interrupt, not a NACK interrupt.
+    if (call Usci.getCtl1() & UCTR){
+      signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
+    }else {
+      signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( ENOACK, call Usci.getI2csa(), m_len, m_buf );
     }
   }
+
+  void AL_interrupt(){
+    uint8_t lastAction = m_action;
+    slaveIdle();
+    //clear AL flag
+    call Usci.setStat(call Usci.getStat() & ~(UCALIFG));
+    //TODO: more descriptive error? I guess EBUSY is fair.
+    if(lastAction == MASTER_WRITE){
+      signal I2CBasicAddr.writeDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf );
+    } else if(lastAction == MASTER_READ){
+      signal I2CBasicAddr.readDone[call ArbiterInfo.userId()]( EBUSY, call Usci.getI2csa(), m_len, m_buf);
+    }
+    //once this returns, we should get another interrupt for STT
+    //if we are addressed. Otherwise, we're just chillin' in idle
+    //slave mode as per usual.
+  }
+
+  void STP_interrupt(){
+    /* disable STOP interrupt, enable START interrupt */
+    call Usci.setIe((call Usci.getIe() | UCSTTIE) & ~UCSTPIE);
+    signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
+  }
+  
+  void STT_interrupt(){
+    //clear start flag, but leave enabled (repeated start)
+    //enable stop interrupt
+    //enable RX/TX interrupts
+    call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
+    call Usci.setIe(call Usci.getIe() | UCSTPIE | UCRXIE | UCTXIE);
+    signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
+  }
+ 
 
 }
