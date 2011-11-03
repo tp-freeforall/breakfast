@@ -8,5 +8,5 @@ fi
 dev=$1
 file=$2
 shift 2
-
-~/tinyos-2.x/bin/cc430-bsl --noadg715 -S 115200 -c $dev -e $@ $file
+set -x
+~/tinyos-2.x/bin/cc430-bsl --invertRTS --noadg715 -S 115200 -c $dev -e $@ $file
