@@ -59,9 +59,9 @@ implementation {
       //P2.0: VBAT sense (input? out to gnd?)
       //P2.2: light sense (input? out to gnd?)
       //P2.5: thermistor sense (input? out to gnd?)
-      //P2.6/2.7: I2C (out to gnd)
+      //P2.6/2.7: I2C (out to VCC)
       P2DIR = 0xDA;
-      P2OUT = 0x00;
+      P2OUT = 0xC0;
 #endif 
     
 #if defined(__msp430_have_port3) || defined(__MSP430_HAS_PORT3__) || defined(__MSP430_HAS_PORT3_R__)
