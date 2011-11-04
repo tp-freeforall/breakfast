@@ -466,7 +466,7 @@ generic module Msp430UsciI2CP () @safe() {
   void STT_interrupt();
 
   async event void Interrupts.interrupted(uint8_t iv){
-    printf("I: %x\n\r", iv);
+//    printf("I: %x\n\r", iv);
     switch(iv){
       case USCI_I2C_UCALIFG:
         AL_interrupt();
@@ -577,22 +577,35 @@ generic module Msp430UsciI2CP () @safe() {
   }
 
   void STP_interrupt(){
+//    printf("STP\n\r");
     /* disable STOP interrupt, enable START interrupt */
     call Usci.setIe((call Usci.getIe() | UCSTTIE) & ~UCSTPIE);
     //this is ugly: the stop interrupt has higher priority than RX.
-    //This is in place so that we make sure that the RX gets handled
-    //before the stop.
-    if (call Usci.getIfg() & UCRXIFG){
+    //It appears to be the case that since we get the RX interrupt as
+    //soon as the byte is received, and the STP interrupt as soon as
+    //the stop condition is received, there is a very short window
+    //where we have the RX but not the STP, and we tend to see the
+    //stop interrupt first.  This will surely confound upper-level
+    //logic (it would see a stop, then another byte), so we reverse
+    //the priority for this case in software.
+    if (call Usci.getIfg() & UCRXIFG & call Usci.getIe()){
       RXInterrupts_interrupted(call Usci.getIfg());
     }
     signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
   }
   
   void STT_interrupt(){
+//    printf("STT\n\r");
     //clear start flag, but leave enabled (repeated start)
     //enable stop interrupt
     //enable RX/TX interrupts
     call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
+
+    //This is the same issue as noted in the STP_interrupt above, but
+    //applied to repeated start conditions.
+    if (call Usci.getIfg() & UCRXIFG & call Usci.getIe() ){
+      RXInterrupts_interrupted(call Usci.getIfg());
+    }
     call Usci.setIe(call Usci.getIe() | UCSTPIE | UCRXIE | UCTXIE);
     signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
   }

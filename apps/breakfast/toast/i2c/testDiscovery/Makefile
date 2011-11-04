@@ -2,6 +2,7 @@ COMPONENT=TestAppC
 CFLAGS += -DI2C_GLOBAL_ADDR_LENGTH=4
 CFLAGS += -I$(TOSROOT)/apps/breakfast/util/i2cDiscover
 CFLAGS += -I$(TOSROOT)/apps/breakfast/util
+CFLAGS += -I$(TOSDIR)/lib/serialprintf
 
 GLOBAL_ADDR_LSB?=1
 AUTO_SLAVE?=0

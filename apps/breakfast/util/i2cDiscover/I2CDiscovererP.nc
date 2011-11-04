@@ -1,5 +1,7 @@
 #include "I2CDiscoverable.h"
+
 //TODO: ten-bit addresses: should be parameterized
+
 generic module I2CDiscovererP(){
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface I2CSlave;
@@ -59,6 +61,14 @@ generic module I2CDiscovererP(){
   discoverer_register_union_t _reg;
   discoverer_register_union_t* reg = &_reg;
 
+  void printContents(){
+    uint8_t i;
+    printf("Reg: %p\n\r", reg);
+    for(i = 0; i < sizeof(discoverer_register_union_t); i++){
+      printf("[%x]=%x\n\r", i, reg-> data[i]);
+    }
+  }
+
   command error_t I2CDiscoverer.startDiscovery(bool reset_, uint16_t addrStart){
 //    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
@@ -71,6 +81,7 @@ generic module I2CDiscovererP(){
         }
         atomic reg->val.localAddr = addrStart;
         reset = reset_;
+//        printContents();
         return SUCCESS;
       } else {
         return FAIL;
@@ -182,6 +193,8 @@ generic module I2CDiscovererP(){
   async event void I2CSlave.slaveStart(bool generalCall){
     isGC = generalCall;
     transCount = 0;
+//    printf("SS\n\r");
+//    printContents();
 //    printf("slave start %x \n\r", generalCall);
     //post restartTimeout();
     switch(state){
@@ -203,6 +216,7 @@ generic module I2CDiscovererP(){
   async event bool I2CSlave.slaveReceiveRequested(){
     uint8_t data = call I2CSlave.slaveReceive();
 //    printf("%s: %x\n\r", __FUNCTION__, data);
+//    printf("SRR: %x\n\r", data);
     if (isGC){
       //first byte ends with 1: own-address announcement from master
       if (data & 0x01){
@@ -223,9 +237,9 @@ generic module I2CDiscovererP(){
       if(transCount == 0){
         //first byte: offset
         pos = data;
-//        printf("pos: %x", pos);
+//        printf("pos: %x\n\r", pos);
       } else {
-//        printf("writing %x to %x (actually %x)\n\r", data, pos, pos%sizeof(discoverer_register_t));
+//        printf("%x to %x(%x)\n\r", data, pos, pos%sizeof(discoverer_register_t));
         //everything else: write it to buffer (circular)
         reg->data[(pos++)%sizeof(discoverer_register_t)] = data;
       }
@@ -242,8 +256,10 @@ generic module I2CDiscovererP(){
 //      reg.data[pos%sizeof(discoverer_register_t)]);
     //return from buf (circular)
     if (reg->val.cmd == I2C_DISCOVERABLE_REQUEST_ADDR){
+//      printf("STR: %x\n\r", reg->data[pos % sizeof(discoverer_register_t)]);
       call I2CSlave.slaveTransmit(reg->data[(pos++)%sizeof(discoverer_register_t)]);
     } else {
+//      printf("BADCMD\n\r");
       call I2CSlave.slaveTransmit(0xff);
     }
     return TRUE;
