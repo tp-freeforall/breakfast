@@ -33,6 +33,7 @@
  */
 
 #include "Bsl.h"
+#include <stdio.h>
 using namespace std;
 
 void Bsl::makeFrame(commands_t cmd, uint16_t A, uint16_t L, frame_t* frame, uint8_t dLen) {

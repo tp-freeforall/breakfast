@@ -32,6 +32,7 @@
  * @date 2007-04-16
  */
 #include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include "../config.h"
 #ifdef HAVE_LINUX_VERSION_H
