@@ -334,7 +334,6 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
 
 int BaseSerial::highSpeed(int *err) {
     int r;
-    //TODO: update defs for 115200 speed
 #if defined(HAVE_LINUX_VERSION_H) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
     struct serial_struct serinfo;
     r = ioctl(serialWriteFD, TIOCGSERIAL, &serinfo);
@@ -342,7 +341,7 @@ int BaseSerial::highSpeed(int *err) {
         *err = errno;
         return -1;
     }
-    serinfo.custom_divisor = serinfo.baud_base / 38400;
+    serinfo.custom_divisor = serinfo.baud_base / 115200;
     if(serinfo.custom_divisor == 0) serinfo.custom_divisor = 1;
     serinfo.flags &= ~ASYNC_SPD_MASK;
     serinfo.flags |= ASYNC_SPD_CUST;
@@ -350,8 +349,8 @@ int BaseSerial::highSpeed(int *err) {
 #else
     struct termios my_tios;
     r = tcgetattr(serialWriteFD, &my_tios);
-    cfsetispeed(&my_tios, B38400); 
-    cfsetospeed(&my_tios, B38400);
+    cfsetispeed(&my_tios, B115200); 
+    cfsetospeed(&my_tios, B115200);
     r = tcsetattr(serialReadFD, TCSANOW, &my_tios);
     if(r == -1) {
         *err = errno;
