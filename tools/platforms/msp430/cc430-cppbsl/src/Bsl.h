@@ -48,11 +48,12 @@ protected:
     const char *image;
     const int CHUNKSIZE;
     
+    //DC: modified for flash-based BSL
     enum commands_t {
-        MASS_ERASE = 0x18,
-        RX_DATA = 0x12,
-        RX_PWD = 0x10,
-        BAUDRATE = 0x20
+        MASS_ERASE = 0x15,
+        RX_DATA = 0x10,
+        RX_PWD = 0x11,
+        BAUDRATE = 0x52
     };
 
     class Segment {
@@ -78,6 +79,7 @@ protected:
     int writeBlock(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len);
     int writeData(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len);
     int parseIhex(int *err);
+    //TODO: revise prototype
     void makeFrame(commands_t cmd, uint16_t A, uint16_t L, frame_t* frame, uint8_t dLen);
     int highSpeed(int *err);
     

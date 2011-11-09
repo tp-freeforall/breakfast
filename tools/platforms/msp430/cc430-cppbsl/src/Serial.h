@@ -55,16 +55,12 @@ inline void serial_delay(unsigned usec) {
     select(0,NULL,NULL,NULL, &tv);
 };
 
+//cc430-bsl.py uses 244 data bytes (+2 checksum)
 struct frame_t {
-    uint8_t HDR;
-    uint8_t CMD;
-    uint8_t L1;
-    uint8_t L2;
-    uint8_t AL;
-    uint8_t AH;
-    uint8_t LL;
-    uint8_t LH;
-    uint8_t data[252];
+    uint8_t SYNC;
+    uint8_t NL;
+    uint8_t NH;
+    uint8_t data[244 + 2]; 
 } __attribute__ ((packed));
 
 /**
@@ -87,9 +83,8 @@ protected:
     bool swapRstTest;
     
     fd_set rfds;
-    
+
     enum {
-	CMD_FAILED = 0x70,
 	SYNC = 0x80,
 	DATA_ACK = 0x90,
 	DATA_NAK = 0xA0,
@@ -159,10 +154,11 @@ protected:
 
     inline void checksum(frame_t *frame) {
         uint8_t i;
-        uint8_t frameLen = frame->L1/2 + 2;
-        uint16_t *dat = (uint16_t *)frame;
-        uint16_t check = 0;
-        for(i = 0; i < frameLen; i++) {
+        uint8_t frameLen = (frame->NH << 8) + frame->NL;
+        uint16_t *dat = (uint16_t *)(frame->data);
+        uint16_t check = 0xffff;
+        for(i = 0; i < frameLen / 2; i++) {
+            //TODO: replace CRC impl
             check ^= dat[i];
         }
         dat[i] = ~check;
@@ -206,7 +202,7 @@ public:
         return r;
     };
     
-    int txrx(int *err, frame_t *txframe, frame_t *rxframe);
+    int txrx(int *err, bool responseExpected, frame_t *txframe, frame_t *rxframe);
     
     // handle connection
     int disconnect(int *err);
@@ -217,47 +213,6 @@ public:
     // do initial magic on serial interface
     virtual int reset(int *err);
     virtual int invokeBsl(int *err);
-
-};
-
-class TelosBSerial : public BaseSerial {    
-protected:
-    virtual int resetPins(int *err);
-    virtual int setPins(int *err);
-        
-    int telosSetSCL(int *err) {
-        return clrRTS(err);
-    }
-    
-    int telosClrSCL(int *err) {
-        return setRTS(err);
-    }
-    
-    int telosSetSDA(int *err) {
-        return clrDTR(err);
-    }
-
-    int telosClrSDA(int *err) {
-        return setDTR(err);
-    }
-
-    int telosI2CStart(int *err);
-    int telosI2CStop(int *err);
-    int telosI2CWriteBit(int *err, bool bit);
-    int telosI2CWriteByte(int* err, uint8_t byte);
-    int telosI2CWriteCmd(int*err, uint8_t addr, uint8_t cmdbyte);
-    
-public:    
-    TelosBSerial(const termios& term, int rFD, int wFD, bool T=false, bool R=false) :
-        BaseSerial(term, rFD, wFD, T, R) {
-    }
-    
-    virtual ~TelosBSerial() {
-    }
-    
-    virtual int reset(int *err);
-    virtual int invokeBsl(int *err);    
-
 
 };
 

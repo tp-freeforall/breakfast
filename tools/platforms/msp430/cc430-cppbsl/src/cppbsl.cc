@@ -29,7 +29,9 @@
 /**
  * hand rolled bsl tool, other ones are too slow
  * @author Andreas Koepke <koepke at tkn.tu-berlin.de>
+ * @author Doug Carlson <carlson@cs.jhu.edu>
  * @date 2007-04-16
+ * @date 2011-11-08
  */
 
 #include <fstream>
@@ -65,12 +67,7 @@ int main(int argc, char *argv[]) {
         delete parameters;
         return -1;
     }
-    if(parameters->telosb) {
-        bs = new TelosBSerial(oldterm, readFD, writeFD);
-    }
-    else {
-        bs = new BaseSerial(oldterm, readFD, writeFD, parameters->invertTest, parameters->invertReset);
-    }
+    bs = new BaseSerial(oldterm, readFD, writeFD, parameters->invertTest, parameters->invertReset);
     bsl = new Bsl(bs, parameters->img.c_str(), parameters->chunksize);
     switch(parameters->action) {
         case Parameters::ERASE:

@@ -214,6 +214,7 @@ int BaseSerial::disconnect(int *err) {
     return r;
 }
 
+//TODO: update for flash
 int BaseSerial::reset(int *err) {
     int r = 0;
     r = setRST(err);
@@ -231,6 +232,7 @@ int BaseSerial::reset(int *err) {
     return clearBuffers(err);
 };
 
+//TODO: update for flash
 int BaseSerial::invokeBsl(int *err) {
     int r = 0;
     r = setRST(err);
@@ -288,95 +290,52 @@ int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     return cnt;
 }
 
-int BaseSerial::txrx(int *err, frame_t *txframe, frame_t *rxframe) {
+int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t *rxframe) {
     int r = 0;
     char sync = SYNC;
     uint8_t ack = 0;
-    if((txframe == NULL) || (txframe->L1 < 4) || ((txframe->L1 & 1) != 0) || (rxframe == NULL)) {
+    if((txframe == NULL) || (txframe->NL + (txframe->NH << 8)) == 0 || (rxframe == NULL)) {
         cerr << "BaseSerial::txrx: precondition not fulfilled, "
              << " txFrame: " << txframe
              << " rxFrame: " << rxframe
-             << " txframe->L1: " << (unsigned) txframe->L1
+             << " txframe->NH: " << (unsigned) txframe->NH 
+             << " txframe->NL: " << (unsigned) txframe->NL 
              << endl;
         return -1;
     }
-    for(unsigned i = 0; i < 2; i++) {
-        r = write(serialWriteFD,&sync, 1);
-        if(r == -1) {
-            *err = errno;
-            if(errno != EAGAIN) return -1;
-        }
-        r = readFD(err, (char *)(&ack),1,1);
-        if(r == 1) {
-            if(ack == DATA_ACK) {
-                r = 0;
-                break;
-            }
-            else {
-                cerr << "WARN: BaseSerial::txrx: received " << hex << (unsigned) ack
-                     << " when trying to sync with node." << dec << endl;
-            }
-        }
-        else {
-            if((r == -1) && (errno == EAGAIN)) {
-                // retry to sync
-            }
-            else {
-                cerr << "FATAL: BaseSerial::txrx could not SYNC with node" << endl;
-                return -1;
-            }
-        } 
-    }
-    if(r == -1) {
-        return -1;
-    }
-    r = clearBuffers(err); 
-    if(r == -1) return r;
-    // transmit frame
+    //checksum/transmit frame
     checksum(txframe);    
-    r = write(serialWriteFD, (char *)txframe, txframe->L1 + 6);
-    if(r < txframe->L1 + 6) {
+    //length is the value of NH NL, plus 2 bytes for NH NL plus 2
+    //  bytes for crc
+    txframe->SYNC = SYNC;
+    r = write(serialWriteFD, (char *)txframe, ((txframe->NH << 8) + txframe->NL) + 4);
+    if(r < ((txframe->NH << 8) + txframe->NL) + 4) {
         *err = errno;
         return -1;
     }
-    // receive response
-    int len = 0;
-    rxframe->L1 = 4;
-    r = 0;
-    while(r >= 0) {
-        r = readFD(err, (char *)rxframe, sizeof(frame_t), sizeof(frame_t));
-        if(r == -1) {
-            return -1;
-        }
-        else if(r >= 1) {
-            len += r;
-            if(rxframe->HDR == DATA_ACK) {
-                break;
-            }            
-            else if(rxframe->HDR == DATA_NAK) {
-                cerr << "BaseSerial::txrx frame not valid, command "
-                     << hex << (unsigned) txframe->CMD << dec 
-                     << " not defined or not allowed" << endl;
-                return -1;
-            }
-            else if(rxframe->HDR == SYNC) {
-                if(len >= rxframe->L1 + 6) {
-                    break;
-                }
-            }
-            else {
-                cerr << "FATAL: BaseSerial::txrx: received "
-                     << hex << (unsigned) rxframe->HDR
-                     << " when trying to execute " << hex << (unsigned) txframe->CMD << dec << endl;
-                break;
-            }
-        }
+    //read single byte to check ack
+    r = readFD(err, (char*)&ack, 1, 1);
+    if (ack == DATA_ACK){
+      //if we expect to get more than an ack, read back the sync +
+      //length, then the data
+      if(responseExpected){
+        r = readFD(err, (char*)rxframe, 3, 3);
+        int len = ((rxframe -> NH << 8) + rxframe -> NL);
+        //TODO: check r
+        r = readFD(err, (char*)(&rxframe->data), len, sizeof(rxframe) - 3);
+        //TODO: verify checksum
+      } else {
+        return r;
+      }
+    } else {
+      //TODO: proper error handling
     }
     return r;
 }
 
 int BaseSerial::highSpeed(int *err) {
     int r;
+    //TODO: update defs for 115200 speed
 #if defined(HAVE_LINUX_VERSION_H) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
     struct serial_struct serinfo;
     r = ioctl(serialWriteFD, TIOCGSERIAL, &serinfo);
@@ -407,124 +366,4 @@ int BaseSerial::highSpeed(int *err) {
         return -1;
     }
     return r;
-}
-
-int TelosBSerial::reset(int *err) {
-    int r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    serial_delay(switchdelay);
-    r = telosI2CWriteCmd(err, 0, 3);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 2);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    serial_delay(switchdelay);
-    cout << "Reset device ..." << endl;
-    return clearBuffers(err);
-}
-
-int TelosBSerial::invokeBsl(int *err) {
-    int r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    serial_delay(switchdelay);
-    r = telosI2CWriteCmd(err, 0, 1);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 3);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 1);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 3);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 2);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    r = telosI2CWriteCmd(err, 0, 0);
-    if(r == -1) return r;
-    serial_delay(switchdelay);
-    cout << "Invoking BSL..." << endl;
-    return clearBuffers(err);
-}
-
-int TelosBSerial::telosI2CStart(int *err) {
-    int r;
-    r = telosSetSDA(err);
-    if(r == -1) return -1;
-    r = telosSetSCL(err);
-    if(r == -1) return -1;
-    r = telosClrSDA(err);
-    return r;
-}
-
-int TelosBSerial::telosI2CStop(int *err) {
-    int r;
-    r = telosClrSDA(err);
-    if(r == -1) return r;
-    r = telosSetSCL(err);
-    if(r == -1) return r;
-    r = telosSetSDA(err);
-    return r;
-}
-
-int TelosBSerial::telosI2CWriteBit(int *err, bool bit) {
-    int r = telosClrSCL(err);
-    if(r == -1) return r;
-    if(bit) {
-        r = telosSetSDA(err);
-        if(r == -1) return r;
-    } else {
-        r = telosClrSDA(err);
-        if(r == -1) return r;
-    }
-    r = telosSetSCL(err);
-    if(r == -1) return r;
-    r = telosClrSCL(err);
-    return r;
-}
-
-int TelosBSerial::telosI2CWriteByte(int *err, uint8_t byte) {
-    int r;
-    r = telosI2CWriteBit(err,  byte & 0x80 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x40 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x20 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x10 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x08 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x04 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x02 );
-    if(r == -1) return r;
-    r = telosI2CWriteBit(err,  byte & 0x01 );
-    if(r == -1) return r;
-    return telosI2CWriteBit(err,  0 );
-}
-
-int TelosBSerial::telosI2CWriteCmd(int *err, uint8_t addr, uint8_t cmdbyte) {
-    int r;
-    r = telosI2CStart(err);
-    if(r == -1) return r;
-    r = telosI2CWriteByte(err,  0x90 | (addr << 1) );
-    if(r == -1) return r;
-    r = telosI2CWriteByte(err,  cmdbyte );
-    if(r == -1) return r;
-    r = telosI2CStop(err);
-    if(r == -1) return r;
-    return clearBuffers(err);
-}
-
-int TelosBSerial::setPins(int *err) {
-    return 0;
-}
-
-int TelosBSerial::resetPins(int *err) {
-    return 0;
 }

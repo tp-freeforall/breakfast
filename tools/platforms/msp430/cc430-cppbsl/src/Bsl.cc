@@ -37,14 +37,15 @@
 using namespace std;
 
 void Bsl::makeFrame(commands_t cmd, uint16_t A, uint16_t L, frame_t* frame, uint8_t dLen) {
-    frame->HDR = 0x80;
-    frame->CMD = (uint8_t)cmd;
-    frame->L1 = dLen + 4;
-    frame->L2 = dLen + 4;
-    frame->AL = A & 0xff;
-    frame->AH = (A>>8) & 0xff;
-    frame->LL = L & 0xff;
-    frame->LH = (L>>8) & 0xff;
+    //TODO: replace with flash-bsl frame structure
+//    frame->HDR = 0x80;
+//    frame->CMD = (uint8_t)cmd;
+//    frame->L1 = dLen + 4;
+//    frame->L2 = dLen + 4;
+//    frame->AL = A & 0xff;
+//    frame->AH = (A>>8) & 0xff;
+//    frame->LL = L & 0xff;
+//    frame->LH = (L>>8) & 0xff;
 }
 
 int Bsl::rxPassword(int *err) {
@@ -53,41 +54,26 @@ int Bsl::rxPassword(int *err) {
     for(int i = 0; i < 32; i++) {
         txframe.data[i] = 0xff;
     }
+    //TODO: update
     makeFrame(RX_PWD, 0, 0, &txframe, 32);
     cout << "Transmit default password ..." << endl;
-    return s->txrx(err, &txframe, &rxframe);
+    int r = s->txrx(err, true, &txframe, &rxframe);
+    //TODO: verify that rxframe contains a message(SUCCESS) frame,
+    //  combine with r
+    return r;
 }
 
 int Bsl::erase(int *err) {
     int r = 0;
     frame_t txframe;
     frame_t rxframe;
+    //TODO: update
     makeFrame(MASS_ERASE, 0xff00, 0xa506, &txframe, 0);
-    for(int i = 0; i < 2; i++) {
-        r = s->invokeBsl(err);
-        if(r != -1) {
-            r = s->txrx(err, &txframe, &rxframe);
-            if(r != -1) {
-                cout << "Mass Erase..." << endl;
-                break;
-            }
-            else {
-                if(*err == EAGAIN) {
-                    serial_delay(1000000);
-                }
-                else {
-                    return -1;
-                }
-            }
-        }
-        else {
-            if(*err == EAGAIN) {
-                serial_delay(1000000);
-            }
-            else {
-                return -1;
-            }
-        }
+    //TODO: incorporate retry
+    r = s->invokeBsl(err);
+    if(r != -1) {
+        r = s->txrx(err, true, &txframe, &rxframe);
+        //TODO: check rxframe for message(SUCCESS)
     }
     return r;
 }
@@ -136,7 +122,10 @@ int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const ui
     frame_t rxframe;
     memcpy(txframe.data, data, len);
     makeFrame(RX_DATA, addr, len, &txframe, len);
-    return s->txrx(err, &txframe, &rxframe);
+    int r = s->txrx(err, true, &txframe, &rxframe);
+    //TODO: verify rxframe
+    //TODO: combine with r
+    return r;
 }
 
 int Bsl::writeData(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len) {
@@ -230,8 +219,9 @@ int Bsl::highSpeed(int *err) {
     for(int i = 0; i < 32; i++) {
         txframe.data[i] = 0xff;
     }
+    //TODO: switch to fasty-fast (115200 = 0x0003)
     makeFrame(BAUDRATE, 0x87e0, 0x0002, &txframe, 0);
-    r = s->txrx(err, &txframe, &rxframe);
+    r = s->txrx(err, false, &txframe, &rxframe);
     if(r != -1) {
         serial_delay(10000);
         r = s->highSpeed(err);
