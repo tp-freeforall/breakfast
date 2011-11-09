@@ -218,7 +218,7 @@ int BaseSerial::reset(int *err) {
     int r = 0;
     r = setRSTn(err);
     if(r == -1) return -1;
-    r = setTEST(err);
+    r = clrTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
     r = clrRSTn(err);
@@ -238,7 +238,6 @@ int BaseSerial::invokeBsl(int *err) {
     r = setTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-
     r = clrTEST(err);
     if(r == -1) return -1;
     r = clrRSTn(err);
