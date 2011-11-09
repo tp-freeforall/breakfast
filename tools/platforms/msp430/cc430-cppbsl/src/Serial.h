@@ -55,12 +55,37 @@ inline void serial_delay(unsigned usec) {
     select(0,NULL,NULL,NULL, &tv);
 };
 
-//cc430-bsl.py uses 244 data bytes (+2 checksum)
+#ifndef BSL_CORE_LEN
+#define BSL_CORE_LEN 243
+#endif
+
+#define BSL_CRC_LEN 2
+
+struct addr_frame_header_t {
+  uint8_t AL;
+  uint8_t AM;
+  uint8_t AH;
+} __attribute__ ((packed));
+
+struct addr_frame_t {
+  addr_frame_header_t header;
+  uint8_t body[BSL_CORE_LEN - sizeof(addr_frame_header_t) + BSL_CRC_LEN ];
+} __attribute__ ((packed));
+
+struct bsl_core_frame_t {
+  uint8_t CMD;
+  union {
+    uint8_t body[BSL_CORE_LEN - 1 + BSL_CRC_LEN]; 
+    addr_frame_t addrFrame;
+  }
+} __attribute__ ((packed));
+
 struct frame_t {
     uint8_t SYNC;
     uint8_t NL;
     uint8_t NH;
-    uint8_t data[244 + 2]; 
+    uint8_t CMD;
+    bsl_core_frame_t core;
 } __attribute__ ((packed));
 
 /**
@@ -130,32 +155,32 @@ protected:
     
     int setTEST(int *err) {
         int r;
-        if(invertTest) { r = clrRTS(err); } else { r = setRTS(err); }
+        if(invertTest) { r = clrDTR(err); } else { r = setDTR(err); }
         return r;
     }
 
     int clrTEST(int *err) {
         int r;
-        if(invertTest) { r = setRTS(err); } else { r = clrRTS(err); }
+        if(invertTest) { r = setDTR(err); } else { r = clrDTR(err); }
         return r;
     }
 
-    int setRST(int *err) {
+    int setRSTn(int *err) {
         int r;
-        if(invertReset) { r = clrDTR(err); } else { r = setDTR(err); }
+        if(invertReset) { r = clrRTS(err); } else { r = setRTS(err); }
         return r;
     }
 
-    int clrRST(int *err) {
+    int clrRSTn(int *err) {
         int r;
-        if(invertReset) { r= setDTR(err); } else { r = clrDTR(err); }
+        if(invertReset) { r= setRTS(err); } else { r = clrRTS(err); }
         return r;
     }
 
     inline void checksum(frame_t *frame) {
         uint8_t i;
         uint8_t frameLen = (frame->NH << 8) + frame->NL;
-        uint16_t *dat = (uint16_t *)(frame->data);
+        uint16_t *dat = (uint16_t *)(&frame->bslCore);
         uint16_t check = 0xffff;
         for(i = 0; i < frameLen / 2; i++) {
             //TODO: replace CRC impl

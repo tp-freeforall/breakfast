@@ -36,26 +36,34 @@
 #include <stdio.h>
 using namespace std;
 
-void Bsl::makeFrame(commands_t cmd, uint16_t A, uint16_t L, frame_t* frame, uint8_t dLen) {
-    //TODO: replace with flash-bsl frame structure
-//    frame->HDR = 0x80;
-//    frame->CMD = (uint8_t)cmd;
-//    frame->L1 = dLen + 4;
-//    frame->L2 = dLen + 4;
-//    frame->AL = A & 0xff;
-//    frame->AH = (A>>8) & 0xff;
-//    frame->LL = L & 0xff;
-//    frame->LH = (L>>8) & 0xff;
+int Bsl::setUartFrameHeader(commands_t cmd, uint16_t dataLen, 
+  frame_t* frame) {
+    frame->SYNC = SYNC;
+    frame->CMD = cmd;
+    uint16_t len = dataLen + 1;
+    frame->NH = (len >> 8);
+    frame->NL = len & 0xff;
+}
+
+int Bsl::setAddrFrameHeader(commands_t cmd, uint16_t dataLen, uint8_t
+AL, uint
+  frame_t* frame) {
+    frame->SYNC = SYNC;
+    frame->CMD = cmd;
+    uint16_t len = dataLen + 1;
+    frame->NH = (len >> 8);
+    frame->NL = len & 0xff;
 }
 
 int Bsl::rxPassword(int *err) {
     frame_t txframe;
     frame_t rxframe;
+    //default password
     for(int i = 0; i < 32; i++) {
-        txframe.data[i] = 0xff;
+        txframe.bslCore.data[i] = 0xff;
     }
-    //TODO: update
-    makeFrame(RX_PWD, 0, 0, &txframe, 32);
+    setUartFrameHeader(RX_PWD, 32, &txframe);
+    //makeFrame(RX_PWD, 0, 0, &txframe, 32);
     cout << "Transmit default password ..." << endl;
     int r = s->txrx(err, true, &txframe, &rxframe);
     //TODO: verify that rxframe contains a message(SUCCESS) frame,
@@ -67,8 +75,7 @@ int Bsl::erase(int *err) {
     int r = 0;
     frame_t txframe;
     frame_t rxframe;
-    //TODO: update
-    makeFrame(MASS_ERASE, 0xff00, 0xa506, &txframe, 0);
+    setUartFrameHeader(MASS_ERASE, 0, &txframe);
     //TODO: incorporate retry
     r = s->invokeBsl(err);
     if(r != -1) {
@@ -120,8 +127,10 @@ int Bsl::install(int *err) {
 int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len) {
     frame_t txframe;
     frame_t rxframe;
-    memcpy(txframe.data, data, len);
+    setUartFrameHeader(RX_DATA, len, &txframe);
+
     makeFrame(RX_DATA, addr, len, &txframe, len);
+    memcpy(txframe.data, data, len);
     int r = s->txrx(err, true, &txframe, &rxframe);
     //TODO: verify rxframe
     //TODO: combine with r

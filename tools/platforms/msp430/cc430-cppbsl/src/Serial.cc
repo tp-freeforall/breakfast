@@ -179,12 +179,12 @@ int serial_connect(int* err, const char* dev, int* readFD, int* writeFD, termios
 };
 
 int BaseSerial::setPins(int *err) {
-    setRST(err);
+    setRSTn(err);
     return setTEST(err);
 }
 
 int BaseSerial::resetPins(int *err) {
-    setRST(err);
+    setRSTn(err);
     return clrTEST(err);
 }
 
@@ -214,33 +214,34 @@ int BaseSerial::disconnect(int *err) {
     return r;
 }
 
-//TODO: update for flash
 int BaseSerial::reset(int *err) {
     int r = 0;
-    r = setRST(err);
+    r = setRSTn(err);
     if(r == -1) return -1;
     r = setTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-    r = clrRST(err);
+    r = clrRSTn(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-    r = setRST(err);
+    r = setRSTn(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
     cout << "Reset device ..." << endl;
     return clearBuffers(err);
 };
 
-//TODO: update for flash
 int BaseSerial::invokeBsl(int *err) {
     int r = 0;
-    r = setRST(err);
+    r = setRSTn(err);
     if(r == -1) return -1;
     r = setTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-    r = clrRST(err);
+
+    r = clrTEST(err);
+    if(r == -1) return -1;
+    r = clrRSTn(err);
     if(r == -1) return -1;
     r = setTEST(err);
     if(r == -1) return -1;
@@ -248,11 +249,9 @@ int BaseSerial::invokeBsl(int *err) {
     if(r == -1) return -1;
     r = setTEST(err);
     if(r == -1) return -1;
+    r = setRSTn(err);
+    if(r == -1) return -1;
     r = clrTEST(err);
-    if(r == -1) return -1;
-    r = setRST(err);
-    if(r == -1) return -1;
-    r = setTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
     cout << "Invoking BSL..." << endl;
@@ -322,7 +321,7 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
         r = readFD(err, (char*)rxframe, 3, 3);
         int len = ((rxframe -> NH << 8) + rxframe -> NL);
         //TODO: check r
-        r = readFD(err, (char*)(&rxframe->data), len, sizeof(rxframe) - 3);
+        r = readFD(err, (char*)(&rxframe->bslCore), len, sizeof(rxframe) - 3);
         //TODO: verify checksum
       } else {
         return r;

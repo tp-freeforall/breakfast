@@ -56,6 +56,10 @@ protected:
         BAUDRATE = 0x52
     };
 
+    enum syncByte_t {
+        SYNC = 0x80
+    };
+
     class Segment {
     public:
         unsigned startAddr;
@@ -79,8 +83,8 @@ protected:
     int writeBlock(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len);
     int writeData(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len);
     int parseIhex(int *err);
-    //TODO: revise prototype
-    void makeFrame(commands_t cmd, uint16_t A, uint16_t L, frame_t* frame, uint8_t dLen);
+    void setUartFrameHeader(commands_t cmd, uint16_t dataLen, frame_t* frame);
+    void setAddrFrameHeader(commands_t cmd, uint16_t dataLen, uint8_t AL, uint8_t AM, uint8_t AH, frame_t* frame);
     int highSpeed(int *err);
     
 public:
