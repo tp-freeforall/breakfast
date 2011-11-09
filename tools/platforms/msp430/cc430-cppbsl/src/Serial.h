@@ -77,14 +77,13 @@ struct bsl_core_frame_t {
   union {
     uint8_t body[BSL_CORE_LEN - 1 + BSL_CRC_LEN]; 
     addr_frame_t addrFrame;
-  }
+  } ;
 } __attribute__ ((packed));
 
 struct frame_t {
     uint8_t SYNC;
     uint8_t NL;
     uint8_t NH;
-    uint8_t CMD;
     bsl_core_frame_t core;
 } __attribute__ ((packed));
 
@@ -180,7 +179,7 @@ protected:
     inline void checksum(frame_t *frame) {
         uint8_t i;
         uint8_t frameLen = (frame->NH << 8) + frame->NL;
-        uint16_t *dat = (uint16_t *)(&frame->bslCore);
+        uint16_t *dat = (uint16_t *)(&frame->core);
         uint16_t check = 0xffff;
         for(i = 0; i < frameLen / 2; i++) {
             //TODO: replace CRC impl

@@ -36,23 +36,23 @@
 #include <stdio.h>
 using namespace std;
 
-int Bsl::setUartFrameHeader(commands_t cmd, uint16_t dataLen, 
+void Bsl::setUartFrameHeader(commands_t cmd, uint16_t dataLen, 
   frame_t* frame) {
     frame->SYNC = SYNC;
-    frame->CMD = cmd;
+    frame->core.CMD = cmd;
+    //+1 to account for CMD
     uint16_t len = dataLen + 1;
     frame->NH = (len >> 8);
     frame->NL = len & 0xff;
 }
 
-int Bsl::setAddrFrameHeader(commands_t cmd, uint16_t dataLen, uint8_t
-AL, uint
-  frame_t* frame) {
-    frame->SYNC = SYNC;
-    frame->CMD = cmd;
-    uint16_t len = dataLen + 1;
-    frame->NH = (len >> 8);
-    frame->NL = len & 0xff;
+void Bsl::setAddrFrameHeader(commands_t cmd, uint16_t dataLen, 
+  uint32_t startAddr, frame_t* frame) {
+  //+3 to account for address (only lower 3 bytes are used)
+  setUartFrameHeader(cmd, dataLen+3, frame);
+  frame->core.addrFrame.header.AL = startAddr & 0xff;
+  frame->core.addrFrame.header.AM = (startAddr >> 8) & 0xff;
+  frame->core.addrFrame.header.AH = (startAddr >> 16) & 0xff;
 }
 
 int Bsl::rxPassword(int *err) {
@@ -60,7 +60,7 @@ int Bsl::rxPassword(int *err) {
     frame_t rxframe;
     //default password
     for(int i = 0; i < 32; i++) {
-        txframe.bslCore.data[i] = 0xff;
+        txframe.core.body[i] = 0xff;
     }
     setUartFrameHeader(RX_PWD, 32, &txframe);
     //makeFrame(RX_PWD, 0, 0, &txframe, 32);
@@ -127,10 +127,8 @@ int Bsl::install(int *err) {
 int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len) {
     frame_t txframe;
     frame_t rxframe;
-    setUartFrameHeader(RX_DATA, len, &txframe);
-
-    makeFrame(RX_DATA, addr, len, &txframe, len);
-    memcpy(txframe.data, data, len);
+    setAddrFrameHeader(RX_DATA, len, addr, &txframe);
+    memcpy(txframe.core.addrFrame.body, data, len);
     int r = s->txrx(err, true, &txframe, &rxframe);
     //TODO: verify rxframe
     //TODO: combine with r
@@ -161,6 +159,13 @@ int Bsl::writeData(int *err, const uint16_t addr, const uint8_t* data, const uin
     return r;
 }
 
+//Note: the flash bsl takes a 24-bit address, but:
+// a. The cc430f5137, which is what we care about at the moment,
+//    only has 32k so we never use the AH byte
+// b. The parseIhex code lifted from the previous impl expects
+//    16-bit addresses.
+// c. Not sure if msp430-objdump will even generate 32-bit ihex
+//    files.
 int Bsl::parseIhex(int *err) {
     char buf[512];
     Segment segment;
@@ -225,11 +230,8 @@ int Bsl::highSpeed(int *err) {
     frame_t txframe;
     frame_t rxframe;
     int r;
-    for(int i = 0; i < 32; i++) {
-        txframe.data[i] = 0xff;
-    }
-    //TODO: switch to fasty-fast (115200 = 0x0003)
-    makeFrame(BAUDRATE, 0x87e0, 0x0002, &txframe, 0);
+    setUartFrameHeader(BAUDRATE, 1, &txframe);
+    txframe.core.body[0] = BAUDRATE_115200;
     r = s->txrx(err, false, &txframe, &rxframe);
     if(r != -1) {
         serial_delay(10000);

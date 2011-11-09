@@ -56,13 +56,17 @@ protected:
         BAUDRATE = 0x52
     };
 
+    enum{
+      BAUDRATE_115200 = 0x06,
+    };
+
     enum syncByte_t {
         SYNC = 0x80
     };
 
     class Segment {
     public:
-        unsigned startAddr;
+        uint32_t startAddr;
         unsigned len;
         uint8_t  data[65536];
         Segment(const Segment& a) {
@@ -84,7 +88,7 @@ protected:
     int writeData(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len);
     int parseIhex(int *err);
     void setUartFrameHeader(commands_t cmd, uint16_t dataLen, frame_t* frame);
-    void setAddrFrameHeader(commands_t cmd, uint16_t dataLen, uint8_t AL, uint8_t AM, uint8_t AH, frame_t* frame);
+    void setAddrFrameHeader(commands_t cmd, uint16_t dataLen, uint32_t startAddr, frame_t* frame);
     int highSpeed(int *err);
     
 public:

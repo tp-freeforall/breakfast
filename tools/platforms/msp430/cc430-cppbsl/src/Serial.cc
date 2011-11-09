@@ -321,7 +321,7 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
         r = readFD(err, (char*)rxframe, 3, 3);
         int len = ((rxframe -> NH << 8) + rxframe -> NL);
         //TODO: check r
-        r = readFD(err, (char*)(&rxframe->bslCore), len, sizeof(rxframe) - 3);
+        r = readFD(err, (char*)(&rxframe->core), len, sizeof(rxframe) - 3);
         //TODO: verify checksum
       } else {
         return r;
