@@ -387,7 +387,6 @@ class LowLevel:
                     debug(1, "standard reset")
                     self.SetTCK(0)
                     self.SetRSTn(0)
-                    time.sleep(1)
                     self.SetRSTn(1)
                     self.SetTCK(1)
                 else:
