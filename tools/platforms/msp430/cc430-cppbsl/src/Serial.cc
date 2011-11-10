@@ -265,26 +265,33 @@ int BaseSerial::invokeBsl(int *err) {
     cout << "/invokeBSL" << endl;
     return clearBuffers(err);
 }
+
 int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     int cnt = 0;
     int retries = 0;
     timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
-    while(cnt == 0) {
-        int tmpCnt = read(serialReadFD, buffer, maxCount);
+    printf("starting read of %d to \t%p\n\r", count, buffer);
+    FD_ZERO(&rfds);
+    FD_SET(serialReadFD, &rfds);
+    while(cnt < count) {
+        int tmpCnt = read(serialReadFD, buffer+cnt, maxCount-cnt);
+        printf("read %d bytes to \t%p\n\r", tmpCnt, buffer+cnt);
         *err = errno;
         if((tmpCnt == 0) || ((tmpCnt < 0) && (errno == EAGAIN))) {
-            FD_SET(serialReadFD, &rfds);
-            if(select(serialReadFD + 1, &rfds, NULL, NULL, &tv) < 0) {
+            int retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
+            if (retval < 0){
+                fprintf(stderr, "Select error.\n\r");
                 *err = errno;
                 return -1;
+            } else if (retval == 0){
+              fprintf(stderr, "Data read timeout\n\r");
+              return -1;
+            } else {
+              //ok, great. data should be available next go-round
             }
-            FD_CLR(serialReadFD, &rfds);
-            if(retries++ >= 2) {
-                cerr << "FATAL: BaseSerial::readFD no data available after 1s" << endl;
-                return -1;
-            }
+
         }
         else if(tmpCnt > 0) {
             cnt += tmpCnt;
