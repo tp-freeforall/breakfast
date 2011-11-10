@@ -36,6 +36,7 @@
 #include <stdio.h>
 using namespace std;
 
+
 void Bsl::setUartFrameHeader(commands_t cmd, uint16_t dataLen, 
   frame_t* frame) {
     frame->SYNC = SYNC;
@@ -76,11 +77,15 @@ int Bsl::erase(int *err) {
     frame_t txframe;
     frame_t rxframe;
     setUartFrameHeader(MASS_ERASE, 0, &txframe);
-    //TODO: incorporate retry
+    //TODO: incorporate retry: should redo invokeBsl if no ack
+    //received or rxframe indicate trouble
+    printFrame(&txframe);
     r = s->invokeBsl(err);
     if(r != -1) {
+        cout << "massErase" << endl;
         r = s->txrx(err, true, &txframe, &rxframe);
         //TODO: check rxframe for message(SUCCESS)
+        cout << "/massErase" << endl;
     }
     return r;
 }

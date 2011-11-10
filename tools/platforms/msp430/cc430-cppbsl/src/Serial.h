@@ -51,6 +51,7 @@
 
 using namespace std;
 
+
 inline void serial_delay(unsigned usec) {
     struct timeval tv;
     tv.tv_sec = usec/1000000;
@@ -87,9 +88,13 @@ struct frame_t {
     uint8_t SYNC;
     uint8_t NL;
     uint8_t NH;
-    bsl_core_frame_t core;
+    union{
+      bsl_core_frame_t core;
+      uint8_t body[BSL_CORE_LEN + BSL_CRC_LEN];
+    };
 } __attribute__ ((packed));
 
+void printFrame(frame_t* frame);
 /**
  * Connect with serial device (dev), returns the opened file descriptors in *
  * readFD and writeFD. Returns on error with something != 0 and errno is *
@@ -184,15 +189,22 @@ protected:
     }
 
     inline void checksum(frame_t *frame) {
+        printf("Checksumming:\n\r");
+        printFrame(frame);
         uint8_t i;
         uint8_t frameLen = (frame->NH << 8) + frame->NL;
-        uint16_t *dat = (uint16_t *)(&frame->core);
-        uint16_t check = 0xffff;
-        for(i = 0; i < frameLen / 2; i++) {
-            //TODO: replace CRC impl
-            check ^= dat[i];
+        uint16_t crc = 0xffff;
+        for(i = 0; i < frameLen; i++) {
+            uint8_t byte = frame->body[i];
+            crc  = ((crc >> 8) | (crc << 8)) & 0xffff;
+            crc ^= byte;
+            crc ^= (crc & 0xf0) >> 4;
+            crc ^= (crc & 0x0f) << 12;
+            crc ^= (crc & 0xff) << 5;
         }
-        dat[i] = ~check;
+        printf("checksum: %x\n\r", crc);
+        frame->body[frameLen] = crc & 0xff;
+        frame->body[frameLen+1] = ((crc >> 8) & 0xff);
     }
     
     int readFD(int *err, char *buffer, int count, int maxCount);

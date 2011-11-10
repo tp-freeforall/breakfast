@@ -46,6 +46,14 @@
 
 using namespace std;
 
+void printFrame(frame_t* frame){
+  unsigned int len = (frame->NH << 8) + (frame->NL);
+  printf("Frame %p len %d\n\r", frame, len);
+  for(int i = 0; i< len + 5; i++){
+    printf("[%d]: %x\n\r", i, ((uint8_t*)frame)[i]);
+  }
+}
+
 int serial_connect(int* err, const char* dev, int* readFD, int* writeFD, termios* pt)
 {
     struct termios my_tios;
@@ -307,8 +315,12 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
     //length is the value of NH NL, plus 2 bytes for NH NL plus 2
     //  bytes for crc
     txframe->SYNC = SYNC;
-    r = write(serialWriteFD, (char *)txframe, ((txframe->NH << 8) + txframe->NL) + 4);
-    if(r < ((txframe->NH << 8) + txframe->NL) + 4) {
+    printf("Writing:\n\r");
+    printFrame(txframe);
+    //frameLen includes sync, NH, NL, CKL, CKH, plus core
+    int frameLen = ((txframe -> NH << 8) + txframe->NL) + 1 + 2 + 2;
+    r = write(serialWriteFD, (char *)txframe, frameLen);
+    if(r < frameLen) {
         *err = errno;
         return -1;
     }
