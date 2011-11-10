@@ -232,6 +232,7 @@ int BaseSerial::reset(int *err) {
 };
 
 int BaseSerial::invokeBsl(int *err) {
+    cout << "invokeBSL" << endl;
     int r = 0;
     r = setRSTn(err);
     if(r == -1) return -1;
@@ -253,7 +254,7 @@ int BaseSerial::invokeBsl(int *err) {
     r = clrTEST(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-    cout << "Invoking BSL..." << endl;
+    cout << "/invokeBSL" << endl;
     return clearBuffers(err);
 }
 
