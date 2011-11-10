@@ -258,6 +258,7 @@ int Bsl::highSpeed(int *err) {
     frame_t txframe;
     frame_t rxframe;
     int r;
+    //TODO: safety
     setUartFrameHeader(BAUDRATE, 1, &txframe);
     txframe.core.body[0] = BAUDRATE_115200;
     r = s->txrx(err, false, &txframe, &rxframe);
