@@ -118,8 +118,13 @@ protected:
 
     enum {
 	SYNC = 0x80,
-	DATA_ACK = 0x90,
-	DATA_NAK = 0xA0,
+	ACK = 0x00,
+	HEADER_INCORRECT = 0x51,
+	CHECKSUM_INCORRECT = 0x52,
+	PACKET_SIZE_ZERO = 0x53,
+	PACKET_EXCEEDS_BUFFER = 0x54,
+	UNKNOWN_ERROR = 0x55,
+	UNKNOWN_BAUD_RATE = 0x56,
     };
     
  protected:    
@@ -187,10 +192,7 @@ protected:
         if(invertReset) { r= setRTS(err); } else { r = clrRTS(err); }
         return r;
     }
-
-    inline void checksum(frame_t *frame) {
-        printf("Checksumming:\n\r");
-        printFrame(frame);
+    inline uint16_t calcChecksum(frame_t* frame){
         uint8_t i;
         uint8_t frameLen = (frame->NH << 8) + frame->NL;
         uint16_t crc = 0xffff;
@@ -202,9 +204,22 @@ protected:
             crc ^= (crc & 0x0f) << 12;
             crc ^= (crc & 0xff) << 5;
         }
-        printf("checksum: %x\n\r", crc);
+        return crc;
+    }
+
+    inline void checksum(frame_t *frame) {
+        printf("Checksumming:\n\r");
+        printFrame(frame);
+        uint8_t frameLen = (frame->NH << 8) + frame->NL;
+        uint16_t crc = calcChecksum(frame);
         frame->body[frameLen] = crc & 0xff;
         frame->body[frameLen+1] = ((crc >> 8) & 0xff);
+    }
+
+    inline bool verifyChecksum(frame_t* frame){
+        uint8_t frameLen = (frame->NH << 8) + frame->NL;
+        uint16_t crc = calcChecksum(frame);
+        return crc == *(uint16_t*)&frame->body[frameLen];
     }
     
     int readFD(int *err, char *buffer, int count, int maxCount);

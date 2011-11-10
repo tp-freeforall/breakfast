@@ -310,6 +310,7 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
              << endl;
         return -1;
     }
+    memset(rxframe, 0, sizeof(*rxframe));
     //checksum/transmit frame
     checksum(txframe);    
     //length is the value of NH NL, plus 2 bytes for NH NL plus 2
@@ -326,21 +327,41 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
     }
     //read single byte to check ack
     r = readFD(err, (char*)&ack, 1, 1);
-    if (ack == DATA_ACK){
+    if (r == -1){
+      return r;
+    }
+    if (ack == ACK){
       //if we expect to get more than an ack, read back the sync +
       //length, then the data
       if(responseExpected){
         r = readFD(err, (char*)rxframe, 3, 3);
-        int len = ((rxframe -> NH << 8) + rxframe -> NL);
-        //TODO: check r
-        r = readFD(err, (char*)(&rxframe->core), len, sizeof(rxframe) - 3);
-        //TODO: verify checksum
+        if(r != 3){
+          fprintf(stderr, "Failed to read UART header, got %d bytes (expected %d).\n\r", r, 3);
+          return -1;
+        }
+        printf("After header:\n\r");
+        printFrame(rxframe);
+        int len = ((rxframe -> NH << 8) + rxframe -> NL) + BSL_CRC_LEN;
+        r = readFD(err, (char*)(&rxframe->body), len, sizeof(bsl_core_frame_t));
+        printf("after body:\n\r");
+        printFrame(rxframe);
+        if (r != len){
+          fprintf(stderr, "Failed to read core + checksum, got %d bytes (expected %d).\n\r", r, len);
+          return -1;
+        }
+        if (!verifyChecksum(rxframe)){
+          fprintf(stderr, "Bad checksum.\n\r");
+          return -1;
+        }
       } else {
+        //no response expected, so we can just return a non -1 value
         return r;
       }
     } else {
-      //TODO: proper error handling
+      fprintf(stderr, "Expected ACK(%x) got %x\n\r", ACK, ack);
+      return -1;
     }
+    //ok!
     return r;
 }
 
