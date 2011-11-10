@@ -72,7 +72,6 @@ int Bsl::rxPassword(int *err) {
         fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
         return -1;
     } else if(rxframe.core.body[0] == MSG_SUCCESS){
-        printf("rx password OK\n\r");  
         return r;
     } else {
         fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
@@ -155,7 +154,6 @@ int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const ui
         fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
         return -1;
     } else if(rxframe.core.body[0] == MSG_SUCCESS){
-        printf("rx data OK\n\r");  
         return r;
     } else {
         fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
@@ -258,13 +256,15 @@ int Bsl::highSpeed(int *err) {
     frame_t txframe;
     frame_t rxframe;
     int r;
-    //TODO: safety
     setUartFrameHeader(BAUDRATE, 1, &txframe);
     txframe.core.body[0] = BAUDRATE_115200;
     r = s->txrx(err, false, &txframe, &rxframe);
-    if(r != -1) {
+    if(r != -1 ) {
         serial_delay(10000);
         r = s->highSpeed(err);
+    } else {
+        fprintf(stderr, "Failed to set high-speed\n\r");
+        return -1;
     }
     return r;
 }
