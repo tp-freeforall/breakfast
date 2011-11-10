@@ -59,17 +59,25 @@ void Bsl::setAddrFrameHeader(commands_t cmd, uint16_t dataLen,
 int Bsl::rxPassword(int *err) {
     frame_t txframe;
     frame_t rxframe;
+    setUartFrameHeader(RX_PWD, 32, &txframe);
     //default password
     for(int i = 0; i < 32; i++) {
         txframe.core.body[i] = 0xff;
     }
-    setUartFrameHeader(RX_PWD, 32, &txframe);
-    //makeFrame(RX_PWD, 0, 0, &txframe, 32);
     cout << "Transmit default password ..." << endl;
     int r = s->txrx(err, true, &txframe, &rxframe);
-    //TODO: verify that rxframe contains a message(SUCCESS) frame,
-    //  combine with r
-    return r;
+    if (r == -1){
+        fprintf(stderr, "rx password failed\n\r");
+    } else if(rxframe.core.CMD != RESPONSE_MSG ){
+        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
+        return -1;
+    } else if(rxframe.core.body[0] == MSG_SUCCESS){
+        printf("rx password OK\n\r");  
+        return r;
+    } else {
+        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
+        return -1;
+    }
 }
 
 int Bsl::erase(int *err) {
@@ -140,9 +148,19 @@ int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const ui
     setAddrFrameHeader(RX_DATA, len, addr, &txframe);
     memcpy(txframe.core.addrFrame.body, data, len);
     int r = s->txrx(err, true, &txframe, &rxframe);
-    //TODO: verify rxframe
-    //TODO: combine with r
-    return r;
+    if (r == -1){
+        fprintf(stderr, "rx data failed\n\r");
+        return -1;
+    } else if(rxframe.core.CMD != RESPONSE_MSG ){
+        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
+        return -1;
+    } else if(rxframe.core.body[0] == MSG_SUCCESS){
+        printf("rx data OK\n\r");  
+        return r;
+    } else {
+        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
+        return -1;
+    }
 }
 
 int Bsl::writeData(int *err, const uint16_t addr, const uint8_t* data, const uint16_t len) {
