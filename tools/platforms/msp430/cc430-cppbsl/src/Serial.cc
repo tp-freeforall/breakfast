@@ -223,6 +223,7 @@ int BaseSerial::disconnect(int *err) {
 }
 
 int BaseSerial::reset(int *err) {
+    cout << "Reset device ..." << endl;
     int r = 0;
     r = setRSTn(err);
     if(r == -1) return -1;
@@ -235,7 +236,6 @@ int BaseSerial::reset(int *err) {
     r = setRSTn(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
-    cout << "Reset device ..." << endl;
     return clearBuffers(err);
 };
 
@@ -272,28 +272,33 @@ int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
-    while(cnt == 0) {
-        int tmpCnt = read(serialReadFD, buffer, maxCount);
+    //My replacement
+    //get setup for io monitoring
+    FD_ZERO(&rfds);
+    FD_SET(serialReadFD, &rfds);
+
+    int retval;
+    do{ 
+      retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
+      if (retval == -1){
+        fprintf(stderr, "Error with select.\n\r");
         *err = errno;
-        if((tmpCnt == 0) || ((tmpCnt < 0) && (errno == EAGAIN))) {
-            FD_SET(serialReadFD, &rfds);
-            if(select(serialReadFD + 1, &rfds, NULL, NULL, &tv) < 0) {
-                *err = errno;
-                return -1;
-            }
-            FD_CLR(serialReadFD, &rfds);
-            if(retries++ >= 2) {
-                cerr << "FATAL: BaseSerial::readFD no data available after 1s" << endl;
-                return -1;
-            }
+      } else if (retval == 0){
+        fprintf(stderr, "No data available after timeout\n\r");
+        return cnt;
+      } else {
+        //read some bytes: update start location, decrement max
+        //  accepted
+        int tmpCnt = read(serialReadFD, (buffer + cnt), maxCount - cnt);
+        if (tmpCnt == -1){
+          fprintf(stderr, "Error with read.\n\r");
+          *err = errno;
+        } else {
+          cnt += tmpCnt;
         }
-        else if(tmpCnt > 0) {
-            cnt += tmpCnt;
-        }
-        else {
-            return -1;
-        }
-    }
+      }
+    } while(retval > 0);
+
     return cnt;
 }
 
@@ -316,8 +321,8 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
     //length is the value of NH NL, plus 2 bytes for NH NL plus 2
     //  bytes for crc
     txframe->SYNC = SYNC;
-    printf("Writing:\n\r");
-    printFrame(txframe);
+//    printf("Writing:\n\r");
+//    printFrame(txframe);
     //frameLen includes sync, NH, NL, CKL, CKH, plus core
     int frameLen = ((txframe -> NH << 8) + txframe->NL) + 1 + 2 + 2;
     r = write(serialWriteFD, (char *)txframe, frameLen);
@@ -339,13 +344,9 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
           fprintf(stderr, "Failed to read UART header, got %d bytes (expected %d).\n\r", r, 3);
           return -1;
         }
-        printf("After header:\n\r");
-        printFrame(rxframe);
         int len = ((rxframe -> NH << 8) + rxframe -> NL) + BSL_CRC_LEN;
         r = readFD(err, (char*)(&rxframe->body), len, sizeof(bsl_core_frame_t));
-        printf("after body:\n\r");
-        printFrame(rxframe);
-        if (r != len){
+        if (r < len){
           fprintf(stderr, "Failed to read core + checksum, got %d bytes (expected %d).\n\r", r, len);
           return -1;
         }

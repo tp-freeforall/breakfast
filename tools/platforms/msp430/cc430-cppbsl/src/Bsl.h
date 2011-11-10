@@ -41,6 +41,9 @@
 #include "Parameters.h"
 #include "Serial.h"
 
+#ifndef BSL_RETRIES 
+#define BSL_RETRIES 5
+#endif
 
 class Bsl {
 protected:
@@ -53,7 +56,13 @@ protected:
         MASS_ERASE = 0x15,
         RX_DATA = 0x10,
         RX_PWD = 0x11,
-        BAUDRATE = 0x52
+        BAUDRATE = 0x52,
+    };
+
+    enum {
+        RESPONSE_OTHER = 0x3a,
+        RESPONSE_MSG = 0x3b,
+        MSG_SUCCESS = 0x00,
     };
 
     enum{

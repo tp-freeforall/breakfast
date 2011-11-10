@@ -77,15 +77,20 @@ int Bsl::erase(int *err) {
     frame_t txframe;
     frame_t rxframe;
     setUartFrameHeader(MASS_ERASE, 0, &txframe);
-    //TODO: incorporate retry: should redo invokeBsl if no ack
-    //received or rxframe indicate trouble
-    printFrame(&txframe);
-    r = s->invokeBsl(err);
-    if(r != -1) {
-        cout << "massErase" << endl;
-        r = s->txrx(err, true, &txframe, &rxframe);
-        //TODO: check rxframe for message(SUCCESS)
-        cout << "/massErase" << endl;
+    for(int i = 0; i < BSL_RETRIES; i++){
+      r = s->invokeBsl(err);
+      if(r != -1) {
+          cout << "massErase" << endl;
+          r = s->txrx(err, true, &txframe, &rxframe);
+
+          if (r != -1 && rxframe.core.CMD == RESPONSE_MSG 
+              && rxframe.core.body[0] == MSG_SUCCESS){
+            cout << "/massErase" << endl;
+            break;
+          }
+          printf("/massErase (failed)\n\r");
+          s->reset(err);
+      }
     }
     return r;
 }
