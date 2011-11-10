@@ -265,42 +265,73 @@ int BaseSerial::invokeBsl(int *err) {
     cout << "/invokeBSL" << endl;
     return clearBuffers(err);
 }
-
 int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     int cnt = 0;
     int retries = 0;
     timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
-    //My replacement
-    //get setup for io monitoring
-    FD_ZERO(&rfds);
-    FD_SET(serialReadFD, &rfds);
-
-    int retval;
-    do{ 
-      retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
-      if (retval == -1){
-        fprintf(stderr, "Error with select.\n\r");
+    while(cnt == 0) {
+        int tmpCnt = read(serialReadFD, buffer, maxCount);
         *err = errno;
-      } else if (retval == 0){
-        fprintf(stderr, "No data available after timeout\n\r");
-        return cnt;
-      } else {
-        //read some bytes: update start location, decrement max
-        //  accepted
-        int tmpCnt = read(serialReadFD, (buffer + cnt), maxCount - cnt);
-        if (tmpCnt == -1){
-          fprintf(stderr, "Error with read.\n\r");
-          *err = errno;
-        } else {
-          cnt += tmpCnt;
+        if((tmpCnt == 0) || ((tmpCnt < 0) && (errno == EAGAIN))) {
+            FD_SET(serialReadFD, &rfds);
+            if(select(serialReadFD + 1, &rfds, NULL, NULL, &tv) < 0) {
+                *err = errno;
+                return -1;
+            }
+            FD_CLR(serialReadFD, &rfds);
+            if(retries++ >= 2) {
+                cerr << "FATAL: BaseSerial::readFD no data available after 1s" << endl;
+                return -1;
+            }
         }
-      }
-    } while(retval > 0);
-
+        else if(tmpCnt > 0) {
+            cnt += tmpCnt;
+        }
+        else {
+            return -1;
+        }
+    }
     return cnt;
 }
+
+
+//int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
+//    int cnt = 0;
+//    int retries = 0;
+//    timeval tv;
+//    tv.tv_sec = 1;
+//    tv.tv_usec = 0;
+//    //My replacement
+//    //get setup for io monitoring
+//    FD_ZERO(&rfds);
+//    FD_SET(serialReadFD, &rfds);
+//
+//    int retval;
+//    do{ 
+//      retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
+//      if (retval == -1){
+//        fprintf(stderr, "Error with select.\n\r");
+//        *err = errno;
+//      } else if (retval == 0){
+//        fprintf(stderr, "No data available after timeout\n\r");
+//        return cnt;
+//      } else {
+//        //read some bytes: update start location, decrement max
+//        //  accepted
+//        int tmpCnt = read(serialReadFD, (buffer + cnt), maxCount - cnt);
+//        if (tmpCnt == -1){
+//          fprintf(stderr, "Error with read.\n\r");
+//          *err = errno;
+//        } else {
+//          cnt += tmpCnt;
+//        }
+//      }
+//    } while(retval > 0);
+//
+//    return cnt;
+//}
 
 int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t *rxframe) {
     int r = 0;
