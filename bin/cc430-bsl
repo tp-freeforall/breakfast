@@ -315,6 +315,7 @@ class LowLevel:
                       (Tck and 2 or 0)) ^ 0x3
         self.adg715I2CWriteLatch(latchState)
 
+
     def bslReset(self, invokeBSL=0):
         """
          BSL entry sequence on cc430 JTAG pins
@@ -382,10 +383,15 @@ class LowLevel:
                     self.setRstTck(0, 0)
                     self.setRstTck(1, 0)
             else:
-                if self.errataJTAG20Resolved:
+                if self.errataJTAG20Resolved or not self.inBSL:
+                    debug(1, "standard reset")
+                    self.SetTCK(0)
                     self.SetRSTn(0)
+                    time.sleep(1)
                     self.SetRSTn(1)
+                    self.SetTCK(1)
                 else:
+                    debug(1, "BSL exit reset")
                     self.SetRSTn(1) #10
                     self.SetTEST(1) #11
                     self.SetTEST(0) #10
@@ -943,7 +949,8 @@ class BootStrapLoader(BSL):
             debug(1, "try #%d"%i)
             if i:
                 debug(1, "standard reset")
-                self.bslReset(False)
+                self.inBSL = False
+                self.bslReset()
             try:
                 debug(1, "starting BSL")
                 self._actionStartBSL()
@@ -977,7 +984,7 @@ class BootStrapLoader(BSL):
     def actionReset(self):
         "reset MCU"
         debug(0, "Reset device")
-        self.bslReset(False)
+        self.bslReset()
 
     def actionRun(self, address):
         "jump to address"
