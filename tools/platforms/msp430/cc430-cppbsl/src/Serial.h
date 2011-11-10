@@ -60,7 +60,7 @@ inline void serial_delay(unsigned usec) {
 };
 
 #ifndef BSL_CORE_LEN
-#define BSL_CORE_LEN 243
+#define BSL_CORE_LEN 256
 #endif
 
 #define BSL_CRC_LEN 2
