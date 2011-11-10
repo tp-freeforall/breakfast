@@ -236,8 +236,31 @@ int BaseSerial::reset(int *err) {
     r = setRSTn(err);
     if(r == -1) return -1;
     serial_delay(switchdelay);
+    r = setTEST(err);
+    if(r == -1) return -1;
+    serial_delay(switchdelay);
     return clearBuffers(err);
-};
+}
+
+int BaseSerial::bslExitReset(int *err) {
+    cout << "Reset device ..." << endl;
+    int r = 0;
+    r = setRSTn(err);
+    if(r == -1) return -1;
+    r = setTEST(err);
+    if(r == -1) return -1;
+    r = clrTEST(err);
+    if(r == -1) return -1;
+    r = setTEST(err);
+    if(r == -1) return -1;
+    r = clrTEST(err);
+    if(r == -1) return -1;
+    r = clrRSTn(err);
+    if(r == -1) return -1;
+    r = setRSTn(err);
+    if(r == -1) return -1;
+    return clearBuffers(err);
+}
 
 int BaseSerial::invokeBsl(int *err) {
     cout << "invokeBSL" << endl;

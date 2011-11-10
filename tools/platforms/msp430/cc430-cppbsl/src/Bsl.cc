@@ -135,7 +135,7 @@ int Bsl::install(int *err) {
         }
     }
     cout << len << " bytes programmed." << endl;
-    r = s->reset(err);
+    r = s->bslExitReset(err);
     if(r == -1) {
         cerr << " Bsl::install: could not reset node" << endl;
     }

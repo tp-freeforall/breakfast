@@ -270,6 +270,7 @@ public:
 
     // do initial magic on serial interface
     virtual int reset(int *err);
+    virtual int bslExitReset(int *err);
     virtual int invokeBsl(int *err);
 
 };
