@@ -266,18 +266,19 @@ int BaseSerial::invokeBsl(int *err) {
     return clearBuffers(err);
 }
 
+/*
 int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     int cnt = 0;
     int retries = 0;
     timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
-    printf("starting read of %d to \t%p\n\r", count, buffer);
+//    printf("starting read of %d to \t%p\n\r", count, buffer);
     FD_ZERO(&rfds);
     FD_SET(serialReadFD, &rfds);
     while(cnt < count) {
         int tmpCnt = read(serialReadFD, buffer+cnt, maxCount-cnt);
-        printf("read %d bytes to \t%p\n\r", tmpCnt, buffer+cnt);
+//        printf("read %d bytes to \t%p\n\r", tmpCnt, buffer+cnt);
         *err = errno;
         if((tmpCnt == 0) || ((tmpCnt < 0) && (errno == EAGAIN))) {
             int retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
@@ -291,7 +292,6 @@ int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
             } else {
               //ok, great. data should be available next go-round
             }
-
         }
         else if(tmpCnt > 0) {
             cnt += tmpCnt;
@@ -302,43 +302,46 @@ int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
     }
     return cnt;
 }
+*/
 
+//TODO: maxCount really isn't used here. we don't want to get
+//ourselves in a situation where we accidentally read data that's not
+//intended for us...
+int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
+    int cnt = 0;
+    timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    //My replacement
+    //get set up for io monitoring
+    FD_ZERO(&rfds);
+    FD_SET(serialReadFD, &rfds);
+//    printf("Read %d to \t%p\n\r", count, buffer);
+    int retval;
+    do{ 
+      retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
+      if (retval == -1){
+        fprintf(stderr, "Error with select.\n\r");
+        *err = errno;
+      } else if (retval == 0){
+        fprintf(stderr, "Read timeout.\n\r");
+        return cnt;
+      } else {
+        //read some bytes: update start location, decrement max
+        //  accepted
+        int tmpCnt = read(serialReadFD, (buffer + cnt), count - cnt);
+        if (tmpCnt == -1){
+          fprintf(stderr, "Error with read.\n\r");
+          *err = errno;
+        } else {
+//          printf("Read %d bytes\n\r", tmpCnt);
+          cnt += tmpCnt;
+        }
+      }
+    } while(retval > 0 && cnt < count);
 
-//int BaseSerial::readFD(int *err, char *buffer, int count, int maxCount) {
-//    int cnt = 0;
-//    int retries = 0;
-//    timeval tv;
-//    tv.tv_sec = 1;
-//    tv.tv_usec = 0;
-//    //My replacement
-//    //get setup for io monitoring
-//    FD_ZERO(&rfds);
-//    FD_SET(serialReadFD, &rfds);
-//
-//    int retval;
-//    do{ 
-//      retval = select(serialReadFD + 1, &rfds, NULL, NULL, &tv);
-//      if (retval == -1){
-//        fprintf(stderr, "Error with select.\n\r");
-//        *err = errno;
-//      } else if (retval == 0){
-//        fprintf(stderr, "No data available after timeout\n\r");
-//        return cnt;
-//      } else {
-//        //read some bytes: update start location, decrement max
-//        //  accepted
-//        int tmpCnt = read(serialReadFD, (buffer + cnt), maxCount - cnt);
-//        if (tmpCnt == -1){
-//          fprintf(stderr, "Error with read.\n\r");
-//          *err = errno;
-//        } else {
-//          cnt += tmpCnt;
-//        }
-//      }
-//    } while(retval > 0);
-//
-//    return cnt;
-//}
+    return cnt;
+}
 
 int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t *rxframe) {
     int r = 0;
@@ -370,8 +373,9 @@ int BaseSerial::txrx(int *err, bool responseExpected, frame_t *txframe, frame_t 
     }
     //read single byte to check ack
     r = readFD(err, (char*)&ack, 1, 1);
-    if (r == -1){
-      return r;
+    if (r != 1){
+      printf("No ack.\n\r");
+      return -1;
     }
     if (ack == ACK){
       //if we expect to get more than an ack, read back the sync +
