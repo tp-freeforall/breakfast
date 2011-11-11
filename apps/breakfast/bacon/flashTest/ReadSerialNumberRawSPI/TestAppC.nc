@@ -3,6 +3,7 @@ configuration TestAppC{
   components MainC, LedsC;
   components TestP;
   components new TimerMilliC();
+  components SerialPrintfC;
   
   components HplStm25pSpiC;
   components HplStm25pPinsC;

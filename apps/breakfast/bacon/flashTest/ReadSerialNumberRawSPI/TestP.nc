@@ -1,4 +1,4 @@
-#include "printf.h"
+#include <stdio.h>
 
 module TestP{
   uses interface Boot;
@@ -65,7 +65,7 @@ module TestP{
     for (i=0; i < ID_LEN; i++){
       printf("%x", id_buf[i]);
     }
-    printfflush();
+    printf("\n\r");
     memset(id_buf, 0, ID_LEN);
   }
 }

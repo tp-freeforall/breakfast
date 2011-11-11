@@ -1,5 +1,5 @@
 COMPONENT=TestAppC
 
-CFLAGS+=-I$(TOSDIR)/lib/printf
+CFLAGS+=-I$(TOSDIR)/lib/serialprintf
 
 include $(MAKERULES)
