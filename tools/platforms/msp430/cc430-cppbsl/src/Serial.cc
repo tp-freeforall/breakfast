@@ -100,6 +100,7 @@ int serial_connect(int* err, const char* dev, int* readFD, int* writeFD, termios
     }
     /* prepare attributes */
 #if defined(HAVE_LINUX_VERSION_H) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+#warning serialConnect have
     r = tcgetattr(*writeFD, &my_tios);
     if(r == -1) {
         *err = errno;
@@ -145,6 +146,7 @@ int serial_connect(int* err, const char* dev, int* readFD, int* writeFD, termios
         return -1;        
     }
 #else
+#warning serialConnect else
     r = tcgetattr(*writeFD, &my_tios);
     if(r == -1) {
         *err = errno;
