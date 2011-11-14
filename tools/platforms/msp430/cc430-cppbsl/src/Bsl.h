@@ -42,7 +42,7 @@
 #include "Serial.h"
 
 #ifndef BSL_RETRIES 
-#define BSL_RETRIES 5
+#define BSL_RETRIES 2
 #endif
 
 class Bsl {

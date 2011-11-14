@@ -133,6 +133,8 @@ int serial_connect(int* err, const char* dev, int* readFD, int* writeFD, termios
         close(*writeFD);
         return -1;        
     }    
+    //9600:  0 is 1.042, 1.04175
+    //10000: 0 is 1.000
     serinfo.custom_divisor = serinfo.baud_base / 9600;
     if(serinfo.custom_divisor == 0) serinfo.custom_divisor = 1;
     serinfo.flags &= ~ASYNC_SPD_MASK;
@@ -275,6 +277,10 @@ int BaseSerial::invokeBsl(int *err) {
     r = clrTEST(err);
     if(r == -1) return -1;
     r = clrRSTn(err);
+    if(r == -1) return -1;
+    r = setTEST(err);
+    if(r == -1) return -1;
+    r = clrTEST(err);
     if(r == -1) return -1;
     r = setTEST(err);
     if(r == -1) return -1;

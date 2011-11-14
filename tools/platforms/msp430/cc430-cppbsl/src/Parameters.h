@@ -59,6 +59,7 @@ public:
     bool invertReset;
     bool intelhex;
     bool telosb;
+    bool resetFirst;
     
     actions_t action;
     int chunksize;

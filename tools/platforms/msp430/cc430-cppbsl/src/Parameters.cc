@@ -45,6 +45,7 @@ Parameters::Parameters(int argc, char **argv) {
     image = 0;
     telosb = false;
     chunksize = 250;
+    resetFirst = false;
     
     poptOption optionsTable[] = {
         {"debug",'D', 0, 0, 'd', "print many statements on progress"},
@@ -56,6 +57,7 @@ Parameters::Parameters(int argc, char **argv) {
         {"intelhex",'I', 0, 0, 'I', "force fileformat to be  IntelHex"},
         {"erase",'e', 0, 0, 'e', "erase device"},
         {"reset",'r', 0, 0, 'r', "reset device"},
+        {"reset-first",'f', 0, 0, 'f', "perform standard reset before bsl entry sequence "},
         {"send-chunk-size",'s', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT,
          &chunksize, 0, "program msp430 using chunks of this size", ""},
         {"program",'p', POPT_ARG_STRING, &image, 0,
@@ -92,6 +94,9 @@ Parameters::Parameters(int argc, char **argv) {
                 break;
             case 'b':
                 telosb = true;
+                break;
+            case 'f':
+                resetFirst = true;
                 break;
             default:
                 break;

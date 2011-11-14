@@ -69,6 +69,12 @@ int main(int argc, char *argv[]) {
     }
     bs = new BaseSerial(oldterm, readFD, writeFD, parameters->invertTest, parameters->invertReset);
     bsl = new Bsl(bs, parameters->img.c_str(), parameters->chunksize);
+    if(parameters->resetFirst){
+      r = bsl->reset(&err);
+    }
+    if (r == -1){
+      errMsg(r, err, "Could not do initial reset.");
+    }
     switch(parameters->action) {
         case Parameters::ERASE:
             r = bsl->erase(&err);

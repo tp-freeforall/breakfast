@@ -85,7 +85,7 @@ int Bsl::erase(int *err) {
     frame_t rxframe;
     setUartFrameHeader(MASS_ERASE, 0, &txframe);
     for(int i = 0; i < BSL_RETRIES; i++){
-      r = s->invokeBsl(err);
+      r = s->invokeBsl(err); 
       if(r != -1) {
           cout << "massErase" << endl;
           r = s->txrx(err, true, &txframe, &rxframe);
@@ -96,7 +96,6 @@ int Bsl::erase(int *err) {
             break;
           }
           printf("/massErase (failed)\n\r");
-          s->reset(err);
       }
     }
     return r;
