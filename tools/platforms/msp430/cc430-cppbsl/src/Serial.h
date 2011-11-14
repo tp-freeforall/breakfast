@@ -197,6 +197,7 @@ protected:
         uint8_t frameLen = (frame->NH << 8) + frame->NL;
         uint16_t crc = 0xffff;
         for(i = 0; i < frameLen; i++) {
+            //printf("crc [%d]: \t%x\n\r", i, crc);
             uint8_t byte = frame->body[i];
             crc  = ((crc >> 8) | (crc << 8)) & 0xffff;
             crc ^= byte;
@@ -204,6 +205,7 @@ protected:
             crc ^= (crc & 0x0f) << 12;
             crc ^= (crc & 0xff) << 5;
         }
+        //printf("final crc: \t%x\n\r", crc);
         return crc;
     }
 
@@ -217,9 +219,15 @@ protected:
     }
 
     inline bool verifyChecksum(frame_t* frame){
-        uint8_t frameLen = (frame->NH << 8) + frame->NL;
-        uint16_t crc = calcChecksum(frame);
-        return crc == *(uint16_t*)&frame->body[frameLen];
+        uint16_t frameLen = (frame->NH << 8) + frame->NL;
+        uint16_t computedCRC = calcChecksum(frame);
+        uint16_t receivedCRC = *(uint16_t*)&frame->body[frameLen];
+        uint8_t ckl = frame->body[frameLen];
+        uint8_t ckh = frame->body[frameLen+1];
+        uint8_t computedL = computedCRC & 0xff;
+        uint8_t computedH = (computedCRC >> 8) & 0xff;
+        //printf("Comparing computed %x to received %x (l: %x h:%x) (l:%x h:%x)\n\r", computedCRC, receivedCRC, ckl, ckh, computedL, computedH);
+        return (ckl == computedL) && (ckh == computedH);
     }
     
     int readFD(int *err, char *buffer, int count, int maxCount);
