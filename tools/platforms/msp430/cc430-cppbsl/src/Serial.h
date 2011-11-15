@@ -168,28 +168,28 @@ protected:
     int setTEST(int *err) {
         int r;
 //        cout << "SetTEST 1" << endl;
-        if(invertTest) { r = clrDTR(err); } else { r = setDTR(err); }
+        if(invertTest) { r = setDTR(err); } else { r = clrDTR(err); }
         return r;
     }
 
     int clrTEST(int *err) {
         int r;
 //        cout << "SetTEST 0" << endl;
-        if(invertTest) { r = setDTR(err); } else { r = clrDTR(err); }
+        if(invertTest) { r = clrDTR(err); } else { r = setDTR(err); }
         return r;
     }
 
     int setRSTn(int *err) {
         int r;
 //        cout << "SetRSTn 1" << endl;
-        if(invertReset) { r = clrRTS(err); } else { r = setRTS(err); }
+        if(invertReset) { r = setRTS(err); } else { r = clrRTS(err); }
         return r;
     }
 
     int clrRSTn(int *err) {
         int r;
 //        cout << "SetRSTn 0" << endl;
-        if(invertReset) { r= setRTS(err); } else { r = clrRTS(err); }
+        if(invertReset) { r= clrRTS(err); } else { r = setRTS(err); }
         return r;
     }
     inline uint16_t calcChecksum(frame_t* frame){
