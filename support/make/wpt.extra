@@ -1,0 +1,10 @@
+#-*-Makefile-*- vim:syntax=make
+
+PROGRAM = wpt
+
+program: $(BSL_TARGETS) $(TELOS_PROGRAM_DEPS) FORCE
+	@echo "    installing $(PLATFORM) binary using $(PROGRAM)"
+	( cat $(INSTALL_IHEX) ; echo reprogram-quick $(wordlist 2, 2, $(subst -, ,$(INSTALL_IHEX))) ) | nc sensorbed.hinrg.cs.jhu.edu 16462
+
+program_input: ihex
+	@:
