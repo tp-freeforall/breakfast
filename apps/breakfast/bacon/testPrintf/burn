@@ -1,0 +1,13 @@
+#!/bin/bash
+if [ $# -lt 1 ]
+then
+  exit 1
+fi
+
+MAP=nslu10.$1
+make $1
+
+for i in `cut -d ' ' -f 2 $MAP`
+do
+  make $1 reinstall,$i wpt,$MAP
+done

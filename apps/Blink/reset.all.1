@@ -1,0 +1,8 @@
+#!/bin/bash
+
+MAP=all
+
+for i in `cut -d ' ' -f 2 $HOME/$MAP`
+do
+  (echo reset $i) | nc sensorbed.hinrg.cs.jhu.edu 16462
+done
