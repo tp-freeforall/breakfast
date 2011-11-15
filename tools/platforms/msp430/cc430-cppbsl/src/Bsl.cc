@@ -67,14 +67,14 @@ int Bsl::rxPassword(int *err) {
     cout << "Transmit default password ..." << endl;
     int r = s->txrx(err, true, &txframe, &rxframe);
     if (r == -1){
-        fprintf(stderr, "rx password failed\n\r");
+        fprintf(stderr, "rx password failed\n");
     } else if(rxframe.core.CMD != RESPONSE_MSG ){
-        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
+        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n", rxframe.core.CMD);
         return -1;
     } else if(rxframe.core.body[0] == MSG_SUCCESS){
         return r;
     } else {
-        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
+        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n", rxframe.core.body[0]);
         return -1;
     }
 }
@@ -95,7 +95,8 @@ int Bsl::erase(int *err) {
             cout << "/massErase" << endl;
             break;
           }
-          printf("/massErase (failed)\n\r");
+          printf("/massErase (failed)\n");
+          s->reset(err);
       }
     }
     return r;
@@ -147,15 +148,15 @@ int Bsl::writeBlock(int *err, const uint16_t addr, const uint8_t* data, const ui
     memcpy(txframe.core.addrFrame.body, data, len);
     int r = s->txrx(err, true, &txframe, &rxframe);
     if (r == -1){
-        fprintf(stderr, "rx data failed\n\r");
+        fprintf(stderr, "rx data failed\n");
         return -1;
     } else if(rxframe.core.CMD != RESPONSE_MSG ){
-        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n\r", rxframe.core.CMD);
+        fprintf(stderr, "Expected RESPONSE_MSG, got %x\n", rxframe.core.CMD);
         return -1;
     } else if(rxframe.core.body[0] == MSG_SUCCESS){
         return r;
     } else {
-        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n\r", rxframe.core.body[0]);
+        fprintf(stderr, "Expected MSG_SUCCESS, got %x\n", rxframe.core.body[0]);
         return -1;
     }
 }
@@ -262,7 +263,7 @@ int Bsl::highSpeed(int *err) {
         serial_delay(10000);
         r = s->highSpeed(err);
     } else {
-        fprintf(stderr, "Failed to set high-speed\n\r");
+        fprintf(stderr, "Failed to set high-speed\n");
         return -1;
     }
     return r;
