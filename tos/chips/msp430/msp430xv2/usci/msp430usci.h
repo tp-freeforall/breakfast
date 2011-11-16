@@ -77,9 +77,9 @@ msp430_usci_config_t msp430_usci_spi_default_config = {
   /* Inactive high MSB-first 8-bit 3-pin master driven by SMCLK */
   ctl0 : (UCCKPL + UCMSB + UCMST + UCSYNC) ,
   ctl1 : UCSSEL__SMCLK,
-  /* 2x Prescale */
+  /* 1x Prescale */
   br1 : 0,
-  br0 : 2,
+  br0 : 1,
   mctl : 0                      /* Always 0 in SPI mode */
 };
 
