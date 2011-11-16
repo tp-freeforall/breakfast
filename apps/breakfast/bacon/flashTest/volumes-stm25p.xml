@@ -1,0 +1,5 @@
+<volume_table>
+  <volume name="SENSORLOG" size="65536"/>
+  <!-- <volume name="SENSORLOG" size="8388608"/> -->
+  <!-- <volume name="SENSORLOG" size="1048576"/> -->
+</volume_table>
