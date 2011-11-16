@@ -219,9 +219,8 @@ if __name__ == '__main__':
   volumeparse( volumeFile, volumeFileName, 0 )
       
   # allocate with first fit policy
-  # this is an insane way to do this. why don't we just divide volume
-  # size by sector size, stack them up, then test that we're within
-  # the limit and output the offsets?
+  # ok, this is convoluted because we're handling the case where an
+  # explicit base is specified for one or more volume. ok...
   for i in range( len( volumeOffsets ) ):
       size = volumeSizes[ i ]
       if volumeOffsets[ i ] == -1:

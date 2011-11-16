@@ -48,6 +48,8 @@ implementation {
   components HplMsp430GeneralIOC as HplGeneralIOC;
   components new Msp430GpioC() as CSNM;
   //hold not available: will this be an issue?
+  //current drivers make virtually no use of this (always manipulated
+  //in conjunction with chip-select). Worth incorporating in revision?
   //components new Msp430GpioC() as HoldM;
   CSNM -> HplGeneralIOC.Port17;
 
