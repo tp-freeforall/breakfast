@@ -351,6 +351,8 @@ class LowLevel:
                     self.SetTEST(1) # 01    01  y
                     self.SetTEST(0) # 00    00  y 
                     self.SetTEST(1) # 01    01  y
+                    self.SetTEST(0) # 00    00  y 
+                    self.SetTEST(1) # 01    01  y
                     self.SetRSTn(1) # 11    11  y   (might have been 10 once?)
                     self.SetTEST(0) # 10    10  Y
                     ##DC: tos-bsl says that this should be left high for power
