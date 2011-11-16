@@ -88,10 +88,10 @@ implementation {
     uint8_t tmp = 0;
     int i;
 
-    call CSN.clr();
+    call CSN.clr(); P1OUT &= ~BIT1;
     for ( i = 0; i < len; i++ )
       tmp = call SpiByte.write( cmd );
-    call CSN.set();
+    call CSN.set(); P1OUT |= BIT1;
 
     return tmp;
 
@@ -99,7 +99,9 @@ implementation {
 
   command error_t Init.init() {
     call CSN.makeOutput();
-    call CSN.set();
+    P1DIR |= BIT1;
+    P1SEL &= ~BIT1;
+    call CSN.set(); P1OUT |= BIT1;
     return SUCCESS;
   }
 
@@ -177,7 +179,7 @@ implementation {
     m_cmd[ 3 ] = m_addr;
     if ( write )
       sendCmd( S_WRITE_ENABLE, 1 );
-    call CSN.clr();
+    call CSN.clr(); P1OUT &= ~BIT1;
     call SpiPacket.send( m_cmd, NULL, cmd_len );
 
     call Leds.led0On();
@@ -213,7 +215,7 @@ implementation {
             break;
           }
         }
-        call CSN.set();
+        call CSN.set(); P1OUT |= BIT1;
         signalDone( SUCCESS );
         break;
 
@@ -225,7 +227,7 @@ implementation {
         // fall through
 
       case S_SECTOR_ERASE: case S_BULK_ERASE:
-        call CSN.set();
+        call CSN.set(); P1OUT |= BIT1;
         m_is_writing = TRUE;
         releaseAndRequest();
         break;
