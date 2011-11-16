@@ -17,7 +17,8 @@ MSP_BSL ?= $(TOSROOT)/bin/cc430-bsl
 MSP_BSL_FLAGS += --noadg715 --invertRTS  -S 115200
 
 VOLUME_FILE = volumes-stm25p.xml
-VOLUME_ALLOCATOR ?= tos-storage-stm25p
+VOLUME_ALLOCATOR ?= flexible-tos-storage-stm25p
+VOLUME_ALLOCATOR_FLAGS ?= --numSectors 128 --sectorSize 65536
 
 $(call TOSMake_include_platform,msp)
 $(call TOSMake_include_platform,bacon)
