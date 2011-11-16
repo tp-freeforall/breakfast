@@ -57,13 +57,14 @@ implementation {
   };
 
   typedef enum {
-    S_READ = 0x3,
-    S_PAGE_PROGRAM = 0x2,
+    S_READ = 0x03,
+    S_PAGE_PROGRAM = 0x02,
     S_SECTOR_ERASE = 0xd8,
     S_BULK_ERASE = 0xc7,
     S_WRITE_ENABLE = 0x6,
     S_POWER_ON = 0xab,
     S_DEEP_SLEEP = 0xb9,
+    S_READ_STATUS_REGISTER = 0x05,
   } stm25p_cmd_t;
 
   norace uint8_t m_cmd[ 4 ];
@@ -240,7 +241,7 @@ implementation {
 
     if ( !m_is_writing )
       signal ClientResource.granted();
-    else if ( sendCmd( 0x5, 2 ) & 0x1 )
+    else if ( sendCmd( S_READ_STATUS_REGISTER, 2 ) & 0x1 )
       releaseAndRequest();
     else
       signalDone( SUCCESS );
