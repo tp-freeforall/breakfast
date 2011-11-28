@@ -31,9 +31,12 @@ void main(void)
   ADC12CTL1 = ADC12SHP;                     // Use sampling timer
   ADC12IE = 0x01;                           // Enable interrupt
   ADC12CTL0 |= ADC12ENC;
+  ADC12MCTL0 = BIT7 + BIT2;                 //end-of-sequence,
+                                            //AVss->AVcc
+                                            //channel A4
   
-  P2SEL |= BIT0;                            // P2.0 ADC option select
-  P1DIR |= BIT0;                            // P1.0 output
+  P2SEL |= BIT4;                            // P2.4 ADC option select
+  P3DIR |= BIT0;                            // P3.0 output
 
   while (1)
   {
@@ -53,9 +56,9 @@ __attribute((wakeup)) __attribute((interrupt(ADC12_VECTOR))) void ADC12_ISR(void
   case  4: break;                           // Vector  4:  ADC timing overflow
   case  6:                                  // Vector  6:  ADC12IFG0
     if (ADC12MEM0 >= 0x7ff)                 // ADC12MEM = A0 > 0.5AVcc?
-      P1OUT |= BIT0;                        // P1.0 = 1
+      P3OUT &= ~BIT0;                       // led 0 on
     else
-      P1OUT &= ~BIT0;                       // P1.0 = 0
+      P1OUT |= BIT0;                        // led 0 off
 
     __bic_SR_register_on_exit(LPM0_bits);   // Exit active CPU
   case  8: break;                           // Vector  8:  ADC12IFG1
