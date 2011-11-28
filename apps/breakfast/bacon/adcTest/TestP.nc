@@ -19,20 +19,21 @@ module TestP{
     //default: Out, gnd
     P1DIR |= BIT1;
     P1OUT &= ~BIT1;
+    REFCTL0 &= ~REFMSTR;
   }
 
   task void busyRead(){
     uint8_t cycles = 0;
-    //if (REFCTL0 & ~REFMSTR & ~REFGENBUSY){
-      //use legacy ref settings
-      REFCTL0 &= ~REFMSTR;
-      printf("Switched REFMSTR to 0.\n\r");
-    //}
+//    //if (REFCTL0 & ~REFMSTR & ~REFGENBUSY){
+//      //use legacy ref settings
+//      REFCTL0 &= ~REFMSTR;
+//      printf("Switched REFMSTR to 0.\n\r");
+//    //}
     ADC12CTL0  = ADC12SHT02 + ADC12SHT01 + ADC12SHT12 + ADC12SHT11;// + ADC12ON; // match sampling time to non-working version
-    ADC12CTL0 += ADC12MSC + ADC12REF2_5V + ADC12REFON;
+    ADC12CTL0  |= ADC12MSC + ADC12REF2_5V + ADC12REFON;
     ADC12CTL1 = ADC12SHP + ADC12SSEL_1; // ACLK /1
     ADC12MCTL0 = BIT7 + //EOS 
-                 // ADC12SREF0 + //AVss -> VRef+ //reads 4095 until
+                  ADC12SREF0 + //AVss -> VRef+ //reads 4095 until
                                 //connected to gnd
                               //also: refon seems to toggle back and
                               //forth? what's up with that

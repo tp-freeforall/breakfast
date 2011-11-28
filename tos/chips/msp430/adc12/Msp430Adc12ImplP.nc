@@ -114,6 +114,11 @@ implementation
     ctl0.adc12tovie = 1;
     ctl0.adc12ovie = 1;
     call HplAdc12.setCtl0(ctl0);
+#ifdef __MSP430_HAS_REF__
+    //clear REFMSTR: use ADC12CTL to configure reference generator for
+    //backwards compatibility
+    REFCTL0 &= (~REFMSTR);
+#endif // __MSP430_HAS_REF__
     return SUCCESS;
   }
 
