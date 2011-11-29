@@ -17,6 +17,8 @@ module TestP{
     printf("s: Sample\n\r");
     printf("g: toggle SD pin from gnd to input\n\r");
     printf("v: toggle VCC from 3.0 to nc\n\r");
+    printf("p: toggle P1.0 direction \n\r");
+    printf("P: toggle P1.0 out \n\r");
     printf("q: quit/reset\n\r");
     //vcc: from VCC1WB
     P3OUT |= BIT7;
@@ -25,6 +27,14 @@ module TestP{
     //default: Out, gnd
     P1DIR |= BIT1;
     P1OUT &= ~BIT1;
+    //when input: pulldown
+    P1REN |= BIT1;
+    P1REN &= ~BIT1;
+
+    //p1.0 = where sensor vcc is connected when vcc1wb is open
+    P1DIR |= BIT0;
+    P1OUT &= ~BIT0;
+
     
     //I don't see why this has to be done manually.
     P2SEL |= BIT4;
@@ -82,6 +92,16 @@ module TestP{
     post readInternal();
   }
 
+  task void toggleP1Dir(){
+    P1DIR ^= BIT0;
+    printf("P1.0 Dir: %x\n\r", P1DIR&0x01);
+  }
+
+  task void toggleP1Out(){
+    P1OUT ^= BIT0;
+    printf("P1.0 Out: %x\n\r", P1OUT&0x01);
+  }
+
   async event void UartStream.receivedByte(uint8_t b){
     switch(b){
       case 'q':
@@ -98,6 +118,12 @@ module TestP{
         break;
       case 'v':
         post toggleVCC();
+        break;
+      case 'p':
+        post toggleP1Dir();
+        break;
+      case 'P':
+        post toggleP1Out();
         break;
       case '\r':
         printf("\n\r");
