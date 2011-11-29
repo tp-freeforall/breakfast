@@ -109,16 +109,21 @@ implementation
   command error_t Init.init()
   {
     adc12ctl0_t ctl0;
-    call HplAdc12.stopConversion();
-    ctl0 = call HplAdc12.getCtl0();
-    ctl0.adc12tovie = 1;
-    ctl0.adc12ovie = 1;
-    call HplAdc12.setCtl0(ctl0);
+    atomic {
+      // stop any ongoing conversion (conversion data -if any- is unreliable)
+      call HplAdc12.stopConversion(); 
+      // clear pending interrupt flags (potential relict from SW reset / PUC)
+      call HplAdc12.resetIFGs(); 
+      ctl0 = call HplAdc12.getCtl0();
+      ctl0.adc12tovie = 1;
+      ctl0.adc12ovie = 1;
+      call HplAdc12.setCtl0(ctl0);
 #ifdef __MSP430_HAS_REF__
-    //clear REFMSTR: use ADC12CTL to configure reference generator for
-    //backwards compatibility
-    REFCTL0 &= (~REFMSTR);
+      //clear REFMSTR: use ADC12CTL to configure reference generator for
+      //backwards compatibility
+      REFCTL0 &= (~REFMSTR);
 #endif // __MSP430_HAS_REF__
+    }
     return SUCCESS;
   }
 
@@ -224,7 +229,7 @@ implementation
   {
     error_t result = ERESERVE;
 #ifdef ADC12_CHECK_ARGS
-    if (!config)
+    if (!config || config->inch == INPUT_CHANNEL_NONE)
       return EINVAL;
 #endif
     atomic {
@@ -272,7 +277,7 @@ implementation
     if (jiffies>0) 
       return EINVAL;
 #endif
-    if (!config || jiffies == 1 || jiffies == 2)
+    if (!config || config->inch == INPUT_CHANNEL_NONE || jiffies == 1 || jiffies == 2)
       return EINVAL;
 #endif
     atomic {
@@ -324,7 +329,7 @@ implementation
     if (jiffies>0) 
       return EINVAL;
 #endif
-    if (!config || !buf || !length || jiffies == 1 || jiffies == 2)
+    if (!config || config->inch == INPUT_CHANNEL_NONE || !buf || !length || jiffies == 1 || jiffies == 2)
       return EINVAL;
 #endif
     atomic {
@@ -385,7 +390,7 @@ implementation
     if (jiffies>0) 
       return EINVAL;
 #endif
-    if (!config || !buf || !length || length > 16 || jiffies == 1 || jiffies == 2)
+    if (!config || config->inch == INPUT_CHANNEL_NONE || !buf || !length || length > 16 || jiffies == 1 || jiffies == 2)
       return EINVAL;
 #endif
     atomic {
@@ -468,7 +473,7 @@ implementation
     if (jiffies>0) 
       return EINVAL;
 #endif
-    if (!config || !memctl || !numMemctl || numMemctl > 15 || !numSamples || 
+    if (!config || config->inch == INPUT_CHANNEL_NONE || !memctl || !numMemctl || numMemctl > 15 || !numSamples || 
         !buf || jiffies == 1 || jiffies == 2 || numSamples % (numMemctl+1) != 0)
       return EINVAL;
 #endif
@@ -680,6 +685,9 @@ implementation
           break;
         }
 #endif
+      default:
+        stopConversion();
+        break;
       } // switch
   }
 

@@ -1,4 +1,4 @@
-/* $Id$
+/* $Id: AdcStreamP.nc,v 1.6 2008-11-10 14:56:12 janhauer Exp $
  * Copyright (c) 2005 Intel Corporation
  * All rights reserved.
  *

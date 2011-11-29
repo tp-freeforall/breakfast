@@ -78,15 +78,15 @@ implementation
   }
   
   async command void HplAdc12.setMCtl(uint8_t i, adc12memctl_t memCtl){
-    (&ADC12MCTL0)[i] = adc12memctl2int(memCtl);
+    ADC12MCTL[i] = adc12memctl2int(memCtl);
   }
    
   async command adc12memctl_t HplAdc12.getMCtl(uint8_t i){
-    return int2adc12memctl((&ADC12MCTL0)[i]);
+    return int2adc12memctl(ADC12MCTL[i]);
   }  
   
   async command uint16_t HplAdc12.getMem(uint8_t i){
-    return (&ADC12MEM0)[i];
+    return ADC12MEM[i];
   }
 
   async command void HplAdc12.setIEFlags(uint16_t mask){ ADC12IE = mask; } 
@@ -153,7 +153,7 @@ implementation
     
   async command bool HplAdc12.isBusy(){ return (ADC12CTL1 & ADC12BUSY); }
 
-  TOSH_SIGNAL(ADC_VECTOR) {
+  TOSH_SIGNAL(ADC12_VECTOR) {
     signal HplAdc12.conversionDone(ADC12IV);
   }
 }

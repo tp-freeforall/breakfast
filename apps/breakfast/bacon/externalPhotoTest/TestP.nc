@@ -78,8 +78,8 @@ module TestP{
       0x01 & (P2DIR >>4), 0x01 & (P2SEL >> 4),
       P2MAP4,
       val);
-    call Timer.startOneShot(2048);
-    //post readInternal();
+    //call Timer.startOneShot(2048);
+    post readInternal();
   }
 
   async event void UartStream.receivedByte(uint8_t b){
