@@ -27,8 +27,8 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * - Revision -------------------------------------------------------------
- * $Revision: 1.5 $
- * $Date: 2007-04-05 13:42:36 $
+ * $Revision$
+ * $Date$
  * @author: Jan Hauer <hauer@tkn.tu-berlin.de>
  * ========================================================================
  */
@@ -47,7 +47,6 @@ module Msp430RefVoltArbiterImplP
     NO_OWNER = 0xFF,
   };
   norace uint8_t syncOwner = NO_OWNER;
-  bool ref2_5v;
 
   task void switchOff();
   
@@ -83,14 +82,10 @@ module Msp430RefVoltArbiterImplP
         return;
       }
       syncOwner = client;
-      if (settings->ref2_5v == REFVOLT_LEVEL_1_5) {
-        ref2_5v = FALSE;
+      if (settings->ref2_5v == REFVOLT_LEVEL_1_5)
         started = call RefVolt_1_5V.start();
-      }
-      else {
-        ref2_5v = TRUE;
+      else
         started = call RefVolt_2_5V.start();
-      }
       if (started != SUCCESS){
         syncOwner = NO_OWNER;
         call AdcResource.release[client]();
@@ -140,16 +135,11 @@ module Msp430RefVoltArbiterImplP
 
   task void switchOff()
   {
-    error_t stopped;
     // update internal state
     if (syncOwner != NO_OWNER){
-      if (ref2_5v)
-        stopped = call RefVolt_2_5V.stop();
-      else
-        stopped = call RefVolt_1_5V.stop();
-      if (stopped == SUCCESS)
+      if (call RefVolt_1_5V.stop() == SUCCESS){
         syncOwner = NO_OWNER;
-      else
+      } else
         post switchOff();
     }
   }
@@ -162,7 +152,7 @@ module Msp430RefVoltArbiterImplP
   {
   }
 
-  async command bool ClientResource.isOwner[uint8_t client]()
+  async command uint8_t ClientResource.isOwner[uint8_t client]()
   {
     return call AdcResource.isOwner[client]();
   }

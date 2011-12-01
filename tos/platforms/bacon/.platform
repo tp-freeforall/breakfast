@@ -21,7 +21,6 @@ for (split(/\n/, <<'EOText'
   %P/hardware/onewire
   %T/platforms/surf/hardware/onewire
   %P/hardware/adc
-  %T/platforms/surf/hardware/adc
 
   %P/hardware/batteryVoltage
   %P/hardware/apds9007

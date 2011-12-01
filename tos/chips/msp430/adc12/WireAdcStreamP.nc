@@ -1,4 +1,4 @@
-/* $Id: WireAdcStreamP.nc,v 1.1 2008-04-07 09:41:55 janhauer Exp $
+/* $Id$
  * Copyright (c) 2005 Intel Corporation
  * All rights reserved.
  *

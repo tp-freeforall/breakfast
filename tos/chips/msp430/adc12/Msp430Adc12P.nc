@@ -27,8 +27,8 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * - Revision -------------------------------------------------------------
- * $Revision: 1.7 $
- * $Date: 2008-05-15 23:57:13 $
+ * $Revision$
+ * $Date$
  * @author: Jan Hauer <hauer@tkn.tu-berlin.de>
  * ========================================================================
  */
@@ -57,16 +57,48 @@ configuration Msp430Adc12P
   Msp430Adc12ImplP.ADCArbiterInfo -> Arbiter;
   Msp430Adc12ImplP.HplAdc12 -> HplAdc12P;
 
+#if ADC12_USE_PLATFORM_ADC
+  components PlatformAdcC ;
+
+  Msp430Adc12ImplP.TimerA -> PlatformAdcC.TimerA;
+  Msp430Adc12ImplP.ControlA0 -> PlatformAdcC.ControlA0;
+  Msp430Adc12ImplP.ControlA1 -> PlatformAdcC.ControlA1;
+  Msp430Adc12ImplP.CompareA0 -> PlatformAdcC.CompareA0;
+  Msp430Adc12ImplP.CompareA1 -> PlatformAdcC.CompareA1;
+
+  Msp430Adc12ImplP.A0 -> PlatformAdcC.A0;
+  Msp430Adc12ImplP.A1 -> PlatformAdcC.A1;
+  Msp430Adc12ImplP.A2 -> PlatformAdcC.A2;
+  Msp430Adc12ImplP.A3 -> PlatformAdcC.A3;
+  Msp430Adc12ImplP.A4 -> PlatformAdcC.A4;
+  Msp430Adc12ImplP.A5 -> PlatformAdcC.A5;
+#if 6 < ADC12_PINS_AVAILABLE
+  Msp430Adc12ImplP.A6 -> PlatformAdcC.A6;
+  Msp430Adc12ImplP.A7 -> PlatformAdcC.A7;
+#if 8 < ADC12_PINS_AVAILABLE
+  Msp430Adc12ImplP.A8 -> PlatformAdcC.A8;
+  Msp430Adc12ImplP.A9 -> PlatformAdcC.A9;
+  Msp430Adc12ImplP.A10 -> PlatformAdcC.A10;
+  Msp430Adc12ImplP.A11 -> PlatformAdcC.A11;
+  Msp430Adc12ImplP.A12 -> PlatformAdcC.A12;
+  Msp430Adc12ImplP.A13 -> PlatformAdcC.A13;
+  Msp430Adc12ImplP.A14 -> PlatformAdcC.A14;
+  Msp430Adc12ImplP.A15 -> PlatformAdcC.A15;
+#endif /* ADC12_PINS_AVAILABLE : 8 */
+#endif /* ADC12_PINS_AVAILABLE : 6 */
+
+#else /* ADC12_USE_PLATFORM_ADC */
+
 #ifdef ADC12_P6PIN_AUTO_CONFIGURE
   components HplMsp430GeneralIOC;
-  Msp430Adc12ImplP.Port60 -> HplMsp430GeneralIOC.Port60;
-  Msp430Adc12ImplP.Port61 -> HplMsp430GeneralIOC.Port61;
-  Msp430Adc12ImplP.Port62 -> HplMsp430GeneralIOC.Port62;
-  Msp430Adc12ImplP.Port63 -> HplMsp430GeneralIOC.Port63;
-  Msp430Adc12ImplP.Port64 -> HplMsp430GeneralIOC.Port64;
-  Msp430Adc12ImplP.Port65 -> HplMsp430GeneralIOC.Port65;
-  Msp430Adc12ImplP.Port66 -> HplMsp430GeneralIOC.Port66;
-  Msp430Adc12ImplP.Port67 -> HplMsp430GeneralIOC.Port67;
+  Msp430Adc12ImplP.A0 -> HplMsp430GeneralIOC.Port60;
+  Msp430Adc12ImplP.A1 -> HplMsp430GeneralIOC.Port61;
+  Msp430Adc12ImplP.A2 -> HplMsp430GeneralIOC.Port62;
+  Msp430Adc12ImplP.A3 -> HplMsp430GeneralIOC.Port63;
+  Msp430Adc12ImplP.A4 -> HplMsp430GeneralIOC.Port64;
+  Msp430Adc12ImplP.A5 -> HplMsp430GeneralIOC.Port65;
+  Msp430Adc12ImplP.A6 -> HplMsp430GeneralIOC.Port66;
+  Msp430Adc12ImplP.A7 -> HplMsp430GeneralIOC.Port67;
 #endif
 
 #ifdef ADC12_TIMERA_ENABLED
@@ -77,5 +109,7 @@ configuration Msp430Adc12P
   Msp430Adc12ImplP.CompareA0 -> Msp430TimerC.CompareA0;
   Msp430Adc12ImplP.CompareA1 -> Msp430TimerC.CompareA1;
 #endif
+
+#endif /* ADC12_USE_PLATFORM_ADC */
 }
 

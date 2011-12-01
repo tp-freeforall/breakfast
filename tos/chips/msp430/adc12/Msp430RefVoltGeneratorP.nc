@@ -27,8 +27,8 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * - Revision -------------------------------------------------------------
- * $Revision: 1.6 $
- * $Date: 2010-03-11 09:42:25 $
+ * $Revision$
+ * $Date$
  * @author: Jan Hauer <hauer@tkn.tu-berlin.de>
  * ========================================================================
  */
@@ -43,7 +43,6 @@ module Msp430RefVoltGeneratorP {
     interface HplAdc12;
     interface Timer<TMilli> as SwitchOnTimer;
     interface Timer<TMilli> as SwitchOffTimer;
-    interface Timer<TMilli> as SwitchOffSettleTimer;
   }
   
 } 
@@ -99,22 +98,12 @@ implementation {
       if (targetState == m_state) {
         result = EALREADY;
       } else if ((result = switchOn(targetState)) == SUCCESS) {
-        if (m_state==REFERENCE_1_5V_STABLE) { // targetState==REFERENCE_2_5V_STABLE
-          m_state = REFERENCE_2_5V_ON_PENDING;
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_STABILIZE_INTERVAL);
-        } else {
-          m_state = REFERENCE_1_5V_ON_PENDING;
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_SWITCH_2_5_TO_1_5_INTERVAL);
-        }
+        m_state = targetState;
+        signalStartDone(targetState, SUCCESS);
       }
     } else if (m_state == GENERATOR_OFF) {
       if ((result = switchOn(targetState)) == SUCCESS) {
-        if (targetState==REFERENCE_1_5V_STABLE && call SwitchOffSettleTimer.isRunning()) {
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_SWITCH_2_5_TO_1_5_INTERVAL);
-        }
-        else
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_STABILIZE_INTERVAL);
-        call SwitchOffSettleTimer.stop();
+        call SwitchOnTimer.startOneShot(STABILIZE_INTERVAL);
         m_state = targetState + 2; // +2 turns "XXX_STABLE" state into a "XXX_ON_PENDING" state 
       }
     } else if (m_state == REFERENCE_1_5V_OFF_PENDING || m_state == REFERENCE_2_5V_OFF_PENDING) {
@@ -122,19 +111,9 @@ implementation {
         // there is a pending stop() call
         state_t oldState = m_state;
         call SwitchOffTimer.stop();
+        m_state = targetState;
         signalStopDone(oldState, FAIL);
-        if (targetState==m_state-4) {
-          m_state=targetState;
-          signalStartDone(targetState, SUCCESS);
-        }
-        else if (m_state==REFERENCE_1_5V_OFF_PENDING) {
-          m_state = REFERENCE_2_5V_ON_PENDING;
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_STABILIZE_INTERVAL);
-        }
-        else {
-          m_state = REFERENCE_1_5V_ON_PENDING;
-          call SwitchOnTimer.startOneShot(MSP430_REFVOLT_SWITCH_2_5_TO_1_5_INTERVAL);
-        }
+        signalStartDone(targetState, SUCCESS);
       }
     } else if (m_state == targetState + 2) // starting already?
       result = SUCCESS;
@@ -150,9 +129,10 @@ implementation {
     if (m_state == GENERATOR_OFF)
       result = EALREADY;
     else if (m_state == REFERENCE_1_5V_STABLE || m_state == REFERENCE_2_5V_STABLE) {
-      result = SUCCESS;
-      m_state = nextState; // m_state becomes a "XXX_OFF_PENDING" state
-      call SwitchOffTimer.startOneShot(MSP430_REFVOLT_SWITCHOFF_INTERVAL);
+      if ((result = switchOff()) == SUCCESS) {
+        m_state = nextState; // m_state becomes a "XXX_OFF_PENDING" state 
+        call SwitchOffTimer.startOneShot(SWITCHOFF_INTERVAL);
+      }
     } else if (m_state == REFERENCE_1_5V_ON_PENDING || m_state == REFERENCE_2_5V_ON_PENDING) {
       if ((result = switchOff()) == SUCCESS) {
         // there is a pending start() call
@@ -204,24 +184,23 @@ implementation {
     
   event void SwitchOffTimer.fired() {
     switch (m_state) {
-      case REFERENCE_1_5V_OFF_PENDING:
+      case REFERENCE_1_5V_STABLE:
         if (switchOff() == SUCCESS){
           m_state = GENERATOR_OFF;
           signal RefVolt_1_5V.stopDone(SUCCESS);
           
         } else {
-          call SwitchOffTimer.startOneShot(MSP430_REFVOLT_SWITCHOFF_INTERVAL);
+          call SwitchOffTimer.startOneShot(SWITCHOFF_INTERVAL);
         }
         break;
         
-      case REFERENCE_2_5V_OFF_PENDING:
+      case REFERENCE_2_5V_STABLE:
         if (switchOff() == SUCCESS) {
           m_state = GENERATOR_OFF;
           signal RefVolt_2_5V.stopDone(SUCCESS);
           
-          call SwitchOffSettleTimer.startOneShot(MSP430_REFVOLT_DROP_2_5_TO_1_5_INTERVAL);
         } else {
-          call SwitchOffTimer.startOneShot(MSP430_REFVOLT_SWITCHOFF_INTERVAL);
+          call SwitchOffTimer.startOneShot(SWITCHOFF_INTERVAL);
         }
         break;
         
@@ -229,8 +208,6 @@ implementation {
         break;
     }
   }
-  
-  event void SwitchOffSettleTimer.fired() {}
   
   /**************** HplAdc12 Events ***************/
   async event void HplAdc12.conversionDone(uint16_t iv) {

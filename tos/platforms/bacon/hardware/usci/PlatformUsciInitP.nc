@@ -4,7 +4,8 @@ module PlatformUsciInitP{
   command error_t Init.init(){
     //Bacon board: I2C data on P2.6, clock on P2.7
     atomic{
-      PMAPPWD = 0x02D52;
+      PMAPPWD = PMAPKEY;
+      PMAPCTL = PMAPRECFG;
       P2MAP6 = PM_UCB0SDA;
       P2MAP7 = PM_UCB0SCL;
 //      P1MAP2 = PM_NONE;

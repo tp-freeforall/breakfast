@@ -27,8 +27,8 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * - Revision -------------------------------------------------------------
- * $Revision: 1.4 $
- * $Date: 2006-12-12 18:23:07 $
+ * $Revision$
+ * $Date$
  * @author: Jan Hauer <hauer@tkn.tu-berlin.de>
  * ========================================================================
  */
@@ -58,7 +58,6 @@ configuration Msp430RefVoltArbiterP
   components Msp430RefVoltGeneratorP, Msp430RefVoltArbiterImplP,
              new TimerMilliC() as SwitchOnDelayTimer, 
              new TimerMilliC() as SwitchOffDelayTimer,
-             new TimerMilliC() as SwitchOffSettleTimer,
              HplAdc12P;
 
   ClientResource = Msp430RefVoltArbiterImplP.ClientResource;
@@ -69,7 +68,6 @@ configuration Msp430RefVoltArbiterP
   Msp430RefVoltArbiterImplP.RefVolt_2_5V -> Msp430RefVoltGeneratorP.RefVolt_2_5V;
   Msp430RefVoltGeneratorP.SwitchOnTimer -> SwitchOnDelayTimer;
   Msp430RefVoltGeneratorP.SwitchOffTimer -> SwitchOffDelayTimer;
-  Msp430RefVoltGeneratorP.SwitchOffSettleTimer -> SwitchOffSettleTimer;
   Msp430RefVoltGeneratorP.HplAdc12 -> HplAdc12P;
 }  
 

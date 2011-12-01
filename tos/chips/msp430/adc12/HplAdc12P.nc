@@ -27,8 +27,8 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * - Revision -------------------------------------------------------------
- * $Revision: 1.9 $
- * $Date: 2009-10-17 11:48:33 $
+ * $Revision$
+ * $Date$
  * @author: Jan Hauer <hauer@tkn.tu-berlin.de>
  * ========================================================================
  */
@@ -78,15 +78,15 @@ implementation
   }
   
   async command void HplAdc12.setMCtl(uint8_t i, adc12memctl_t memCtl){
-    ADC12MCTL[i] = adc12memctl2int(memCtl);
+    (&ADC12MCTL0)[i] = adc12memctl2int(memCtl);
   }
    
   async command adc12memctl_t HplAdc12.getMCtl(uint8_t i){
-    return int2adc12memctl(ADC12MCTL[i]);
+    return int2adc12memctl((&ADC12MCTL0)[i]);
   }  
   
   async command uint16_t HplAdc12.getMem(uint8_t i){
-    return ADC12MEM[i];
+    return (&ADC12MEM0)[i];
   }
 
   async command void HplAdc12.setIEFlags(uint16_t mask){ ADC12IE = mask; } 
@@ -98,6 +98,42 @@ implementation
   } 
   
   async command void HplAdc12.startConversion(){ 
+    printf("StartConversion:\n\r");
+    printf(" P2DIR: %x (4: %x)\n\r", P2DIR, (P2DIR >> 4) & 0x01);
+    printf(" P2SEL: %x (4: %x)\n\r", P2SEL, (P2SEL >> 4) & 0x01);
+    printf(" P2MAP4: %x\n\r", P2MAP4);
+    printf(" ADC12CTL0:  %x\n\r", ADC12CTL0);
+    printf("  SHT1x: %x\n\r", (ADC12CTL0_H >> 4) & 0x0f);
+    printf("  SHT0x: %x\n\r", (ADC12CTL0_H >> 0) & 0x0f);
+    printf("  MSC  : %x\n\r", (ADC12CTL0_L >> 7) & 0x01);
+    printf("  REF25: %x\n\r", (ADC12CTL0_L >> 6) & 0x01);
+    printf("  REFON: %x\n\r", (ADC12CTL0_L >> 5) & 0x01);
+    printf("  ADCON: %x\n\r", (ADC12CTL0_L >> 4) & 0x01);
+    printf("  OVIE:  %x\n\r", (ADC12CTL0_L >> 3) & 0x01);
+    printf("  TOVIE: %x\n\r", (ADC12CTL0_L >> 2) & 0x01);
+    printf("  ENC:   %x\n\r", (ADC12CTL0_L >> 1) & 0x01);
+    printf("  SC:    %x\n\r", (ADC12CTL0_L >> 0) & 0x01);
+    printf(" ADC12CTL1:  %x\n\r", ADC12CTL1);
+    printf("  SA:    %x\n\r", (ADC12CTL1_H >> 4) & 0x0f);
+    printf("  SHS:   %x\n\r", (ADC12CTL1_H >> 2) & 0x03);
+    printf("  SHP:   %x\n\r", (ADC12CTL1_H >> 1) & 0x01);
+    printf("  ISSH:  %x\n\r", (ADC12CTL1_H >> 0) & 0x01);
+    printf("  DIVx:  %x\n\r", (ADC12CTL1_L >> 5) & 0x07);
+    printf("  SSEL:  %x\n\r", (ADC12CTL1_L >> 3) & 0x03);
+    printf("  CONSQ: %x\n\r", (ADC12CTL1_L >> 1) & 0x03);
+    printf("  BUSY:  %x\n\r", (ADC12CTL1_L >> 0) & 0x01);
+    printf(" ADC12CTL2:  %x\n\r", ADC12CTL2);
+    printf("  PDIV:  %x\n\r", (ADC12CTL2_H >> 0) & 0x01);
+    printf("  TCOFF: %x\n\r", (ADC12CTL2_L >> 7) & 0x01);
+    printf("  RES:   %x\n\r", (ADC12CTL2_L >> 4) & 0x03);
+    printf("  DF:    %x\n\r", (ADC12CTL2_L >> 3) & 0x01);
+    printf("  SR:    %x\n\r", (ADC12CTL2_L >> 2) & 0x01);
+    printf("  ROUT:  %x\n\r", (ADC12CTL2_L >> 1) & 0x01);
+    printf("  RBRST: %x\n\r", (ADC12CTL2_L >> 0) & 0x01);
+    printf(" ADC12MCTL0: %x\n\r", ADC12MCTL0);
+    printf("  EOS:   %x\n\r", (ADC12MCTL0 >> 7) & 0x01);
+    printf("  SREF:  %x\n\r", (ADC12MCTL0 >> 4) & 0x07);
+    printf("  INCH:  %x\n\r", (ADC12MCTL0 >> 0) & 0x0f);
     ADC12CTL0 |= ADC12ON; 
     ADC12CTL0 |= (ADC12SC + ENC); 
   }
@@ -117,7 +153,7 @@ implementation
     
   async command bool HplAdc12.isBusy(){ return (ADC12CTL1 & ADC12BUSY); }
 
-  TOSH_SIGNAL(ADC12_VECTOR) {
+  TOSH_SIGNAL(ADC_VECTOR) {
     signal HplAdc12.conversionDone(ADC12IV);
   }
 }
