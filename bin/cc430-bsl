@@ -195,7 +195,7 @@ class LowLevel:
     def SetRSTn(self, level):
         """map RSTn (mcu) to RTSn (serial)"""
         debug(4, "SetRSTn %d"%level)
-        if self.invertRTS:
+        if self.invertReset:
             self.SetRTS( not level)
         else:
             self.SetRTS(level)
@@ -203,12 +203,18 @@ class LowLevel:
     def SetTEST(self, level):
         """map TEST (mcu) to DTRn (serial)"""
         debug(4, "SetTEST %d"%level)
-        self.SetDTR(level)
+        if self.invertTest:
+            self.SetDTR(not level)
+        else:
+            self.SetDTR(level)
 
     def SetTCK(self, level):
         """map TCK (mcu) to DTRn (serial)"""
         debug(4, "SetTCK %d"%level)
-        self.SetDTR(level)
+        if self.invertTCK:
+            self.SetDTR(not level)
+        else:
+            self.SetDTR(level)
 
     def adg715SetSCL(self, level):
         "adjust ADG715 SCL (I2C clock) pin"
@@ -1037,6 +1043,13 @@ General options:
   --infoerase           Erase info segments as well as program memory (JHU)
   --noadg715            No I2C switch controlling RST/TCK pins 
                         (bare access from DTR/CTS of serial)
+  --invert-reset        Invert signal on RSTn pin (used by some BSL
+                        hardware)
+  --invert-test         Invert signal on TEST pin (used by some BSL
+                        hardware)
+  --invert-TCK          Invert signal on TCK pin (used by some BSL
+                        hardware) (should be the same as invert-test,
+                        but labeling is different on different chips)
   --errataJTAG20Resolved No need to use the bsl exit sequence described 
                         in cc430 errata. (JHU)
   --dedicatedJTAG       Use BSL entry sequence for devices with dedicated 
@@ -1098,7 +1111,9 @@ def main():
     bsl.errataJTAG20Resolved = False
     bsl.dedicatedJTAG = False
     bsl.pauseBSLEntry = False
-    bsl.invertRTS = False
+    bsl.invertReset = False
+    bsl.invertTest = False
+    bsl.invertTCK = False
     # bsl.maxData
     # bsl.fastrx
     # bsl.speed
@@ -1118,7 +1133,7 @@ def main():
              "bslversion", "wipe-info=", "infoerase", "upload=", "size=", "hex", "bin",
              "noadg715", "errataJTAG20Resolved", "dedicatedJTAG",
              "pauseBSLEntry", "go=","reset", "wait", "enterbsl",
-             "nospeed", "invertRTS"]
+             "nospeed", "invert-reset", "invert-TCK", "invert-test"]
         )
     except getopt.GetoptError:
         # print help information and exit:
@@ -1218,8 +1233,12 @@ def main():
             bsl.pauseBSLEntry = True
         elif o in ("--enterbsl"):
             enterbsl = True
-        elif o in ("--invertRTS"):
-            bsl.invertRTS = True
+        elif o in ("--invert-reset"):
+            bsl.invertReset = True
+        elif o in ("--invert-TCK"):
+            bsl.invertTCK = True
+        elif o in ("--invert-test"):
+            bsl.invertTest = True
         elif o in ("--nospeed"):
             bsl.speed = None
         else:
