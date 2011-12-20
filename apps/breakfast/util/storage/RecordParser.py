@@ -10,12 +10,6 @@ except ImportError:
 to install it.""")
     sys.exit(1)
 
-PRIMITIVE_FIELDTYPES = ["nx_uint8_t", 
-    "nx_uint16_t", 
-    "nx_int8_t",
-    "nx_int16_t", 
-    "char"]
-
 
 class FieldType(object):
     def __init__(self):
@@ -44,6 +38,12 @@ class Char(FieldType):
     def structStr(self):
         return "c"
 
+PRIMITIVE_FIELDTYPES = {"nx_uint8_t": NXUint8(), 
+    "nx_uint16_t": NXUint16(), 
+    "nx_int8_t": NXInt8(),
+    "nx_int16_t": NXInt16(), 
+    "char": Char()}
+
 class FieldDef(object):
     """Abstract structure of a single field. Can be converted into
     one field in a nesC-compatible struct declaration. Parses
@@ -64,8 +64,14 @@ class FieldDef(object):
             self.varLen = True
         else:
             self.varLen = False
-        #optimization: if fixed-length (composed of a fixed number of fixed-length
-        #  fields), can generate fmt string statically
+
+        if self.fTypeName in PRIMITIVE_FIELDTYPES:
+            self.setType(PRIMITIVE_FIELDTYPES[self.fTypeName])
+
+    def setType(self, fType):
+        #TODO: optimization: if fixed-length (composed of a fixed number of fixed-length
+        #  fields), can generate fmt string statically here
+        self.fType = fType
 
     def fieldStr(self):
         """Get a string for how this field is represented in nesC.
@@ -109,7 +115,7 @@ class StructDef(object):
     def linkDependencies(self, structMap):
         for f in self.fields:
             if f.fTypeName in structMap:
-                f.fType = structMap[f.fTypeName]
+                f.setType(structMap[f.fTypeName])
 
     def cStructStr(self):
         fs = ", \n".join([f.fieldStr() for f in self.fields])
@@ -132,8 +138,8 @@ class RecordParser(object):
     def __init__(self, recordDef):
         tree = etree.parse(recordDef)
         root = tree.getroot()
-        rtName = (root.xpath("/recordType/@name")[0])
-        globalType = (root.xpath("/recordType/@globalType")[0])
+        self.rtName = (root.xpath("/recordType/@name")[0])
+        self.globalType = (root.xpath("/recordType/@globalType")[0])
         self.structs = {}
         for s in tree.xpath("/recordType/struct"):
             self.structs[s.xpath("@name")[0]] = StructDef(s)
@@ -147,7 +153,9 @@ class RecordParser(object):
         """Get the nesC nx_struct definition that this RecordParser
         handles.
         """
-        return "\n".join([self.structs[s].cStructStr() for s in self.depOrder])
+        return "#define %s_GRT %s\n"%(self.rtName, self.globalType)+ \
+            "//AUTOMATICALLY GENERATED, DO NOT MODIFY\n"+ \
+            "\n".join([self.structs[s].cStructStr() for s in self.depOrder])
 
     def parsePhysicalRecord(self, pr):
         """Convert the binary data in a physical record to a
