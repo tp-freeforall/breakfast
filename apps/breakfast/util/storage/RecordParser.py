@@ -104,6 +104,8 @@ class StructDef(object):
     subsection of physical record recursively according to field
     definitions.
     """
+    #TODO: it might be cleaner to treat structDef as a subclass of
+    #      FieldDef
 
     def __init__(self, structElement):
         self.name = structElement.xpath("@name")[0]
