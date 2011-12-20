@@ -8,7 +8,9 @@ module TestP{
   uses interface UartStream;
   uses interface UartByte;
   uses interface StdControl as UartControl;
-  //TODO: wire I2CSlave/I2CPacket/Resource (unused, basically)
+  uses interface I2CPacket<TI2CBasicAddr>;
+  uses interface I2CSlave;
+  uses interface Resource;
 } implementation {
   uint8_t rxByte;
   uint16_t localAddr = GLOBAL_ADDR_LSB;
@@ -47,7 +49,9 @@ module TestP{
 
   task void startTask(){
     //TODO: read myLocalAddr back from flash.
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(call I2CDiscoverable.startDiscoverable(myLocalAddr))); 
+    call I2CDiscoverable.setLocalAddr(myLocalAddr);
+    printf("%s: %s\n\r", __FUNCTION__, 
+        decodeError(call Resource.request())); 
   }
 
 
@@ -93,13 +97,15 @@ module TestP{
     }
   }
 
-  event void I2CDiscoverable.endDiscoverable(error_t error, uint16_t lastLocalAddr){
+  event void I2CDiscoverable.assigned(error_t error, uint16_t lastLocalAddr){
     printf("End Discoverable: %s local address: %x\n\r", decodeError(error), lastLocalAddr);
     myLocalAddr = lastLocalAddr;
     if (AUTO_SLAVE){
       post startTask();
     }
   }
+
+  event void Resource.granted(){}
 
   event void I2CDiscoverer.discoveryDone(error_t error){
     printf("%s: \n\r", __FUNCTION__);
@@ -128,5 +134,20 @@ module TestP{
 
   async event void UartStream.receiveDone(uint8_t* buf, uint16_t len, error_t err){};
   async event void UartStream.sendDone(uint8_t* buf, uint16_t len, error_t err){};
+
+  async event bool I2CSlave.slaveReceiveRequested(){
+    call I2CSlave.slaveReceive();
+    return TRUE;
+  }
+
+  async event bool I2CSlave.slaveTransmitRequested(){
+    call I2CSlave.slaveTransmit(0xff);
+    return TRUE;
+  }
+
+  async event void I2CSlave.slaveStart(bool isGeneralCall){ }
+  async event void I2CSlave.slaveStop(){}
+  async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
+  async event void I2CPacket.writeDone(error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
 
 }

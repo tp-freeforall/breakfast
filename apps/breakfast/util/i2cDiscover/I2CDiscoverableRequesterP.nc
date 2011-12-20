@@ -1,4 +1,3 @@
-#include "I2CDiscoverable.h"
 /**
  * - should receive master address, then reset/set cmd. When
  *   this is received, try to claim the bus by writing to the bus
@@ -12,26 +11,25 @@
  *   indicate that we have a local address now.
  * 
 **/
+#include "I2CDiscoverable.h"
 //TODO: ten-bit addresses: should be parameterized
 generic module I2CDiscoverableRequesterP(){
-  uses interface I2CPacket<TI2CBasicAddr>;
-  uses interface I2CSlave;
-  uses interface Resource;
+  uses interface I2CPacket<TI2CBasicAddr> as SubI2CPacket;
+  uses interface I2CSlave as SubI2CSlave;
+  uses interface Resource as SubResource;
   provides interface I2CDiscoverable;
-  uses interface Timer<TMilli>;
   uses interface Timer<TMilli> as RandomizeTimer;
   uses interface Random;
   uses interface ParameterInit<uint16_t> as RandomInit;
   provides interface Msp430UsciConfigure;
-////TODO: pass-throughs for non-GC work
-//  provides interface Resource;
-//  provides interface I2CSlave;
-//  provides interface I2CPacket;
+  provides interface Resource;
+  provides interface I2CSlave;
+  provides interface I2CPacket<TI2CBasicAddr>;
 } implementation {
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
   norace uint16_t lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
-  bool isGC;
+  bool isDiscovering;
   bool setAddrNeeded;
   bool resetNeeded;
   uint8_t state;
@@ -70,48 +68,66 @@ generic module I2CDiscoverableRequesterP(){
 
   discoverable_reservation_t _reservation;
 
-  command error_t I2CDiscoverable.startDiscoverable(uint16_t lastLocalAddr_){
-    if ( SUCCESS == call Resource.request()){
-      setState(S_WAITING);
-      _reservation.msg.pos = 0;
-      _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
-      memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
-      lastLocalAddr = lastLocalAddr_;
-      //TODO: should randomize with hash of the whole address
-      call RandomInit.init(_reservation.msg.globalAddr[I2C_GLOBAL_ADDR_LENGTH-1]);
-      return SUCCESS;
-    } else {
-      return FAIL;
-    }
+  command void I2CDiscoverable.setLocalAddr(uint16_t lastLocalAddr_){
+    lastLocalAddr = lastLocalAddr_;
   }
 
-  event void Resource.granted(){
-    //start timeout-- if we haven't been assigned an addr by
-    //that time, give up.
+  void init(){
     setState(S_WAITING);
-    //TODO: why set own address to unassigned? should retain last
-    call I2CSlave.setOwnAddress(I2C_DISCOVERABLE_UNASSIGNED);
-    call I2CSlave.enableGeneralCall();
-    //TODO: don't time out
-    call Timer.startOneShot(I2C_DISCOVERY_INITIAL_TIMEOUT);
+    _reservation.msg.pos = 0;
+    _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
+    memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
+    call SubI2CSlave.setOwnAddress(lastLocalAddr);
+    call SubI2CSlave.enableGeneralCall();
+
+    //TODO: should randomize with hash of the whole address
+    call RandomInit.init(_reservation.msg.globalAddr[I2C_GLOBAL_ADDR_LENGTH-1]);
+  }
+
+  async command error_t Resource.request(){
+    return call SubResource.request();
+  }
+
+  async command error_t Resource.release(){
+    return call SubResource.release();
+  }
+
+  async command bool Resource.isOwner(){
+    return call SubResource.isOwner();
+  }
+
+  async command error_t Resource.immediateRequest(){
+    error_t ret = call SubResource.immediateRequest();
+    if (SUCCESS == ret){
+      init();
+    }
+    return ret;
+  }
+
+  event void SubResource.granted(){
+    init();
+    signal Resource.granted();
   }
 
 
-  async event void I2CSlave.slaveStart(bool generalCall){
+  async event void SubI2CSlave.slaveStart(bool generalCall){
     //printf("%s: %x \n\r", __FUNCTION__, generalCall);
-    isGC = generalCall;
+    isDiscovering = generalCall;
     setAddrNeeded = FALSE;
     resetNeeded = FALSE;
     transCount = 0;
-    //TODO: if not general call: pass signal up
+    if (! isDiscovering){
+      signal I2CSlave.slaveStart(generalCall);
+    }
   }
 
-  async event bool I2CSlave.slaveReceiveRequested(){
-    uint8_t data = call I2CSlave.slaveReceive();
+  async event bool SubI2CSlave.slaveReceiveRequested(){
+    uint8_t data;
     //printf("%s: \n\r", __FUNCTION__);
     //printf("RX %x\n\r", data);
-    isReceive=TRUE;
-    if (isGC){
+    if (isDiscovering){
+      isReceive=TRUE;
+      data = call SubI2CSlave.slaveReceive();
       //first byte ends with 1: own-address announcement from master
       if (data & 0x01){
         if (checkState(S_WAITING) || checkState(S_ASSIGNED)){
@@ -136,18 +152,40 @@ generic module I2CDiscoverableRequesterP(){
             setState(S_ERROR);
         }
       }
+      return TRUE;
     } else {
-      //TODO: if it's non-GC, signal up/return what they return
+      //Not doing discovery, so just signal it up.
+      return signal I2CSlave.slaveReceiveRequested();
     }
-    return TRUE;
   }
 
-  async event bool I2CSlave.slaveTransmitRequested(){
-    isReceive=FALSE;
-    setState(S_ERROR);
-    //TODO: if it's non-GC, signal up/return what they return
-    call I2CSlave.slaveTransmit(0xff);
-    return TRUE;
+  async command uint8_t I2CSlave.slaveReceive(){
+    if (isDiscovering){
+      //Should not be allowed to disrupt discovery process
+      return 0xff;
+    } else {
+      return call SubI2CSlave.slaveReceive();
+    }
+  }
+
+  async event bool SubI2CSlave.slaveTransmitRequested(){
+    if (isDiscovering){
+      isReceive=FALSE;
+      setState(S_ERROR);
+      call SubI2CSlave.slaveTransmit(0xff);
+      return TRUE;
+    } else {
+      return signal I2CSlave.slaveTransmitRequested();
+    }
+  }
+  
+  async command void I2CSlave.slaveTransmit(uint8_t data){
+    if (isDiscovering){
+      //ignore it. I guess that this command should actually return
+      //error_t 
+    } else {
+      call SubI2CSlave.slaveTransmit(data);
+    }
   }
 
   task void requestLocalAddrTask(){
@@ -161,7 +199,7 @@ generic module I2CDiscoverableRequesterP(){
     //  - fails: something's wrong
     //printf("fixin' to write %x bytes from %p (base %p)\n\r", sizeof(_reservation), _reservation.data, &_reservation);
     atomic{
-      err = call I2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
+      err = call SubI2CPacket.write(I2C_START , masterAddr, sizeof(_reservation), _reservation.data);
       if (err == SUCCESS){
         //printf("CLAIM\n\r");
         setState(S_CLAIMING_BUS);
@@ -178,7 +216,7 @@ generic module I2CDiscoverableRequesterP(){
     error_t err;
     //printf("%s: \n\r", __FUNCTION__);
     //restart: don't check for EBUSY
-    err = call I2CPacket.read(I2C_RESTART | I2C_STOP, masterAddr, 2, (uint8_t*)(&lastLocalAddr));
+    err = call SubI2CPacket.read(I2C_RESTART | I2C_STOP, masterAddr, 2, (uint8_t*)(&lastLocalAddr));
 //    printf("%s:read %s\n\r", __FUNCTION__, decodeError(err));
     if (err == SUCCESS){
       setState(S_READING_ADDR);
@@ -187,90 +225,61 @@ generic module I2CDiscoverableRequesterP(){
     }
   }
 
-  async event void I2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
+  async event void SubI2CPacket.writeDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
 //    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
-    //TODO: check isGC: if not, signal up
-    switch(stateTmp){
-      case S_CLAIMING_BUS:
-        if(error == SUCCESS){
-          post readLocalAddr();
-        } else {
-          setState(S_WAITING);
-        }
-        break;
-      default:
-//        printf("bad state:%x \n\r", stateTmp);
-        setState(S_ERROR);
+    if (isDiscovering){
+      switch(stateTmp){
+        case S_CLAIMING_BUS:
+          if(error == SUCCESS){
+            post readLocalAddr();
+          } else {
+            setState(S_WAITING);
+          }
+          break;
+        default:
+  //        printf("bad state:%x \n\r", stateTmp);
+          setState(S_ERROR);
+      }
+    } else {
+      signal I2CPacket.writeDone(error, slaveAddr, len, buf);
     }
   }
 
   task void assignedTask(){
-    //TODO: do not release resource!
-    call Timer.stop();
-    call Resource.release();
     setState(S_OFF);
-    signal I2CDiscoverable.endDiscoverable(SUCCESS, lastLocalAddr);
+    signal I2CDiscoverable.assigned(SUCCESS, lastLocalAddr);
   }
 
-  async event void I2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
+  async event void SubI2CPacket.readDone(error_t error, uint16_t slaveAddr, uint8_t len, uint8_t* buf){
     uint8_t stateTmp;
     atomic stateTmp = state;
 //    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
-    //TODO: check isGC: if not, signal up
-    switch(stateTmp){
-      case S_READING_ADDR:
-        if (error == SUCCESS){
-          //great, we're all set.
-          setState(S_ASSIGNED);
-          post assignedTask();
-        } else {
+    if (isDiscovering){
+      switch(stateTmp){
+        case S_READING_ADDR:
+          if (error == SUCCESS){
+            //great, we're all set.
+            setState(S_ASSIGNED);
+            post assignedTask();
+          } else {
+            setState(S_ERROR);
+          }
+          break;
+        default:
           setState(S_ERROR);
-        }
-        break;
-      default:
-        setState(S_ERROR);
+      }
+    } else {
+      signal I2CPacket.readDone(error, slaveAddr, len, buf);
     }
   }
 
   event void RandomizeTimer.fired(){
     post requestLocalAddrTask();
   }
-
-//  task void processSlaveReceive(){
-//    //printf("%s: \n\r", __FUNCTION__);
-//    atomic{
-//      if (isGC){
-//        if(resetNeeded){
-//          printf("RESET\n\r");
-//          lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
-//          setState(S_WAITING);
-//          resetNeeded = FALSE;
-//        }
-//        if(setAddrNeeded 
-//            && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
-//            && (masterAddr != I2C_INVALID_MASTER)){
-//          printf("SET\n\r");
-//
-//          call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
-//          setAddrNeeded = FALSE;
-////          post requestLocalAddrTask();
-//          //delay for a while.
-//          //This is an ugly hack to deal with the issue regarding
-//          //near-simultaneous starts
-//          call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
-//        } else {
-//          printf("IGNORE: %x %x %x\n\r", setAddrNeeded, lastLocalAddr, masterAddr);
-//        }
-//      }else{
-//        //nothin'
-//      }
-//    }
-//  }
   
   task void setTimers(){
-    call Timer.startOneShot(I2C_DISCOVERY_ROUND_TIMEOUT);
     call RandomizeTimer.startOneShot(call Random.rand16() % I2C_RANDOMIZE_MAX_DELAY);
   }
 
@@ -278,34 +287,23 @@ generic module I2CDiscoverableRequesterP(){
   //hold for it to be ignored (it's not a reset or setAddr)
   //the second message (set or reset) is either missed or causes a
   //re-post, which doesn't do us much good.
-  async event void I2CSlave.slaveStop(){
+  async event void SubI2CSlave.slaveStop(){
     //printf("%s: \n\r", __FUNCTION__);
-    if (isReceive && isGC && (resetNeeded || setAddrNeeded)){
-      if (resetNeeded){
-        lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
-        resetNeeded = FALSE;
-      }
-      if (setAddrNeeded 
-          && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
-          && (masterAddr != I2C_INVALID_MASTER)){
-        setAddrNeeded = FALSE;
-        post setTimers();
-      }
-    } else {
-      //TODO: if ! isGC, signal up
-      //no other conditions handled
-    }
-  }
-
-  event void Timer.fired(){
-    if (call Resource.isOwner()){
-      if (call Resource.release() == SUCCESS){
-        signal I2CDiscoverable.endDiscoverable(ENOACK, lastLocalAddr);
-      }else{
-        signal I2CDiscoverable.endDiscoverable(FAIL, lastLocalAddr);
+    if (isDiscovering){
+      if (isReceive && (resetNeeded || setAddrNeeded)){
+        if (resetNeeded){
+          lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
+          resetNeeded = FALSE;
+        }
+        if (setAddrNeeded 
+            && (lastLocalAddr == I2C_DISCOVERABLE_UNASSIGNED) 
+            && (masterAddr != I2C_INVALID_MASTER)){
+          setAddrNeeded = FALSE;
+          post setTimers();
+        }
       }
     } else {
-      signal I2CDiscoverable.endDiscoverable(FAIL, lastLocalAddr);
+      signal I2CSlave.slaveStop();
     }
   }
 
@@ -325,4 +323,48 @@ generic module I2CDiscoverableRequesterP(){
   async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration(){
     return &_config;
   }
+
+  
+  command error_t I2CSlave.setOwnAddress(uint16_t addr){
+    if ( isDiscovering){
+      return EBUSY;
+    } else {
+      return call SubI2CSlave.setOwnAddress(addr);
+    }
+  }
+
+  command error_t I2CSlave.enableGeneralCall(){
+    if (isDiscovering){
+      return EBUSY;
+    } else {
+      return call SubI2CSlave.enableGeneralCall();
+    }
+  }
+
+  command error_t I2CSlave.disableGeneralCall(){
+    if (isDiscovering){
+      return EBUSY;
+    } else {
+      return call SubI2CSlave.disableGeneralCall();
+    }
+  }
+
+  async command error_t I2CPacket.read(i2c_flags_t flags, uint16_t addr, 
+      uint8_t length, uint8_t* data){
+    if (isDiscovering){
+      return EBUSY;
+    } else {
+      return call SubI2CPacket.read(flags, addr, length, data);
+    }
+  }
+
+  async command error_t I2CPacket.write(i2c_flags_t flags, uint16_t addr,
+      uint8_t length, uint8_t* data){
+    if (isDiscovering){
+      return EBUSY;
+    } else {
+      return call SubI2CPacket.write(flags, addr, length, data);
+    }
+  }
+
 }
