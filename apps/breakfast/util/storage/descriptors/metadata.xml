@@ -1,0 +1,12 @@
+<recordType type="0" len="0" name="metadata" globalType="0xdc">
+  <struct name="sensor_sub_t" >
+    <field label="channel" type="nx_uint8_t" />
+    <!--TODO: should type also be a string? -->
+    <field label="type" type="nx_uint16_t" />
+    <field label="globalId" type="nx_uint8_t" varLen="false" maxLen="8"/>
+    <field label="label" type="char" varLen="true" maxLen="128"/>
+  </struct>
+  <struct name="metadata_rt_t" primary="true">
+    <field label="sensor" type="sensor_sub_t" varLen="true" maxLen="8"/>
+  </struct>
+</recordType>
