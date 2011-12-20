@@ -23,6 +23,10 @@ generic module I2CDiscoverableRequesterP(){
   uses interface Random;
   uses interface ParameterInit<uint16_t> as RandomInit;
   provides interface Msp430UsciConfigure;
+////TODO: pass-throughs for non-GC work
+//  provides interface Resource;
+//  provides interface I2CSlave;
+//  provides interface I2CPacket;
 } implementation {
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
@@ -85,8 +89,10 @@ generic module I2CDiscoverableRequesterP(){
     //start timeout-- if we haven't been assigned an addr by
     //that time, give up.
     setState(S_WAITING);
+    //TODO: why set own address to unassigned? should retain last
     call I2CSlave.setOwnAddress(I2C_DISCOVERABLE_UNASSIGNED);
     call I2CSlave.enableGeneralCall();
+    //TODO: don't time out
     call Timer.startOneShot(I2C_DISCOVERY_INITIAL_TIMEOUT);
   }
 
@@ -97,6 +103,7 @@ generic module I2CDiscoverableRequesterP(){
     setAddrNeeded = FALSE;
     resetNeeded = FALSE;
     transCount = 0;
+    //TODO: if not general call: pass signal up
   }
 
   async event bool I2CSlave.slaveReceiveRequested(){
@@ -129,13 +136,16 @@ generic module I2CDiscoverableRequesterP(){
             setState(S_ERROR);
         }
       }
-    } 
+    } else {
+      //TODO: if it's non-GC, signal up/return what they return
+    }
     return TRUE;
   }
 
   async event bool I2CSlave.slaveTransmitRequested(){
     isReceive=FALSE;
     setState(S_ERROR);
+    //TODO: if it's non-GC, signal up/return what they return
     call I2CSlave.slaveTransmit(0xff);
     return TRUE;
   }
@@ -181,6 +191,7 @@ generic module I2CDiscoverableRequesterP(){
     uint8_t stateTmp;
     atomic stateTmp = state;
 //    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
+    //TODO: check isGC: if not, signal up
     switch(stateTmp){
       case S_CLAIMING_BUS:
         if(error == SUCCESS){
@@ -196,6 +207,7 @@ generic module I2CDiscoverableRequesterP(){
   }
 
   task void assignedTask(){
+    //TODO: do not release resource!
     call Timer.stop();
     call Resource.release();
     setState(S_OFF);
@@ -206,6 +218,7 @@ generic module I2CDiscoverableRequesterP(){
     uint8_t stateTmp;
     atomic stateTmp = state;
 //    printf("%s: %s \n\r", __FUNCTION__, decodeError(error));
+    //TODO: check isGC: if not, signal up
     switch(stateTmp){
       case S_READING_ADDR:
         if (error == SUCCESS){
@@ -279,6 +292,7 @@ generic module I2CDiscoverableRequesterP(){
         post setTimers();
       }
     } else {
+      //TODO: if ! isGC, signal up
       //no other conditions handled
     }
   }

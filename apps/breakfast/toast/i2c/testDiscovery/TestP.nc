@@ -8,6 +8,7 @@ module TestP{
   uses interface UartStream;
   uses interface UartByte;
   uses interface StdControl as UartControl;
+  //TODO: wire I2CSlave/I2CPacket/Resource (unused, basically)
 } implementation {
   uint8_t rxByte;
   uint16_t localAddr = GLOBAL_ADDR_LSB;

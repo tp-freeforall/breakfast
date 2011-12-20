@@ -10,6 +10,7 @@ configuration TestAppC{
 
   TestP.Boot -> MainC.Boot;
   TestP.I2CDiscoverable -> I2CDiscoverableC;
+  //TODO: wire I2CSlave/I2CPacket/Resource interfaces
   TestP.UartStream -> PlatformSerialC.UartStream;
   TestP.UartByte -> PlatformSerialC.UartByte;
   TestP.UartControl -> SerialPrintfC.StdControl;

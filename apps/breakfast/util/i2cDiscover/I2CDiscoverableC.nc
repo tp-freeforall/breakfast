@@ -1,5 +1,9 @@
 generic configuration I2CDiscoverableC(){
   provides interface I2CDiscoverable;
+////TODO: pass-throughs for non-GC work
+//  provides interface Resource;
+//  provides interface I2CSlave;
+//  provides interface I2CPacket;
 } implementation {
   components new Msp430UsciI2CB0C() as Msp430I2C0C;
   components new TimerMilliC();
