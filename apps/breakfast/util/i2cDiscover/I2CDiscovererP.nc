@@ -72,6 +72,11 @@ generic module I2CDiscovererP(){
   command error_t I2CDiscoverer.startDiscovery(bool reset_, uint16_t addrStart){
 //    printf("%s: \n\r", __FUNCTION__);
     if(checkState(S_OFF)){
+      //TODO: check addr length to determine mask. prevent starting
+      //  from addresses that use more than 7 bits.
+      if (addrStart & 0xff80){
+        return EINVAL;
+      }
       if ( SUCCESS == call Resource.request()){
         discovered = FALSE;
         setState(S_INIT);
@@ -317,6 +322,9 @@ generic module I2CDiscovererP(){
         reg = call Pool.get();
         reg->val.localAddr = nextAddr;
         post checkQueueTask();
+        //TODO: would be nice to stop and/or cleanly fail if we are in
+        //  danger of assigning a local address that is larger than the
+        //  7-bit (or 10-bit) addressing space allows
       }
 
       setState(S_WAITING);

@@ -1,6 +1,8 @@
 COMPONENT=TestAppC
 CFLAGS += -DGLOBAL_ADDR_LENGTH=1
 CFLAGS += -I$(TOSROOT)/apps/breakfast/util/i2cRegister
-CFLAGS += -DI2C_REGISTER_LENGTH=3
+CFLAGS += -I$(TOSROOT)/apps/breakfast/independent/echoRegister
+CFLAGS += -I$(TOSROOT)/apps/breakfast/util/i2cDiscover
+CFLAGS += -I$(TOSROOT)/apps/breakfast/util
 
 include $(MAKERULES)

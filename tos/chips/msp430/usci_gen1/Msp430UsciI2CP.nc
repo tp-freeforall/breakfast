@@ -135,12 +135,17 @@ implementation {
 					   uint16_t addr, uint8_t len, 
 					   uint8_t* buf ) 
   {
+    uint16_t counter;
+    //TODO: should be address length-dependent
+    if (addr & 0xff80){
+      return EINVAL;
+    }
+
     //According to TI, we can just poll until the start condition
     //clears.  But we're nervous and want to bail out if it doesn't
     //clear fast enough.  This is how many times we loop before we
     //bail out.
-    uint16_t counter = I2C_ONE_BYTE_READ_COUNTER;
-
+    counter = I2C_ONE_BYTE_READ_COUNTER;
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -266,6 +271,10 @@ implementation {
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
+    //TODO: should be address length-dependent
+    if (addr & 0xff80){
+      return EINVAL;
+    }
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -513,9 +522,15 @@ implementation {
   /***** Slave-mode functions ***/
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
-    //retain UCGCEN bit
-    call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
-    return SUCCESS;
+    printf("%s: %x\n\r", __FUNCTION__, addr);
+    //TODO: check addr length for this mask
+    if (addr & 0xff80){
+      return EINVAL;
+    } else {
+      //retain UCGCEN bit
+      call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
+      return SUCCESS;
+    }
   }
 
   command error_t I2CSlave.enableGeneralCall[uint8_t client](){

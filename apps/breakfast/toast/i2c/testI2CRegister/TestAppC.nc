@@ -1,3 +1,4 @@
+#include <stdio.h>
 configuration TestAppC{
 } implementation {
   components MainC;
@@ -5,16 +6,23 @@ configuration TestAppC{
   components PlatformSerialC;
   components SerialPrintfC;
 
-  components new I2CRegisterC(I2C_REGISTER_LENGTH);
+  components new EchoRegisterC(10);
+  components I2CMultiRegisterC;
 
+  components new I2CDiscovererC();
   components new Msp430UsciI2CB0C();
 
   TestP.Boot -> MainC.Boot;
-  TestP.I2CRegister -> I2CRegisterC;
-  TestP.SplitControl -> I2CRegisterC;
+
+  TestP.SplitControl -> I2CMultiRegisterC;
+  TestP.I2CDiscoverable -> I2CMultiRegisterC;
+
+  TestP.I2CPacket -> Msp430UsciI2CB0C.I2CPacket;
+  TestP.Resource -> Msp430UsciI2CB0C.Resource;
+
+  TestP.I2CDiscoverer -> I2CDiscovererC;
+
   TestP.UartStream -> PlatformSerialC.UartStream;
   TestP.UartByte -> PlatformSerialC.UartByte;
   TestP.UartControl -> SerialPrintfC.StdControl;
-  TestP.Resource -> Msp430UsciI2CB0C;
-  TestP.I2CPacket -> Msp430UsciI2CB0C;
 }

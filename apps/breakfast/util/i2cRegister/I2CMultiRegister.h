@@ -1,0 +1,4 @@
+#ifndef I2C_MULTI_REGISTER_H
+#define I2C_MULTI_REGISTER_H
+
+#endif
