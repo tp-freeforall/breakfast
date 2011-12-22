@@ -136,7 +136,7 @@ implementation {
 					   uint8_t* buf ) 
   {
     uint16_t counter;
-    printf("%s: f %x a %x l %d b %p\n\r", __FUNCTION__, flags, addr, len, buf);
+//    printf("%s: f %x a %x l %d b %p\n\r", __FUNCTION__, flags, addr, len, buf);
     //TODO: should be address length-dependent
     if (addr & 0xff80){
       return EINVAL;
@@ -395,7 +395,6 @@ implementation {
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
 //    printf("TXI\n\r");
-    pdbg(0x01);
 
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
@@ -405,12 +404,10 @@ implementation {
       nextWrite();
     } else {
       if(signal I2CSlave.slaveTransmitRequested[call ArbiterInfo.userId()]()){
-        pdbg(0x02);
         //true= "I'm responding RIGHT NOW"
         // note that when this interrupt context ends, txinterrupt
         // will be raised again.
       }else{
-        pdbg(0x03);
 //        printf("disable TXI\n\r");
         //false= "I need to pause for a second"
         //disable TX interrupt.
@@ -423,7 +420,6 @@ implementation {
 //    printf("%s: \n\r", __FUNCTION__);
     //TODO: safety
     //write it, reenable interrupt (if it was disabled)
-    pdbg(0x04);
     call Usci.setTxbuf(data);
 //    printf("enable TXI\n\r");
     call Usci.setIe(call Usci.getIe() | TXIE_MASK);
@@ -432,17 +428,14 @@ implementation {
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
 //    printf("RXI\n\r");
-    pdbg(0x05);
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
     } else {
       if (signal I2CSlave.slaveReceiveRequested[call ArbiterInfo.userId()]()){
-        pdbg(0x06);
         //TRUE: they're responding immediately (should have actually
         //already responded at this point). 
       } else {
-        pdbg(0x07);
         //FALSE: disable the RX interrupt, since the client needs to
         //do some work
         call Usci.setIe(call Usci.getIe() & ~RXIE_MASK);
@@ -451,7 +444,6 @@ implementation {
   }
 
   async command uint8_t I2CSlave.slaveReceive[uint8_t client](){
-    pdbg(0x08);
     //re-enable rx interrupt, read the byte
     call Usci.setIe(call Usci.getIe() | RXIE_MASK);
     return call Usci.getRxbuf();
@@ -460,7 +452,6 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
-    pdbg(0x09);
 //    printf("SI\n\r");
 //    if(call Usci.getStat() & UCALIFG){
 //      printf("AL!");
@@ -493,7 +484,6 @@ implementation {
         }
       } 
     } else {
-      pdbg(0x0a);
       //slave-specific
       /* arbitration lost (we USED TO be master)*/
       if (call Usci.getStat() & UCALIFG) 
@@ -515,7 +505,6 @@ implementation {
       /* STOP condition */
       else if (call Usci.getStat() & UCSTPIFG) 
       {
-        pdbg(0x0b);
         /* disable STOP interrupt, enable START interrupt */
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTTIE) & ~UCSTPIE);
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
@@ -524,7 +513,6 @@ implementation {
       /* START condition */
       else if (call Usci.getStat() & UCSTTIFG) 
       {
-        pdbg(0x0c);
         //clear start flag, but leave enabled (repeated start)
         //enable stop interrupt
         call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
@@ -547,7 +535,7 @@ implementation {
   /***** Slave-mode functions ***/
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
-    printf("%s: %x\n\r", __FUNCTION__, addr);
+//    printf("%s: %x\n\r", __FUNCTION__, addr);
     //TODO: check addr length for this mask
     if (addr & 0xff80){
       return EINVAL;

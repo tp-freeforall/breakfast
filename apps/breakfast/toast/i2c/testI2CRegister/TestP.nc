@@ -49,8 +49,6 @@ module TestP{
     call UartControl.start();
     globalAddr[GLOBAL_ADDR_LENGTH - 1] = TOS_NODE_ID;
     printf("I2C Register Test\n\r");
-    P6DIR = 0xff;
-    P6SEL = 0x00;
   }
 
   event uint16_t I2CDiscoverer.getLocalAddr(){
