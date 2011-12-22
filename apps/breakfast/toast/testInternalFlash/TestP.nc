@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include "decodeError.h"
 
 module TestP{
   uses interface Boot;
   uses interface Timer<TMilli>;
+  uses interface InternalFlash;
+
 } implementation {
   uint8_t counter;
   event void Boot.booted(){
@@ -77,7 +80,15 @@ module TestP{
   }
 
   event void Timer.fired(){
-    printf("test %d\n\r", counter++);
+    uint8_t check = 0;
+    error_t error;
+    counter++;
+    error = call InternalFlash.write((void*)0x1000, &counter, 1);
+    printf("write %d: %s\n\r", 
+      counter, 
+      decodeError(error));
+    error = call InternalFlash.read((void*)0x1000, &check, 1);
+    printf("read: %d %s\n\r", check, decodeError(error));
   }
 
 }
