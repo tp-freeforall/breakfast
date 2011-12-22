@@ -96,14 +96,14 @@ implementation {
 
   uint8_t fromInverseUnary(uint8_t iu){
     uint8_t ret = 0;
-    printf("from IU: %x ", iu);
+    //printf("from IU: %x ", iu);
 
     iu ^= 0xFF;
     while (iu){
       ret += 1;
       iu = (iu >> 1);
     }
-    printf("-> %x\n\r", ret);
+    //printf("-> %x\n\r", ret);
     return ret;
   }
 
@@ -130,11 +130,13 @@ implementation {
     uint8_t segmentNum;
     uint8_t* targetSegmentStart;
     uint8_t wdState;
+    volatile uint8_t* next = IFLASH_NEXT;
+    uint8_t nextVal;
     
     if ((uint16_t)addr + size > IFLASH_SEGMENT_SIZE - 1){
       return ESIZE;
     }
-    segmentNum = fromInverseUnary(*IFLASH_NEXT);
+    segmentNum = fromInverseUnary(*next);
     targetSegmentStart = (IFLASH_START + (segmentNum * IFLASH_SEGMENT_SIZE));
 
     printf("Write: Segment start %p\n\r", targetSegmentStart);
@@ -154,9 +156,11 @@ implementation {
     memcpy((void*)((uint16_t)addr + targetSegmentStart), buf, size);
     
     //increment the next segment number
-    *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
-    printf("after inc: ");
-    fromInverseUnary(*IFLASH_NEXT);
+    //TODO: this doesn't seem to always "take". why? are we exceeding
+    //  the cumulative programming time for this segment? That can't
+    //  be right. 
+    nextVal = incrementInverseUnary(*next);
+    *next = nextVal;
 
     //disable write
     FCTL1 = FWKEY;
@@ -172,9 +176,10 @@ implementation {
     if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
       return ESIZE;
     }
-
+    //TODO: fix wrap-around
     targetSegmentStart = IFLASH_START + (fromInverseUnary(*IFLASH_NEXT) - 1)*
       IFLASH_SEGMENT_SIZE;
+    printf("Read: Segment start %p \n\r", targetSegmentStart);
     addr = (void*)((uint16_t)targetSegmentStart + (uint16_t)addr);
 
     //bingo-bango

@@ -108,10 +108,11 @@ module TestP{
     uint8_t check = 0;
     error_t error;
     error = call InternalFlash.write(DEST_ADDR, &counter, 1);
-    printf("Wrote %d to %p: %s\n\r", counter, DEST_ADDR, decodeError(error));
+    printf("\n\rWrote %d to %p: %s\n\r", counter, DEST_ADDR, decodeError(error));
     error = call InternalFlash.read(DEST_ADDR, &check, 1);
-    printf("Read %d from %p: %s\n\r", check, DEST_ADDR, decodeError(error));
+    printf("\n\rRead %d from %p: %s\n\r", check, DEST_ADDR, decodeError(error));
     counter++;
+    printf("\n\r\n\r");
   }
 #endif 
 
