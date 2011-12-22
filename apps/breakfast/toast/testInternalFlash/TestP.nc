@@ -41,8 +41,8 @@ module TestP{
   }
 
   void eraseSegment(volatile uint8_t* ptr){
-    uint8_t wdState = WDTCTL && 0x00ff;
-    //disable WDT
+    uint8_t wdState = WDTCTL & 0x00ff;
+    //hold WDT
     WDTCTL = WDTPW + WDTHOLD;
 
     setupFlashClock();
@@ -80,21 +80,27 @@ module TestP{
     WDTCTL = WDTPW + wdState;
   }
 
-  event void Timer.fired(){
-    error_t error = SUCCESS;
-    uint8_t check = 0;
-    counter++;
-    //eraseSegment((uint8_t*)0x1000);
-    //writeFlash((uint8_t*)0x1000, &counter, 1);
+  #define DEST_ADDR ((uint8_t*)0x1000)
 
-    error = call InternalFlash.write((void*)0x0000, &counter, 1);
-    printf("write %d %s\n\r", counter, decodeError(error));
-    error = call InternalFlash.read((void*)0x0000, &check, 1);
-    //check = *((uint8_t*)0x1000);
-    printf("read: %d \n\r", check);
-    if (check != counter){
-      call Timer.stop();
-    }
+  event void Timer.fired(){
+    uint8_t check;
+
+    //should be 0xff after fresh install, or whatever it was at the
+    //  end of previous cycle
+    check = *((uint8_t*)DEST_ADDR);
+    printf("Value at %p is %x\n\r", DEST_ADDR, check);
+    
+    //should be 0xff after erasure
+    eraseSegment(DEST_ADDR);
+    check = *((uint8_t*)DEST_ADDR);
+    printf("Value at %p after erase is %x\n\r", DEST_ADDR, check);
+
+    //should be counter value after write
+    writeFlash(DEST_ADDR, &counter, 1);
+    check = *((uint8_t*)DEST_ADDR);
+    printf("Value at %p after write is %x\n\r", DEST_ADDR, check);
+
+    counter++;
   }
 
 }
