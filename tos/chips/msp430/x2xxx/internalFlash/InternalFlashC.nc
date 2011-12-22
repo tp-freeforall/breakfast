@@ -53,68 +53,27 @@
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
-module InternalFlashC {
+module InternalFlashC{
   provides interface InternalFlash;
 }
 
 implementation {
 
-  void unlockForWrite(uint8_t* ptr){
-    //TODO: check ptr address for lock/unlock A
-    //unlock segment A if needed
-    if (FCTL3 & LOCKA){
-      FCTL3 = FWKEY + LOCKA;
-    }
-    //unlock flash if needed
-    if (FCTL3 & LOCK){
-      FCTL3 = FWKEY + LOCK;
-    }
-  }
 
-  void lockAfterWrite(uint8_t* ptr){
-    //TODO: check for whether we were in segment A.
-    if (!(FCTL3 & LOCKA)){
-      FCTL3 = FWKEY + LOCKA;
-    }
-    if (!(FCTL3 & LOCK)){
-      FCTL3 = FWKEY + LOCK;
-    }
-  }
-
-  void setupFlashClock(){
-    //flash write pw, SMCLK, div 1
-    FCTL2 = FWKEY + FSSEL_2 + FN0;
-  }
 
   void eraseSegment(uint8_t* ptr){
-    uint8_t wdState = WDTCTL && 0x00ff;
-    //disable WDT
-    WDTCTL = WDTPW + WDTHOLD;
-
-    setupFlashClock();
-    unlockForWrite(ptr);
-
     //set up for the segment erase
     //MERAS=0, ERASE=1: erase segment
-    FCTL1 = FWKEY + ERASE;
     //dummy write to segment being erased: in this case, info A
     *ptr = 0;
     //should stall until done
-
-    lockAfterWrite(ptr);
-    //put WDT back as it was
-    WDTCTL = WDTPW + wdState;
+    FCTL1 = FWKEY;
   }
 
   //TODO: watch out for cumulative programming time limit
   //since this is running from flash, can only do byte/word writes
   void writeFlash(uint8_t* ptr, uint8_t* data, uint8_t len){
     uint8_t i;
-    uint8_t wdState = WDTCTL & 0x00ff;
-    WDTCTL = WDTPW + WDTHOLD;
-
-    setupFlashClock();
-    unlockForWrite(ptr);
     //set up for write
     FCTL1 = FWKEY + WRT;
     for(i = 0; i < len; i++){
@@ -122,99 +81,117 @@ implementation {
     }
     //clear write bit
     FCTL1 = FWKEY;
-    lockAfterWrite(ptr);
-    WDTCTL = WDTPW + wdState;
   }
 
-
-  enum {
-    IFLASH_OFFSET     = 0x1000,
-    IFLASH_SIZE       = 128,
-    IFLASH_SEG0_VNUM_ADDR = 0x107f,
-    IFLASH_SEG1_VNUM_ADDR = 0x10ff,
-    IFLASH_INVALID_VNUM = -1,
+  enum{
+    IFLASH_SEGMENT_SIZE = 64,
+    IFLASH_START = 0x1000,
+    IFLASH_END   = 0x10FF,
+    IFLASH_ERASED = 0xFF,
   };
 
-  uint8_t chooseSegment() {
-    int8_t vnum0 = *(int8_t*)IFLASH_SEG0_VNUM_ADDR;
-    int8_t vnum1 = *(int8_t*)IFLASH_SEG1_VNUM_ADDR;
-    if (vnum0 == IFLASH_INVALID_VNUM){
-      printf("vnum0 invalid\n\r");
-      return 1;
-    }else if (vnum1 == IFLASH_INVALID_VNUM){
-      printf("vnum1 invalid\n\r");
-      return 0;
-    }
-    return ( (int8_t)(vnum0 - vnum1) < 0 );
-  }
-
+  //we can flip bits from 1 to 0 without doing a segment erase, so a
+  //freshly-erased segment will be marked with version 1111 1111
+  //when we start a new segment, we clear another bit from the
+  //previously-existing segments. 
+  // this means that at any given time, the oldest segment is the one
+  // that has the lowest value in its version byte.
+  //e.g. 
+  // A      B       C       D
+  // 1111   1111    1111    1111
+  // 0111   1111    1111    1111
+  // 0011   0111    1111    1111
+  // 0001   0011    0111    1111
+  // 0000   0001    0011    0111
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
+    uint8_t* k;
+    uint8_t* targetSegmentStart;
+    uint8_t oldestVersion = 0xFF;
+    uint8_t segmentVersion;
+    uint8_t wdState;
 
-    volatile int8_t *newPtr;
-    int8_t *oldPtr;
-    int8_t *bufPtr = (int8_t*)buf;
-    int8_t version;
-    uint16_t i;
-    //addr: [0x0, 0x7e] -> [0x1000, 0x107e]
-    addr += IFLASH_OFFSET;
-    newPtr = oldPtr = (int8_t*)IFLASH_OFFSET;
-    //map to next segment
-    if (chooseSegment()) {
-      printf("segment 1\n\r");
-      oldPtr += IFLASH_SIZE;
+    if (size > IFLASH_SEGMENT_SIZE - 1){
+      return ESIZE;
     }
-    else {
-      printf("segment 0\n\r");
-      addr += IFLASH_SIZE;
-      newPtr += IFLASH_SIZE;
-    }
-    
-    printf("addr %p oldPtr %p newPtr %p buf %p\n\r", addr, oldPtr, newPtr, buf);
 
-    //set flash timing generator 
-    //MCLK: 4mhz on toast, so we divide by 12 to get ~367khz
-    //  datasheet indicates it should be between 257khz and 476khz
-    FCTL2 = FWKEY + FSSEL1 + (11);
-    //clear lock bits (also clears locka!)
-    FCTL3 = FWKEY;
-    //enable segment erase
+    for (k = (uint8_t*)IFLASH_START; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
+      //last byte of each 64-byte segment is "version"
+      segmentVersion = *(k + IFLASH_SEGMENT_SIZE - 1);
+      //if we find an erased-segment, just use it.
+      if (segmentVersion == IFLASH_ERASED){
+        targetSegmentStart = k;
+        break;
+      }
+      //otherwise, the oldest segment is the one with the lowest
+      // version number
+      if (segmentVersion < oldestVersion){
+        oldestVersion = segmentVersion;
+        targetSegmentStart = k;
+      }
+    }
+    //printf("Write: Segment start %p\n\r", targetSegmentStart);
+
+    wdState = WDTCTL & 0x00ff;
+    //set up timing generator (mclk/12 puts it in the right range)
+    FCTL2 = FWKEY + FSSEL_1 + 11;
+    //unlock
+    FCTL3 = FWKEY; 
+
+    //erase the target segment
     FCTL1 = FWKEY + ERASE;
-    //writing to newPtr causes erase to occur
-    *newPtr = 0;
-    //enable write (disable erase)
+    *targetSegmentStart = 0;
+
+    //write to it
     FCTL1 = FWKEY + WRT;
-    
-    //do the copy
-    for ( i = 0; i < IFLASH_SIZE-1; i++, newPtr++, oldPtr++ ) {
-      if ((uint16_t)newPtr < (uint16_t)addr || (uint16_t)addr+size <= (uint16_t)newPtr)
-	*newPtr = *oldPtr;
-      else
-	*newPtr = *bufPtr++;
+    memcpy((void*)((uint16_t)addr + targetSegmentStart), buf, size);
+
+    //update versions: shift right 1
+    for (k = (uint8_t*)IFLASH_START ; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
+      if ( *(k + IFLASH_SEGMENT_SIZE - 1) != IFLASH_ERASED){
+        *(k + IFLASH_SEGMENT_SIZE -1) = *(k +IFLASH_SEGMENT_SIZE -1) >> 1;
+        //printf("Set %p to %x\n\r", (k+IFLASH_SEGMENT_SIZE -1), *(k + IFLASH_SEGMENT_SIZE -1));
+      }
     }
-    //write the version
-    version = *oldPtr + 1;
-    if (version == IFLASH_INVALID_VNUM)
-      version++;
-    *newPtr = version;
+
+    *(targetSegmentStart + IFLASH_SEGMENT_SIZE - 1) =
+       *(targetSegmentStart + IFLASH_SEGMENT_SIZE - 1) >> 1;
     //disable write
     FCTL1 = FWKEY;
     //lock
     FCTL3 = FWKEY + LOCK + LOCKA;
-    printf("version %d (in flash at %p: %d)\n\r", version, newPtr, *newPtr);
+    WDTCTL = WDTPW + wdState;
     return SUCCESS;
-
   }
 
   command error_t InternalFlash.read(void* addr, void* buf, uint16_t size) {
     //find the right physical location
-    addr += IFLASH_OFFSET;
-    if (chooseSegment())
-      addr += IFLASH_SIZE;
+    uint8_t* k;
+    uint8_t* youngestSegmentStart;
+    uint8_t youngestVersion = 0x00;
+    uint8_t curVersion;
+
+    if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
+      return ESIZE;
+    }
+
+    for (k = (uint8_t*)IFLASH_START; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
+      curVersion = *(k + IFLASH_SEGMENT_SIZE - 1);
+      //printf("At %p found %x\n\r", (k + IFLASH_SEGMENT_SIZE - 1), curVersion);
+      if( curVersion != IFLASH_ERASED && curVersion > youngestVersion){
+        youngestVersion  = curVersion;
+        youngestSegmentStart = k;
+        //printf("new youngest segment %p\n\r", youngestSegmentStart);
+      }
+    }
+    //printf("Read: Segment start %p\n\r", youngestSegmentStart);
+    //nothing's been written to flash, so failitupskis
+    if (youngestVersion == IFLASH_ERASED){
+      return FAIL;
+    }
+    addr = (void*)((uint16_t)youngestSegmentStart + (uint16_t)addr);
     //bingo-bango
     memcpy(buf, addr, size);
-
     return SUCCESS;
-
   }
 
 }

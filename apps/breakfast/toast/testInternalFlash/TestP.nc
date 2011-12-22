@@ -80,8 +80,8 @@ module TestP{
     WDTCTL = WDTPW + wdState;
   }
 
+#ifdef TEST_MANUAL
   #define DEST_ADDR ((uint8_t*)0x1000)
-
   event void Timer.fired(){
     uint8_t check;
 
@@ -102,5 +102,17 @@ module TestP{
 
     counter++;
   }
+#else
+  #define DEST_ADDR ((uint8_t*)0x00)
+  event void Timer.fired(){
+    uint8_t check = 0;
+    error_t error;
+    error = call InternalFlash.write(DEST_ADDR, &counter, 1);
+    printf("Wrote %d to %p: %s\n\r", counter, DEST_ADDR, decodeError(error));
+    error = call InternalFlash.read(DEST_ADDR, &check, 1);
+    printf("Read %d from %p: %s\n\r", check, DEST_ADDR, decodeError(error));
+    counter++;
+  }
+#endif 
 
 }
