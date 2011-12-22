@@ -85,10 +85,33 @@ implementation {
 
   enum{
     IFLASH_SEGMENT_SIZE = 64,
-    IFLASH_START = 0x1000,
-    IFLASH_END   = 0x10FF,
     IFLASH_ERASED = 0xFF,
   };
+
+  #define IFLASH_START ((void*) 0x1000)
+  #define IFLASH_END   ((void*) 0x10FF)
+  #define IFLASH_NEXT  ((uint8_t*) 0x10FF)
+
+
+
+  uint8_t fromInverseUnary(uint8_t iu){
+    uint8_t ret = 0;
+    printf("from IU: %x ", iu);
+
+    iu ^= 0xFF;
+    while (iu){
+      ret += 1;
+      iu = (iu >> 1);
+    }
+    printf("-> %x\n\r", ret);
+    return ret;
+  }
+
+  uint8_t incrementInverseUnary(uint8_t iu){
+    uint8_t ret = (iu - 1) & iu;
+    //printf("increment IU: %x -> %x\n\r", iu, ret);
+    return ret;
+  }
 
   //we can flip bits from 1 to 0 without doing a segment erase, so a
   //freshly-erased segment will be marked with version 1111 1111
@@ -104,32 +127,17 @@ implementation {
   // 0001   0011    0111    1111
   // 0000   0001    0011    0111
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
-    uint8_t* k;
+    uint8_t segmentNum;
     uint8_t* targetSegmentStart;
-    uint8_t oldestVersion = 0xFF;
-    uint8_t segmentVersion;
     uint8_t wdState;
-
-    if (size > IFLASH_SEGMENT_SIZE - 1){
+    
+    if ((uint16_t)addr + size > IFLASH_SEGMENT_SIZE - 1){
       return ESIZE;
     }
+    segmentNum = fromInverseUnary(*IFLASH_NEXT);
+    targetSegmentStart = (IFLASH_START + (segmentNum * IFLASH_SEGMENT_SIZE));
 
-    for (k = (uint8_t*)IFLASH_START; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
-      //last byte of each 64-byte segment is "version"
-      segmentVersion = *(k + IFLASH_SEGMENT_SIZE - 1);
-      //if we find an erased-segment, just use it.
-      if (segmentVersion == IFLASH_ERASED){
-        targetSegmentStart = k;
-        break;
-      }
-      //otherwise, the oldest segment is the one with the lowest
-      // version number
-      if (segmentVersion < oldestVersion){
-        oldestVersion = segmentVersion;
-        targetSegmentStart = k;
-      }
-    }
-    //printf("Write: Segment start %p\n\r", targetSegmentStart);
+    printf("Write: Segment start %p\n\r", targetSegmentStart);
 
     wdState = WDTCTL & 0x00ff;
     //set up timing generator (mclk/12 puts it in the right range)
@@ -144,17 +152,12 @@ implementation {
     //write to it
     FCTL1 = FWKEY + WRT;
     memcpy((void*)((uint16_t)addr + targetSegmentStart), buf, size);
+    
+    //increment the next segment number
+    *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
+    printf("after inc: ");
+    fromInverseUnary(*IFLASH_NEXT);
 
-    //update versions: shift right 1
-    for (k = (uint8_t*)IFLASH_START ; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
-      if ( *(k + IFLASH_SEGMENT_SIZE - 1) != IFLASH_ERASED){
-        *(k + IFLASH_SEGMENT_SIZE -1) = *(k +IFLASH_SEGMENT_SIZE -1) >> 1;
-        //printf("Set %p to %x\n\r", (k+IFLASH_SEGMENT_SIZE -1), *(k + IFLASH_SEGMENT_SIZE -1));
-      }
-    }
-
-    *(targetSegmentStart + IFLASH_SEGMENT_SIZE - 1) =
-       *(targetSegmentStart + IFLASH_SEGMENT_SIZE - 1) >> 1;
     //disable write
     FCTL1 = FWKEY;
     //lock
@@ -164,31 +167,16 @@ implementation {
   }
 
   command error_t InternalFlash.read(void* addr, void* buf, uint16_t size) {
-    //find the right physical location
-    uint8_t* k;
-    uint8_t* youngestSegmentStart;
-    uint8_t youngestVersion = 0x00;
-    uint8_t curVersion;
+    void* targetSegmentStart;
 
     if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
       return ESIZE;
     }
 
-    for (k = (uint8_t*)IFLASH_START; k < (uint8_t*)IFLASH_END; k += IFLASH_SEGMENT_SIZE){
-      curVersion = *(k + IFLASH_SEGMENT_SIZE - 1);
-      //printf("At %p found %x\n\r", (k + IFLASH_SEGMENT_SIZE - 1), curVersion);
-      if( curVersion != IFLASH_ERASED && curVersion > youngestVersion){
-        youngestVersion  = curVersion;
-        youngestSegmentStart = k;
-        //printf("new youngest segment %p\n\r", youngestSegmentStart);
-      }
-    }
-    //printf("Read: Segment start %p\n\r", youngestSegmentStart);
-    //nothing's been written to flash, so failitupskis
-    if (youngestVersion == IFLASH_ERASED){
-      return FAIL;
-    }
-    addr = (void*)((uint16_t)youngestSegmentStart + (uint16_t)addr);
+    targetSegmentStart = IFLASH_START + (fromInverseUnary(*IFLASH_NEXT) - 1)*
+      IFLASH_SEGMENT_SIZE;
+    addr = (void*)((uint16_t)targetSegmentStart + (uint16_t)addr);
+
     //bingo-bango
     memcpy(buf, addr, size);
     return SUCCESS;
