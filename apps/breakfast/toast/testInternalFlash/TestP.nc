@@ -9,10 +9,11 @@ module TestP{
 } implementation {
   uint8_t counter;
   event void Boot.booted(){
+    printf("Booted\n\r");
     call Timer.startPeriodic(1024);
   }
 
-  void unlockForWrite(uint8_t* ptr){
+  void unlockForWrite(volatile uint8_t* ptr){
     //TODO: check ptr address for lock/unlock A
     //unlock segment A if needed
     if (FCTL3 & LOCKA){
@@ -24,7 +25,7 @@ module TestP{
     }
   }
 
-  void lockAfterWrite(uint8_t* ptr){
+  void lockAfterWrite(volatile uint8_t* ptr){
     //TODO: check for whether we were in segment A.
     if (!(FCTL3 & LOCKA)){
       FCTL3 = FWKEY + LOCKA;
@@ -35,11 +36,11 @@ module TestP{
   }
 
   void setupFlashClock(){
-    //flash write pw, SMCLK, div 1
-    FCTL2 = FWKEY + FSSEL_2 + FN0;
+    //flash write pw, mclk, divide by 12
+    FCTL2 = FWKEY + FSSEL_1 + 11;
   }
 
-  void eraseSegment(uint8_t* ptr){
+  void eraseSegment(volatile uint8_t* ptr){
     uint8_t wdState = WDTCTL && 0x00ff;
     //disable WDT
     WDTCTL = WDTPW + WDTHOLD;
@@ -61,7 +62,7 @@ module TestP{
 
   //TODO: watch out for cumulative programming time limit
   //since this is running from flash, can only do byte/word writes
-  void writeFlash(uint8_t* ptr, uint8_t* data, uint8_t len){
+  void writeFlash(volatile uint8_t* ptr, uint8_t* data, uint8_t len){
     uint8_t i;
     uint8_t wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
@@ -80,15 +81,20 @@ module TestP{
   }
 
   event void Timer.fired(){
+    error_t error = SUCCESS;
     uint8_t check = 0;
-    error_t error;
     counter++;
-    error = call InternalFlash.write((void*)0x1000, &counter, 1);
-    printf("write %d: %s\n\r", 
-      counter, 
-      decodeError(error));
-    error = call InternalFlash.read((void*)0x1000, &check, 1);
-    printf("read: %d %s\n\r", check, decodeError(error));
+    //eraseSegment((uint8_t*)0x1000);
+    //writeFlash((uint8_t*)0x1000, &counter, 1);
+
+    error = call InternalFlash.write((void*)0x0000, &counter, 1);
+    printf("write %d %s\n\r", counter, decodeError(error));
+    error = call InternalFlash.read((void*)0x0000, &check, 1);
+    //check = *((uint8_t*)0x1000);
+    printf("read: %d \n\r", check);
+    if (check != counter){
+      call Timer.stop();
+    }
   }
 
 }
