@@ -49,6 +49,8 @@ module TestP{
     call UartControl.start();
     globalAddr[GLOBAL_ADDR_LENGTH - 1] = TOS_NODE_ID;
     printf("I2C Register Test\n\r");
+    P6DIR = 0xff;
+    P6SEL = 0x00;
   }
 
   event uint16_t I2CDiscoverer.getLocalAddr(){
@@ -100,26 +102,40 @@ module TestP{
   }
 
   task void write(){
-    printf("%s: \n\r", __FUNCTION__);
-    call Resource.request();
-  }
-
-  event void Resource.granted(){
     pkt.pos = 0;
     pkt.body.clientId = 0x01;
     printf("%s: \n\r", __FUNCTION__ );
     printf("call write with %x %d %p\n\r", slaveAddr, sizeof(pkt), &pkt);
-    printf("Write: %s \n\r", decodeError(call I2CPacket.write(I2C_START, slaveAddr, sizeof(pkt), (uint8_t*)&pkt)));
+    printf("Write: %s \n\r", decodeError(call
+    I2CPacket.write(I2C_START|I2C_STOP, slaveAddr, sizeof(pkt), (uint8_t*)&pkt)));
+  }
+
+  task void startWrite(){
+    printf("%s: \n\r", __FUNCTION__);
+    if (! call Resource.isOwner()){
+      call Resource.request();
+    } else {
+      post write();
+    }
+  }
+
+  event void Resource.granted(){
+    printf("%s: \n\r", __FUNCTION__);
+    post write();
   }
 
   task void seek(){
-    pkt.pos = 2;
+    //position 0 = client ID, so read from 1
+    pkt.pos = 1;
     seeking = TRUE;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(call I2CPacket.write(I2C_START, slaveAddr, 1, (uint8_t*)&pkt)));
   }
 
   task void read(){
-    call I2CPacket.read(I2C_START|I2C_STOP, slaveAddr, 9, readBackBuf);
+    error_t error;
+    memset(readBackBuf, 9, 0x00);
+    error = call I2CPacket.read(I2C_RESTART|I2C_STOP, slaveAddr, 9, readBackBuf);
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
   async event void I2CPacket.readDone(error_t error, uint16_t addr, uint8_t len, uint8_t* data){
@@ -153,7 +169,7 @@ module TestP{
         post masterStart();
         break;
       case 'w':
-        post write();
+        post startWrite();
         break;
       case 'r':
         post seek();

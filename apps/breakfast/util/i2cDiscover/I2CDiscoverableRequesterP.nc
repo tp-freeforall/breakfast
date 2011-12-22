@@ -116,7 +116,7 @@ generic module I2CDiscoverableRequesterP(){
 
 
   async event void SubI2CSlave.slaveStart(bool generalCall){
-    //printf("%s: %x \n\r", __FUNCTION__, generalCall);
+//    printf("%s: %x \n\r", __FUNCTION__, generalCall);
     isDiscovering = generalCall;
     setAddrNeeded = FALSE;
     resetNeeded = FALSE;
@@ -128,7 +128,7 @@ generic module I2CDiscoverableRequesterP(){
 
   async event bool SubI2CSlave.slaveReceiveRequested(){
     uint8_t data;
-    //printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     //printf("RX %x\n\r", data);
     if (isDiscovering){
       isReceive=TRUE;
@@ -174,6 +174,7 @@ generic module I2CDiscoverableRequesterP(){
   }
 
   async event bool SubI2CSlave.slaveTransmitRequested(){
+//    printf("%s: \n\r", __FUNCTION__);
     if (isDiscovering){
       isReceive=FALSE;
       setState(S_ERROR);
@@ -293,7 +294,7 @@ generic module I2CDiscoverableRequesterP(){
   //the second message (set or reset) is either missed or causes a
   //re-post, which doesn't do us much good.
   async event void SubI2CSlave.slaveStop(){
-    //printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     if (isDiscovering){
       if (isReceive && (resetNeeded || setAddrNeeded)){
         if (resetNeeded){
