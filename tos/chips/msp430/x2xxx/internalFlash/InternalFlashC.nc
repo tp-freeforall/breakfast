@@ -1,55 +1,38 @@
-// $Id: InternalFlashC.nc,v 1.4 2010-06-29 22:07:48 scipio Exp $
-
-/*
- *
- *
- * Copyright (c) 2000-2004 The Regents of the University  of California.  
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- * - Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the
- *   distribution.
- * - Neither the name of the University of California nor the names of
- *   its contributors may be used to endorse or promote products derived
- *   from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-
 /**
- * InternalFlashC.nc - Internal flash implementation for telos msp
- * platform. On the msp, the flash must first be erased before a value
- * can be written. However, the msp can only erase the flash at a
- * segment granularity (128 bytes for the information section). This
- * module allows transparent read/write of individual bytes to the
- * information section by dynamically switching between the two
- * provided segments in the information section.
+ * InternalFlashC.nc - Internal flash implementation for msp430x2xxx
+ * series. This family has 4 64-byte segments:
+ *  0x1000 - 0x103f  D
+ *  0x1040 - 0x107f  C
+ *  0x1080 - 0x10bf  B
+ *  0x10c0 - 0x10ff  A
+ * 
+ * Segment A is locked independently of the other segments, but this
+ * implementation *does not* give it any special attention otherwise.
  *
- * Valid address range is 0x1000 - 0x107E (0x107F is used to store the
- * version number of the information segment).
+ * Addresses must be between 0 and 63 (0x3f). The highest order byte
+ * of each segment is reserved for version tracking (though only
+ * 0x10FF is used for this purpose).  When new data is written, the
+ * oldest segment is erased and the data is stored there. The current
+ * segment number is updated after an erase/write and is about as
+ * atomic as an operation can get, so this should prevent data loss if
+ * a failure occurs in the middle of an operation.
  *
- * Doug Carlson: Ported to x2xx family 
+ * 0x10FF is an inverse-unary number that indicates which segment
+ * should be written to next. We can flip bits from 1 to 0 without
+ * doing a segment erase, so we can increment this field freely.
+ * This lets us identify the version with a single flash read/lookup
+ * instead of having to search through versions on each page and doing
+ * comparisons.
  *
- * @author Jonathan Hui <jwhui@cs.berkeley.edu>
+ * 0xffff = 0: "segment A erased"  -> write A, read D 
+ * 0xfffe = 1: "segment A written" -> write B, read A 
+ * 0xfffc = 2: "segment B written" -> write C, read B 
+ * 0xfff8 = 3: "segment C written" -> write D, read C 
+ * 0xfff0 = 4: "segment D written" -> write A, read D (4%numSegments == 0)
+ * 
+ * This scheme should work for the general case where you store the
+ * version # in the first segment of the cycle.
+ *
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
@@ -62,7 +45,6 @@ implementation {
    enum{
     IFLASH_SEGMENT_SIZE = 64,
     IFLASH_NUM_SEGMENTS = 4,
-    IFLASH_ERASED = 0xFF,
   };
 
   #define IFLASH_START ((void*) 0x1000)
@@ -81,14 +63,14 @@ implementation {
   }
 
   uint8_t incrementInverseUnary(uint8_t iu){
-    uint8_t ret = (iu - 1) & iu;
-    return ret;
+    return (iu - 1) & iu;
   }
 
   int8_t getNextSegmentIndex(){
     return fromInverseUnary(*IFLASH_NEXT) % IFLASH_NUM_SEGMENTS;
   }
 
+  //nb: segment A = segment 0 = TOP of flash
   uint8_t* getNextSegmentStart(){
     uint8_t index = (IFLASH_NUM_SEGMENTS - getNextSegmentIndex() - 1)%IFLASH_NUM_SEGMENTS;
     return IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
@@ -103,12 +85,6 @@ implementation {
     *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
   }
 
-  //we can flip bits from 1 to 0 without doing a segment erase, so:
-  // 0xffff = "segment A erased"  -> write A, read D : 0
-  // 0xfffe = "segment A written" -> write B, read A : 1
-  // 0xfffc = "segment B written" -> write C, read B : 2
-  // 0xfff8 = "segment C written" -> write D, read C : 3
-  // 0xfff0 = "segment D written" -> write A, read D : 4
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
     volatile uint8_t* targetSegmentStart;
     uint8_t wdState;
@@ -118,6 +94,7 @@ implementation {
     }
     targetSegmentStart = getNextSegmentStart();
 
+    //pause watchdog
     wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
 
@@ -128,6 +105,7 @@ implementation {
     //setup
     FCTL2 = FWKEY + FSSEL_1 + 11;
 
+    //TODO: only unlock segment A if needed
     //unlock: writing 1 to LOCKA *toggles* it, it doesn't set it.
     //Writing 0 has no effect. SO, we want to write 1 if the bit is
     //already set
@@ -143,9 +121,11 @@ implementation {
 
     incrementSegmentIndex();
 
+    //disable writes/erases
     FCTL1 = FWKEY;
     //lock: LOCKA & (FCTL3 ^ LOCKA) = 0 if already locked, 1 if not
     FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
+    //restore watchdog settings
     WDTCTL = WDTPW + wdState;
     return SUCCESS;
   }
