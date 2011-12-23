@@ -31,9 +31,6 @@ module InternalFlashAP{
   
 
   command error_t Init.init(){
-    //TODO: this divider should be set with the rest of the clock
-    //setup
-    FCTL2 = FWKEY + FSSEL_1 + 11;
     return copyIfNeeded(TRUE);
   }
 

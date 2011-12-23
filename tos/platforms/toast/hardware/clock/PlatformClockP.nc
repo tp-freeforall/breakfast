@@ -162,10 +162,16 @@ module PlatformClockP {
     TBCTL = MC1 | (TBCTL & ~(MC1|MC0));
   }
 
+  void initFlashClock(){
+    //4 mhz / 12 (11+1) -> "Flash timing generator frequency"
+    FCTL2 = FWKEY + FSSEL_1 + 11;
+  }
+
   command error_t Init.init ()
   {
     initClocks();
     initTimers();
+    initFlashClock();
     startTimers();
     return call SubInit.init();
   }

@@ -95,13 +95,6 @@ implementation {
     wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
 
-    //set up timing generator (mclk/12 puts it in the right range:
-    //  check datasheet for your device and system clock settings!)
-
-    //TODO: this divider should be set with the rest of the clock
-    //setup
-    FCTL2 = FWKEY + FSSEL_1 + 11;
-
     unlockInternalFlash(targetSegmentStart);
 
     //erase the target segment
