@@ -38,15 +38,13 @@
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
+#include "InternalFlash.h"
+
 generic module InternalFlashx2xxC (uint16_t IFLASH_START, uint8_t IFLASH_NUM_SEGMENTS){
   provides interface InternalFlash;
 }
 
 implementation {
-  enum{
-    IFLASH_SEGMENT_SIZE = 64,
-  };
-
   volatile uint8_t* IFLASH_NEXT = (uint8_t*) (IFLASH_START + (IFLASH_SEGMENT_SIZE * IFLASH_NUM_SEGMENTS) -1);
 
   uint8_t fromInverseUnary(uint8_t iu){
@@ -80,13 +78,9 @@ implementation {
   }
 
   void incrementSegmentIndex(){
-    if ((uint16_t)IFLASH_NEXT == 0x10FF){
-      FCTL3 = FWKEY + (FCTL3 & LOCKA); 
-    }
+    unlockInternalFlash(IFLASH_NEXT);
     *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
-    if ((uint16_t)IFLASH_NEXT == 0x10FF){
-      FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
-    }
+    lockInternalFlash(IFLASH_NEXT);
   }
 
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
@@ -108,14 +102,7 @@ implementation {
     //setup
     FCTL2 = FWKEY + FSSEL_1 + 11;
 
-    //unlock: writing 1 to LOCKA *toggles* it, it doesn't set it.
-    //Writing 0 has no effect. SO, we want to write 1 if the bit is
-    //already set
-    if ((uint16_t)targetSegmentStart == 0x10C0){
-      FCTL3 = FWKEY + (FCTL3 & LOCKA); 
-    } else {
-      FCTL3 = FWKEY;
-    }
+    unlockInternalFlash(targetSegmentStart);
 
     //erase the target segment
     FCTL1 = FWKEY + ERASE;
@@ -130,12 +117,7 @@ implementation {
     //disable writes/erases
     FCTL1 = FWKEY;
 
-    //lock: LOCKA & (FCTL3 ^ LOCKA) = 0 if already locked, 1 if not
-    if ((uint16_t)targetSegmentStart == 0x10C0){
-      FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
-    } else {
-      FCTL3 = FWKEY + LOCK;
-    }
+    lockInternalFlash(targetSegmentStart);
     //restore watchdog settings
     WDTCTL = WDTPW + wdState;
     return SUCCESS;

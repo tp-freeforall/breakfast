@@ -24,10 +24,12 @@
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
 
+#include "InternalFlash.h"
+
 configuration InternalFlashC{
   provides interface InternalFlash;
 }
 implementation {
-  components new InternalFlashx2xxC(0x1000, 2);
+  components new InternalFlashx2xxC((uint16_t)IFLASH_D_START, 2);
   InternalFlash = InternalFlashx2xxC;
 }
