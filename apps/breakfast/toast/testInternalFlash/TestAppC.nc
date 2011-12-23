@@ -4,11 +4,12 @@ configuration TestAppC{
   components new TimerMilliC();
   components SerialPrintfC;
   components MainC;
-  //components new InternalFlashx2xxC(0x1000, 2) as InternalFlashC;
-  components InternalFlashC;
+  components InternalFlashC;  //standard (C/D)
+  components InternalFlashAC; //segment A
 
   TestP.Boot -> MainC.Boot;
   TestP.Timer -> TimerMilliC;
   TestP.InternalFlash -> InternalFlashC;
+  TestP.InternalFlashA -> InternalFlashAC;
 }
 
