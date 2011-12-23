@@ -90,25 +90,17 @@ implementation {
   }
 
   uint8_t* getNextSegmentStart(){
-    uint8_t* ret;
     uint8_t index = (IFLASH_NUM_SEGMENTS - getNextSegmentIndex() - 1)%IFLASH_NUM_SEGMENTS;
-
-    ret = IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
-    return ret;
+    return IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
   }
 
   uint8_t* getCurrentSegmentStart(){
-    uint8_t* ret;
     uint8_t index = (IFLASH_NUM_SEGMENTS - getNextSegmentIndex() )%IFLASH_NUM_SEGMENTS;
-    ret = IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
-    return ret;
+    return IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
   }
 
   void incrementSegmentIndex(){
-    volatile uint8_t* index = IFLASH_NEXT;
-    uint8_t nextVal;
-    nextVal = incrementInverseUnary(*index);
-    *index = nextVal;
+    *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
   }
 
   //we can flip bits from 1 to 0 without doing a segment erase, so:
@@ -126,16 +118,21 @@ implementation {
     }
     targetSegmentStart = getNextSegmentStart();
 
-
     wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
-    //set up timing generator (mclk/12 puts it in the right range)
+
+    //set up timing generator (mclk/12 puts it in the right range:
+    //  check datasheet for your device and system clock settings!)
+
+    //TODO: this divider should be set with the rest of the clock
+    //setup
     FCTL2 = FWKEY + FSSEL_1 + 11;
 
     //unlock: writing 1 to LOCKA *toggles* it, it doesn't set it.
     //Writing 0 has no effect. SO, we want to write 1 if the bit is
     //already set
     FCTL3 = FWKEY + (FCTL3 & LOCKA); 
+
     //erase the target segment
     FCTL1 = FWKEY + ERASE;
     *targetSegmentStart = 0;
