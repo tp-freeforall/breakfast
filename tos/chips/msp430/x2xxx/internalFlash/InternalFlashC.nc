@@ -59,31 +59,7 @@ module InternalFlashC{
 
 implementation {
 
-
-
-  void eraseSegment(uint8_t* ptr){
-    //set up for the segment erase
-    //MERAS=0, ERASE=1: erase segment
-    //dummy write to segment being erased: in this case, info A
-    *ptr = 0;
-    //should stall until done
-    FCTL1 = FWKEY;
-  }
-
-  //TODO: watch out for cumulative programming time limit
-  //since this is running from flash, can only do byte/word writes
-  void writeFlash(uint8_t* ptr, uint8_t* data, uint8_t len){
-    uint8_t i;
-    //set up for write
-    FCTL1 = FWKEY + WRT;
-    for(i = 0; i < len; i++){
-      ptr[i] = data[i];
-    }
-    //clear write bit
-    FCTL1 = FWKEY;
-  }
-
-  enum{
+   enum{
     IFLASH_SEGMENT_SIZE = 64,
     IFLASH_NUM_SEGMENTS = 4,
     IFLASH_ERASED = 0xFF,
@@ -93,54 +69,38 @@ implementation {
   #define IFLASH_END   ((void*) 0x10FF)
   #define IFLASH_NEXT  ((uint8_t*) 0x10FF)
 
-  void printReg(){
-    printf(" FCTL1 %x\n\r", FCTL1);
-    printf(" FCTL2 %x\n\r", FCTL2);
-    printf(" FCTL3 %x\n\r", FCTL3);
-    printf(" FCTL4 %x\n\r", FCTL4);
-    printf(" IFG1  %x\n\r", IFG1);
-  }
-
   uint8_t fromInverseUnary(uint8_t iu){
     uint8_t ret = 0;
-//    printf("fromIU %x ", iu);
 
     iu ^= 0xFF;
     while (iu){
       ret += 1;
       iu = (iu >> 1);
     }
-//    printf("-> %x\n\r", ret);
     return ret;
   }
 
   uint8_t incrementInverseUnary(uint8_t iu){
     uint8_t ret = (iu - 1) & iu;
-    //printf("increment IU: %x -> %x\n\r", iu, ret);
     return ret;
   }
 
   int8_t getNextSegmentIndex(){
-//    printf("Get next:");
     return fromInverseUnary(*IFLASH_NEXT) % IFLASH_NUM_SEGMENTS;
   }
 
   uint8_t* getNextSegmentStart(){
     uint8_t* ret;
     uint8_t index = (IFLASH_NUM_SEGMENTS - getNextSegmentIndex() - 1)%IFLASH_NUM_SEGMENTS;
-//    printf("getNextSegmentStart\n\r");
 
     ret = IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
-//    printf("next start: %d %p\n\r", index, ret);
     return ret;
   }
 
   uint8_t* getCurrentSegmentStart(){
     uint8_t* ret;
     uint8_t index = (IFLASH_NUM_SEGMENTS - getNextSegmentIndex() )%IFLASH_NUM_SEGMENTS;
-//    printf("getCurrentSegmentStart\n\r");
     ret = IFLASH_START + (index * IFLASH_SEGMENT_SIZE);
-//    printf("current start: %d %p\n\r", index, ret);
     return ret;
   }
 
@@ -148,9 +108,7 @@ implementation {
     volatile uint8_t* index = IFLASH_NEXT;
     uint8_t nextVal;
     nextVal = incrementInverseUnary(*index);
-    FCTL1 = FWKEY + WRT;
     *index = nextVal;
-    FCTL1 = FWKEY;
   }
 
   //we can flip bits from 1 to 0 without doing a segment erase, so:
@@ -168,7 +126,6 @@ implementation {
     }
     targetSegmentStart = getNextSegmentStart();
 
-//    printf("Write: Segment start %p\n\r", targetSegmentStart);
 
     wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
@@ -184,13 +141,12 @@ implementation {
     *targetSegmentStart = 0;
 
     //write to it
-    FCTL3 = FWKEY; 
     FCTL1 = FWKEY + WRT;
     memcpy((void*)((uint16_t)addr + targetSegmentStart), buf, size);
-    FCTL1 = FWKEY;
 
     incrementSegmentIndex();
 
+    FCTL1 = FWKEY;
     //lock: LOCKA & (FCTL3 ^ LOCKA) = 0 if already locked, 1 if not
     FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
     WDTCTL = WDTPW + wdState;
@@ -203,7 +159,6 @@ implementation {
     if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
       return ESIZE;
     }
-//    printf("Read: Segment start %p \n\r", targetSegmentStart);
     addr = (void*)((uint16_t)targetSegmentStart + (uint16_t)addr);
 
     //bingo-bango
