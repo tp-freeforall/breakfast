@@ -9,7 +9,8 @@
  * Segment A is locked independently of the other segments, but this
  * implementation *does not* give it any special attention otherwise.
  *
- * This configuration exposes all 4 64-byte segments.
+ * This configuration uses segments C and D only (leaving segment A
+ * for a specialized configuration that treats it differently).
  *
  * Addresses must be between 0 and 63 (0x3f). The highest order byte
  * of each segment is reserved for version tracking (though only
@@ -27,6 +28,6 @@ configuration InternalFlashC{
   provides interface InternalFlash;
 }
 implementation {
-  components new InternalFlashx2xxC(0x1000, 4);
+  components new InternalFlashx2xxC(0x1000, 2);
   InternalFlash = InternalFlashx2xxC;
 }

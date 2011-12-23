@@ -8,20 +8,25 @@
  * 
  * Segment A is locked independently of the other segments, but this
  * implementation *does not* give it any special attention otherwise.
+ * 
+ * This module provides access to a configurable set of the segments
+ * (e.g. A-D, A-B, C-D). 
  *
  * Addresses must be between 0 and 63 (0x3f). The highest order byte
- * of each segment is reserved for version tracking (though only
- * 0x10FF is used for this purpose).  When new data is written, the
- * oldest segment is erased and the data is stored there. The current
- * segment number is updated after an erase/write and is about as
- * atomic as an operation can get, so this should prevent data loss if
- * a failure occurs in the middle of an operation.
+ * of each segment is reserved for version tracking (though only the
+ * high order byte in the first segment is used for this purpose).
+ * When new data is written, the oldest segment is erased and the data
+ * is stored there. The current segment number is updated after an
+ * erase/write and is about as atomic as an operation can get, so this
+ * should prevent data loss if a failure occurs in the middle of an
+ * operation.
  *
- * 0x10FF is an inverse-unary number that indicates which segment
- * should be written to next. We can flip bits from 1 to 0 without
- * doing a segment erase, so we can increment this field freely.
- * This lets us identify the version with a single flash read/lookup
- * instead of having to search through versions on each page and doing
+ * The highest order byte of the first segment in use is an
+ * inverse-unary number that indicates which segment should be written
+ * to next. We can flip bits from 1 to 0 without doing a segment
+ * erase, so we can increment this field freely.  This lets us
+ * identify the version with a single flash read/lookup instead of
+ * having to search through versions on each page and doing
  * comparisons.
  *
  * 0xffff = 0: "segment A erased"  -> write A, read D 
@@ -29,9 +34,6 @@
  * 0xfffc = 2: "segment B written" -> write C, read B 
  * 0xfff8 = 3: "segment C written" -> write D, read C 
  * 0xfff0 = 4: "segment D written" -> write A, read D (4%numSegments == 0)
- * 
- * This scheme should work for the general case where you store the
- * version # in the first segment of the cycle.
  *
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
@@ -78,7 +80,13 @@ implementation {
   }
 
   void incrementSegmentIndex(){
+    if ((uint16_t)IFLASH_NEXT == 0x10FF){
+      FCTL3 = FWKEY + (FCTL3 & LOCKA); 
+    }
     *IFLASH_NEXT = incrementInverseUnary(*IFLASH_NEXT);
+    if ((uint16_t)IFLASH_NEXT == 0x10FF){
+      FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
+    }
   }
 
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
@@ -100,11 +108,14 @@ implementation {
     //setup
     FCTL2 = FWKEY + FSSEL_1 + 11;
 
-    //TODO: only unlock segment A if needed
     //unlock: writing 1 to LOCKA *toggles* it, it doesn't set it.
     //Writing 0 has no effect. SO, we want to write 1 if the bit is
     //already set
-    FCTL3 = FWKEY + (FCTL3 & LOCKA); 
+    if ((uint16_t)targetSegmentStart == 0x10C0){
+      FCTL3 = FWKEY + (FCTL3 & LOCKA); 
+    } else {
+      FCTL3 = FWKEY;
+    }
 
     //erase the target segment
     FCTL1 = FWKEY + ERASE;
@@ -118,8 +129,13 @@ implementation {
 
     //disable writes/erases
     FCTL1 = FWKEY;
+
     //lock: LOCKA & (FCTL3 ^ LOCKA) = 0 if already locked, 1 if not
-    FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
+    if ((uint16_t)targetSegmentStart == 0x10C0){
+      FCTL3 = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
+    } else {
+      FCTL3 = FWKEY + LOCK;
+    }
     //restore watchdog settings
     WDTCTL = WDTPW + wdState;
     return SUCCESS;
