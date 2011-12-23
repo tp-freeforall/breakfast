@@ -98,21 +98,33 @@ module TestP{
     //should be counter value after write
     writeFlash(DEST_ADDR, &counter, 1);
     check = *((uint8_t*)DEST_ADDR);
-    printf("Value at %p after write is %x\n\r", DEST_ADDR, check);
+    printf("Value at %p after write is %x\n\r\n\r", DEST_ADDR, check);
 
     counter++;
+    if (counter >= 8){
+      call Timer.stop();
+    }
   }
 #else
   #define DEST_ADDR ((uint8_t*)0x00)
+  #define RETRY_LIMIT 3
   event void Timer.fired(){
     uint8_t check = 0;
-    error_t error;
-    error = call InternalFlash.write(DEST_ADDR, &counter, 1);
-    printf("\n\rWrote %d to %p: %s\n\r", counter, DEST_ADDR, decodeError(error));
+    error_t error = FAIL;
+    uint8_t retries = 0;
+    while (error == FAIL && retries < RETRY_LIMIT){
+      error = call InternalFlash.write(DEST_ADDR, &counter, 1);
+      printf("Wrote %d to %p: %s\n\r", counter, DEST_ADDR, decodeError(error));
+      retries ++;
+    }
     error = call InternalFlash.read(DEST_ADDR, &check, 1);
-    printf("\n\rRead %d from %p: %s\n\r", check, DEST_ADDR, decodeError(error));
+    printf("Read %d from %p: %s\n\r", check, DEST_ADDR, decodeError(error));
     counter++;
-    printf("\n\r\n\r");
+    printf("\n\r----\n\r");
+    if (counter > 4){
+      printf("Stopping\n\r");
+      call Timer.stop();
+    }
   }
 #endif 
 

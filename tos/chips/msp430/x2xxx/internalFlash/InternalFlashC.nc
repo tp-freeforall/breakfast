@@ -85,6 +85,7 @@ implementation {
 
   enum{
     IFLASH_SEGMENT_SIZE = 64,
+    IFLASH_NUM_SEGMENTS = 4,
     IFLASH_ERASED = 0xFF,
   };
 
@@ -92,18 +93,24 @@ implementation {
   #define IFLASH_END   ((void*) 0x10FF)
   #define IFLASH_NEXT  ((uint8_t*) 0x10FF)
 
-
+  void printReg(){
+    printf(" FCTL1 %x\n\r", FCTL1);
+    printf(" FCTL2 %x\n\r", FCTL2);
+    printf(" FCTL3 %x\n\r", FCTL3);
+    printf(" FCTL4 %x\n\r", FCTL4);
+    printf(" IFG1  %x\n\r", IFG1);
+  }
 
   uint8_t fromInverseUnary(uint8_t iu){
     uint8_t ret = 0;
-    //printf("from IU: %x ", iu);
+    printf("fromIU %x ", iu);
 
     iu ^= 0xFF;
     while (iu){
       ret += 1;
       iu = (iu >> 1);
     }
-    //printf("-> %x\n\r", ret);
+    printf("-> %x\n\r", ret);
     return ret;
   }
 
@@ -111,6 +118,40 @@ implementation {
     uint8_t ret = (iu - 1) & iu;
     //printf("increment IU: %x -> %x\n\r", iu, ret);
     return ret;
+  }
+
+  int8_t getNextSegmentIndex(){
+    printf("Get next:");
+    return fromInverseUnary(*IFLASH_NEXT);
+  }
+
+  uint8_t* getNextSegmentStart(){
+    uint8_t* ret;
+    printf("getNextSegmentStart\n\r");
+    ret = IFLASH_START + getNextSegmentIndex() * IFLASH_SEGMENT_SIZE;
+    printf("next start: %p\n\r", ret);
+    return ret;
+  }
+
+  uint8_t* getCurrentSegmentStart(){
+    uint8_t* ret;
+    printf("getCurrentSegmentStart\n\r");
+    ret = IFLASH_START + ((getNextSegmentIndex() - 1)%IFLASH_NUM_SEGMENTS)* IFLASH_SEGMENT_SIZE;
+    printf("current start: %p\n\r", ret);
+    return ret;
+  }
+
+
+  //this increments every-other time it's called. what the hell?
+  bool incrementSegmentIndex(){
+    volatile uint8_t* index = IFLASH_NEXT;
+    uint8_t nextVal = incrementInverseUnary(*index);
+    printf("Increment index: %x -> %x", *index, nextVal);
+    FCTL1 = FWKEY + WRT;
+    *index = nextVal;
+    FCTL1 = FWKEY;
+    printf(": %x\n\r", *index);
+    return TRUE;
   }
 
   //we can flip bits from 1 to 0 without doing a segment erase, so a
@@ -127,17 +168,15 @@ implementation {
   // 0001   0011    0111    1111
   // 0000   0001    0011    0111
   command error_t InternalFlash.write(void* addr, void* buf, uint16_t size) {
-    uint8_t segmentNum;
-    uint8_t* targetSegmentStart;
+    volatile uint8_t* targetSegmentStart;
     uint8_t wdState;
-    volatile uint8_t* next = IFLASH_NEXT;
-    uint8_t nextVal;
+    error_t r;
+    uint16_t tmp;
     
     if ((uint16_t)addr + size > IFLASH_SEGMENT_SIZE - 1){
       return ESIZE;
     }
-    segmentNum = fromInverseUnary(*next);
-    targetSegmentStart = (IFLASH_START + (segmentNum * IFLASH_SEGMENT_SIZE));
+    targetSegmentStart = getNextSegmentStart();
 
     printf("Write: Segment start %p\n\r", targetSegmentStart);
 
@@ -145,41 +184,42 @@ implementation {
     WDTCTL = WDTPW + WDTHOLD;
     //set up timing generator (mclk/12 puts it in the right range)
     FCTL2 = FWKEY + FSSEL_1 + 11;
-    //unlock
-    FCTL3 = FWKEY; 
 
+    //unlock: writing 1 to LOCKA *toggles* it, it doesn't set it.
+    //Writing 0 has no effect. SO, we want to write 1 if the bit is
+    //already set
+    FCTL3 = FWKEY + (FCTL3 & LOCKA); 
     //erase the target segment
     FCTL1 = FWKEY + ERASE;
     *targetSegmentStart = 0;
 
     //write to it
+    FCTL3 = FWKEY; 
     FCTL1 = FWKEY + WRT;
     memcpy((void*)((uint16_t)addr + targetSegmentStart), buf, size);
-    
-    //increment the next segment number
-    //TODO: this doesn't seem to always "take". why? are we exceeding
-    //  the cumulative programming time for this segment? That can't
-    //  be right. 
-    nextVal = incrementInverseUnary(*next);
-    *next = nextVal;
-
-    //disable write
     FCTL1 = FWKEY;
-    //lock
-    FCTL3 = FWKEY + LOCK + LOCKA;
+    printf("Preinc\n\r");
+    printReg();
+    r = incrementSegmentIndex()? SUCCESS : FAIL;
+    printf("Postinc\n\r");
+    printReg();
+
+    //lock: LOCKA & (FCTL3 ^ LOCKA) = 0 if already locked, 1 if not
+    tmp = FWKEY + LOCK + (LOCKA & (FCTL3 ^ LOCKA));
+    printf("Locking with %x\n\r", tmp);
+    FCTL3 = tmp;
+    printf("Locked\n\r");
+    printReg();
     WDTCTL = WDTPW + wdState;
-    return SUCCESS;
+    return r;
   }
 
   command error_t InternalFlash.read(void* addr, void* buf, uint16_t size) {
-    void* targetSegmentStart;
+    void* targetSegmentStart = (void*) getCurrentSegmentStart();
 
     if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
       return ESIZE;
     }
-    //TODO: fix wrap-around
-    targetSegmentStart = IFLASH_START + (fromInverseUnary(*IFLASH_NEXT) - 1)*
-      IFLASH_SEGMENT_SIZE;
     printf("Read: Segment start %p \n\r", targetSegmentStart);
     addr = (void*)((uint16_t)targetSegmentStart + (uint16_t)addr);
 
