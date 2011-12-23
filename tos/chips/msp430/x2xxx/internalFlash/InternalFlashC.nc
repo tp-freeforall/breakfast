@@ -142,6 +142,7 @@ implementation {
     printf("Write: Segment start %p\n\r", targetSegmentStart);
 
     wdState = WDTCTL & 0x00ff;
+    WDTCTL = WDTPW + WDTHOLD;
     //set up timing generator (mclk/12 puts it in the right range)
     FCTL2 = FWKEY + FSSEL_1 + 11;
     //unlock
