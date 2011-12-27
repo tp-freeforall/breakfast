@@ -3,6 +3,11 @@ component will "just work" like the previous one (under
 lib/net/Deluge/extra/msp), with the notable difference that only 63
 bytes are available (instead of 127).
 
+The TLVStorage interface defines a set of commands that can be used to
+manipulate the "tag-length-value" structure that is generally found in
+segment A (containing DCO and ADC12 calibration constants, plus some
+extra space).
+
 !!!PLEASE NOTE!!!!
 All of these components assume that the flash module's clock generator
 is already set up (e.g. in the platform initialization process).  If
