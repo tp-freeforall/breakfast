@@ -13,20 +13,20 @@ generic module I2CMultiRegisterP () {
   //  out-of-bounds access. the extra logic required to allow wrapping
   //  AND let activeClient be at "index 0" is not worth it for this
   //  rare case
-  uint8_t pos;
-  uint8_t* buf;
-  uint8_t bufLen;
-  uint8_t transCount;
+  norace uint8_t pos;
+  norace uint8_t* buf;
+  norace uint8_t bufLen;
+  norace uint8_t transCount;
   bool isGC;
-  bool isPaused = FALSE;
-  bool receivePending = FALSE;
-  bool transmitPending = FALSE;
+  norace bool isPaused = FALSE;
+  norace bool receivePending = FALSE;
+  norace bool transmitPending = FALSE;
   
   enum{
     I2C_MULTI_REGISTER_INVALID = 0xff,
   };
 
-  uint8_t activeClient = I2C_MULTI_REGISTER_INVALID;
+  norace uint8_t activeClient = I2C_MULTI_REGISTER_INVALID;
 
   void transmit();
   void receive();
@@ -35,22 +35,27 @@ generic module I2CMultiRegisterP () {
     printf("%s: \n\r", __FUNCTION__);
     if (clientId == activeClient){
       if (isPaused){
+        printf("already paused\n\r");
         return EALREADY;
       } else {
+        printf("Pausing\n\r");
         isPaused = TRUE;
         return SUCCESS;
       }
     } else {
+      printf("not active client\n\r");
       return EBUSY;
     }
   }
 
   async command error_t I2CRegister.unPause[uint8_t clientId](){
-    printf("%s: \n\r", __FUNCTION__);
+    printf("%s: ac %x ip %x tp %x rp %x\n\r", __FUNCTION__, activeClient,
+      isPaused, transmitPending, receivePending);
     if (clientId == activeClient){
-      if (!isPaused){
+      if (isPaused){
         isPaused = FALSE;
         if (receivePending && transmitPending){
+          printf("Nothing pending\n\r");
           return FAIL;
         }
         if (transmitPending){
@@ -60,9 +65,11 @@ generic module I2CMultiRegisterP () {
         }
         return SUCCESS;
       } else {
+        printf("not paused\n\r");
         return EALREADY;
       }
     } else {
+      printf("Active Client wrong\n\r");
       return EBUSY;
     }
   }
@@ -92,8 +99,8 @@ generic module I2CMultiRegisterP () {
   }
 
   void receive(){
-//    printf("%s: \n\r", __FUNCTION__);
     buf[(pos-1)%bufLen] = call I2CSlave.slaveReceive();
+    printf("R: %d = %x\n\r", (pos-1)%bufLen, buf[(pos-1)%bufLen]);
     pos++;
     transCount++;
     receivePending = FALSE;
@@ -124,6 +131,7 @@ generic module I2CMultiRegisterP () {
         activeClient = call I2CSlave.slaveReceive();
         buf = signal I2CRegister.transactionStart[activeClient](FALSE);
         bufLen = signal I2CRegister.registerLen[activeClient]();
+        printf("rx buf: %p\n\r", buf);
         pos++;
         transCount ++;
         return TRUE;
@@ -152,6 +160,7 @@ generic module I2CMultiRegisterP () {
     }
     if(transCount == 0){
       buf = signal I2CRegister.transactionStart[activeClient](TRUE);
+      printf("tx buf: %p\n\r", buf);
       bufLen = signal I2CRegister.registerLen[activeClient]();
     } 
     if (isPaused){

@@ -5,7 +5,10 @@ interface I2CRegister{
   //  that the buffer it returns is not available yet.
   //Note that while the provider is not paused, this buffer may be
   //  read/written willy-nilly
-  async event uint8_t* transactionStart(bool isWrite);
+  //isTransmit is from the perspective of the master: if it's true,
+  //  then we will see more slaveTransmitRequested events within this
+  //  layer
+  async event uint8_t* transactionStart(bool isTransmit);
 
   //The provider is asking "how long is the buffer that you have
   //  given me?"

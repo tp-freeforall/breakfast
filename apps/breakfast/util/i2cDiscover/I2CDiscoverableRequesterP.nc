@@ -29,7 +29,7 @@ generic module I2CDiscoverableRequesterP(){
   uint8_t transCount;
   norace uint16_t masterAddr = I2C_INVALID_MASTER;
   norace uint16_t lastLocalAddr = I2C_DISCOVERABLE_UNASSIGNED;
-  bool isDiscovering;
+  norace bool isDiscovering;
   bool setAddrNeeded;
   bool resetNeeded;
   uint8_t state;
