@@ -143,7 +143,7 @@ module TestP{
     uint8_t i;
     printf("Read back: [\n\r");
     for (i=0; i < 63; i++){
-      printf("%c", readBackBuf[i]);
+      printf("%x ", readBackBuf[i]);
     }
     printf("\n\r]\n\r");
   }
