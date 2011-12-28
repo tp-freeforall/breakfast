@@ -764,7 +764,8 @@ class BootStrapLoader(LowLevel):
                 raise ValueError, "password has wrong length (%d)\n" % len(passwd)
             sys.stderr.write('Transmit password ...\n')
             sys.stderr.flush()
-        #send the password
+        #send the password: odd, documentation suggests that we should
+        #  omit the address/length for this command.
         self.bslTxRx(self.BSL_TXPWORD,      #Command: Transmit Password
                        0xffe0,              #Address of interupt vectors
                        0x0020,              #Number of bytes
@@ -793,6 +794,8 @@ class BootStrapLoader(LowLevel):
         """Erase the main flash memory only"""
         sys.stderr.write("Main Erase...\n")
         sys.stderr.flush()
+        self.bslReset(1)
+        self.txPasswd(self.passwd)
         self.bslTxRx(self.BSL_ERASE,                #Command: Segment Erase
                             0xfffe,                 #Any address within flash memory.
                             0xa504)                 #Required setting for main erase!
