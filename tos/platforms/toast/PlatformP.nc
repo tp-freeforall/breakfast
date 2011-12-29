@@ -28,7 +28,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE
  */
-#include "InternalFlash.h"
  
 module PlatformP {
   provides {
@@ -51,7 +50,6 @@ implementation {
 //  } 
   
   command error_t Init.init() {
-    volatile uint16_t* bslskey = (uint16_t*)0xFFDE;
     WDTCTL = WDTPW + WDTHOLD;             // Stop watchdog timer
     //TODO: initialize reset pin function
     //SFRRPCR1 = SYSRSTUP | SYSRSTRE; //pullup, enable
@@ -68,14 +66,6 @@ implementation {
     // before letting the system continue on into a low power mode.
     //uwait(1024*10);    
 
-    //disable mass-erase-on-incorrect password bsl feature
-    if (*bslskey != 0x0000){
-      unlockInternalFlash(bslskey);
-      FCTL1 = FWKEY + WRT;
-      *bslskey = 0x0000;
-      FCTL1 = FWKEY;
-      lockInternalFlash(bslskey);
-    }
     return SUCCESS;
   }
   
