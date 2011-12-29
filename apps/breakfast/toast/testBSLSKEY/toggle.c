@@ -1,8 +1,5 @@
 #include "msp430.h"
 
-#define BSLSKEY_ 0xFFDE
-const_sfrw(BSLSKEY, BSLSKEY_);
-//BSLSKEY = 0;
 
 void main(void)
 {
