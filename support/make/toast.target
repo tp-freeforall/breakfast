@@ -8,6 +8,10 @@ HAS_FLASH ?= 1
 PLATFORM ?= toast
 MSP_MCU = msp430x235
 IAR_MCU_GROUP = msp430x23x
+LDFLAGS +=-L $(TOSDIR)/platforms/$(PLATFORM)/ldscripts
+LDFLAGS +=-T msp430-bslskey.x
+ADDITIONAL_SRCS += $(TOSDIR)/platforms/$(PLATFORM)/bslskey.S
+#LDFLAGS +=-Wl,--verbose
 #IAR_LINKER_XCL = lnkmsp430.xcl
 PFLAGS += -DPLATFORM_HAS_32KHZ_CRYSTAL
 
