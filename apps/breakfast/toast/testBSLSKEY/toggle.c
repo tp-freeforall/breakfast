@@ -2,7 +2,7 @@
 
 #define BSLSKEY_ 0xFFDE
 const_sfrw(BSLSKEY, BSLSKEY_);
-BSLSKEY = 0;
+//BSLSKEY = 0;
 
 void main(void)
 {
@@ -20,4 +20,8 @@ void main(void)
     do (i--);
     while (i != 0);
   }
+}
+
+__attribute((wakeup)) __attribute((interrupt(PORT1_VECTOR))) void P1_ISR(void){
+  P6OUT ^=0x01;
 }
