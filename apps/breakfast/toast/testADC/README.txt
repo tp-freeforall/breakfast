@@ -1,0 +1,14 @@
+- I2CRegister client
+- sampling:
+  - sample command
+    - structure
+      - timeout (32-bit)
+      - ADC registers
+    - behavior
+      - start timer
+      - pause I2C 
+      - load ADC registers up
+      - kick off ADC / enter LPM
+      - copy data back to register (no DMA on this guy)
+- reading:
+  - just uses i2cregister behavior
