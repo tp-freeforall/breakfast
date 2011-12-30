@@ -5,17 +5,46 @@ module TLVStorageP{
   provides interface TLVStorage;
   provides interface Init;
 } implementation {
-  
+
+  void printData(void*tlvs){
+    uint8_t* ba = (uint8_t*)tlvs;
+    uint8_t i;
+    for (i=0; i < IFLASH_SEGMENT_SIZE; i+=4){
+      printf("[%d]\t%x\t%x\t%x\t%x\n\r",i, ba[i], ba[i+1], ba[i+2], ba[i+3]);
+    }
+  }
+  int16_t computeChecksum(void* tlvs){
+    int16_t* wa = (int16_t*) tlvs;
+    int16_t crc = 0x00;
+    uint8_t i;
+    for (i = 1; i < IFLASH_SEGMENT_SIZE / sizeof(uint16_t); i++){
+      crc ^= wa[i];
+    }
+    printf("CRC: %x\n\r", crc);
+    return crc;
+  }
+  bool verifyChecksum(void* tlvs){
+    int16_t* wa = (int16_t*) tlvs;
+    return 0 == (wa[0] + computeChecksum(tlvs));
+  }
+
   command error_t TLVStorage.loadTLVStorage(void* tlvs){
     uint8_t* ba = (uint8_t*) tlvs;
     version_entry_t e;
     memcpy(tlvs, IFLASH_A_START, IFLASH_SEGMENT_SIZE);
-    if (((uint16_t*)tlvs)[0] == 0xFFFF){
+//    printf("Read from flash:\n\r");
+//    printData(tlvs);
+    if (!verifyChecksum(tlvs)){
+      printf("invalid checksum.\n\r");
+//      printf("Clearing %d bytes starting from %p\n\r", IFLASH_SEGMENT_SIZE, tlvs);
+      memset(tlvs, 0xff, IFLASH_SEGMENT_SIZE);
+//      printData(tlvs);
       e.version = 0;
       ba[TLV_CHECKSUM_LENGTH] = TAG_EMPTY;
       ba[TLV_CHECKSUM_LENGTH+1] = 60;
-      memset(&ba[TLV_CHECKSUM_LENGTH+2], 60, 0xff);
       call TLVStorage.addEntry(TAG_VERSION, 2, (tlv_entry_t*)&e, tlvs,0);
+//      printf("After modification\n\r");
+//      printData(tlvs);
       //TODO: better return code? 
       return SUCCESS;
     }
@@ -40,14 +69,17 @@ module TLVStorageP{
     //  - cut it up so that an empty starts at offset
     //  - leave index set to offset
     if(offset > 0){
+      printf("Attempting to insert at %d\n\r", offset);
       //when this loop ends, index will either be > offset or sitting
       //on the start of a TAG_EMPTY which is large enough to fit it.
       while (index <= offset){
         e = (tlv_entry_t*)&ba[index];
         endIndex = index + 2 + len;
+        printf(" index %d endIndex %d\n\r", index, endIndex);
         if (e->tag == TAG_EMPTY && 
           offset >= index && 
           (endIndex <= e->len + 2 + index)){
+          printf("  Found large-enough TAG_EMPTY\n\r");
           //OK, it fits here. 
           //if there's space before it, cut TAG_EMPTY up so that
           //offset is on a TAG_EMPTY boundary, then update index
@@ -55,6 +87,8 @@ module TLVStorageP{
           if (offset > index){
             ba[offset] = TAG_EMPTY;
             ba[offset+1] = (endIndex - offset - 2 );
+            printf("   created new TAG_EMPTY at %d length %d\n\r", offset, (endIndex - offset -2));
+            printf("   update old TAG_EMPTY len from %d to %d\n\r", e->len, (offset - index - 2));
             e-> len = (offset - index - 2);
             index = offset;
             break;
@@ -64,35 +98,44 @@ module TLVStorageP{
       }
       //offset didn't work, so don't try to insert it.
       if (index > offset){
+        printf("Failed to insert at %d\n\r", offset);
         return 0;
       }
     }else {
       index = TLV_CHECKSUM_LENGTH;
+      printf("Starting at %d\n\r", index);
     }
     
     //seek to next available TAG_EMPTY and put it in
     while (index < IFLASH_SEGMENT_SIZE){
       e = (tlv_entry_t*) &ba[index];
+      printf("Checking tag %x len %d at %d\n\r", e->tag, e->len, index);
       if(e->tag == TAG_EMPTY && e->len >= len){
+        printf(" Big-enough empty at %d\n\r", index);
         emptyLen = e->len;
         e-> tag = tag;
         e-> len = len;
         if (entry != NULL){
-          memcpy(&e->data.b, entry->data.b, len);
+          printf("  Copying %d from %p to %p\n\r", len, entry->data.b, e->data.b);
+          memcpy(e->data.b, entry->data.b, len);
         } else {
+          printf("  Clearing %d starting at %p\n\r", len, e->data.b);
           //when no data provided, wipe out the body
-          memset(&e->data, len, 0xff);
+          memset(e->data.b, 0xff, len);
         }
         //take up remaining space with TAG_EMPTY
         if (emptyLen - len > 2){
+          printf("  Padding with TAG_EMPTY at %d len %d \n\r", index+2+len, emptyLen - len - 2);
           ba[index + 2 + len] = TAG_EMPTY;
-          ba[index + 2 + len + 1] = emptyLen - len;
+          ba[index + 2 + len + 1] = emptyLen - len - 2;
         }
         return index;
       } else {
+        printf(" Skip to next\n\r");
         index = index + 2 + e->len;
       }
     }
+    printf("Failed\n\r");
     return 0;
   }
 
@@ -101,20 +144,26 @@ module TLVStorageP{
     uint16_t index = TLV_CHECKSUM_LENGTH;
     tlv_entry_t* e;
     tlv_entry_t* n;
+    printf("merge empty\n\r");
     while (index < IFLASH_SEGMENT_SIZE){
       e = (tlv_entry_t*)(&ba[index]);
       n = (tlv_entry_t*)(&ba[index+e->len+2]);
+      printf("Cur %d Next %d\n\r", index, index + e->len + 2);
       //current entry hits the end of the segment, so stop
       if (e->len + index + 2 >= IFLASH_SEGMENT_SIZE){
+        printf("at the end, stop\n\r");
         break;
       }
       //this entry and next are both empty, so merge them.
       // leave index at the same point in case there are 3+ EMPTY's
       if (e->tag == TAG_EMPTY && n->tag == TAG_EMPTY){
+        printf("Mergeable\n\r");
+        printf("Update len from %d", e->len);
         //add 2 bytes for removed header
         e->len += 2 + n->len;
+        printf(" to %d", e->len);
         //wipe it
-        memset(e->data.b, e->len, 0xff);
+        memset(e->data.b, 0xff, e->len);
         continue;
       }else{
         //no merge possible, so skip to next entry
@@ -130,17 +179,25 @@ module TLVStorageP{
     uint16_t index = TLV_CHECKSUM_LENGTH;
     tlv_entry_t* e;
     //skip ahead to offset
+    printf("Delete entry\n\r");
     while (index < offset){
+      printf("scan %d -> ", index);
       e = (tlv_entry_t*)(&ba[index]);
       index += 2 + e->len;
+      printf("%d\n\r", index);
     }
+    e = (tlv_entry_t*)(&ba[index]);
     //offset provided wasn't an entry.
     if (index != offset){
       return FAIL;
     }else{
       e->tag = TAG_EMPTY;
-      memset(e->data.b, e->len, 0xff);
+      memset(e->data.b, 0xff, e->len);
+      printf("After deletion\n\r");
+      printData(tlvs);
       mergeEmpty(tlvs);
+      printf("After merging\n\r");
+      printData(tlvs);
       return SUCCESS;
     }
   }
@@ -162,6 +219,7 @@ module TLVStorageP{
         index += (2 + e->len);
       }
     }
+    *entry = NULL;
     //not found
     return 0;
   }
@@ -213,7 +271,6 @@ module TLVStorageP{
   command error_t TLVStorage.persistTLVStorage(void* tlvs){
     tlv_entry_t* versionTag;
     int16_t* wa = (int16_t*)tlvs;
-    uint8_t i;
     if (0 == call TLVStorage.findEntry(TAG_VERSION, 0, &versionTag, tlvs)){
       //there should always be a TAG_VERSION in here if tlvs was
       //loaded via this component.
@@ -226,11 +283,8 @@ module TLVStorageP{
     //24.3 in user guide: verification is done by xoring the data,
     //then adding the result to the checksum-to-be-verified. if the
     //result is NOT 0, then it is flagged as bad.
-    wa[0] = 0;
-    for(i = 1; i < (IFLASH_SEGMENT_SIZE/2) - 1; i++){
-      wa[0] ^= wa[i];
-    }
-    wa[0] *= -1;
+    wa[0] = -1*computeChecksum(tlvs);
+    printf("writing crc as %x\n\r", wa[0]);
     writeToB(tlvs);
     copyIfDirty();
     return SUCCESS;
