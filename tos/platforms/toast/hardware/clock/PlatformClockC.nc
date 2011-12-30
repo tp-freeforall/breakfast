@@ -40,5 +40,7 @@ configuration PlatformClockC {
   provides interface Init;
 } implementation {
   components PlatformClockP;
+  components TLVStorageC;
   Init = PlatformClockP;
+  PlatformClockP.TLVStorage -> TLVStorageC;
 }

@@ -37,9 +37,14 @@
  * @author Peter A. Bigot <pab@peoplepowerco.com>
  * @author Doug Carlson <carlson@cs.jhu.edu>
  */
+
+#include "InternalFlash.h"
+#include "TLVStorage.h"
+
 module PlatformClockP {
   provides interface Init;
   uses interface Init as SubInit;
+  uses interface TLVStorage;
 } implementation {
 
   default command error_t SubInit.init () {
@@ -56,9 +61,9 @@ module PlatformClockP {
 
 #define DELTA_4MHZ_BINARY_VLOCLK_aclk 1398              // 1398 x 3000Hz = 4194000
 
-  void set_dco(uint16_t delta){
-    uint8_t* Flash_ptrA;
+  void set_dco(uint16_t delta, void* tlvs){
     uint16_t Compare, Oldcapture = 0;
+    custom_dco_entry_t e;
 
     BCSCTL1 |= DIVA_3;                        // ACLK = LFXT1CLK/8
     TACCTL2 = CM_1 + CCIS_1 + CAP;            // CAP, ACLK
@@ -93,24 +98,18 @@ module PlatformClockP {
     TACTL = 0;                                // Stop Timer_A
     BCSCTL1 &= ~DIVA_3;                       // ACLK = LFXT1CLK
 
-    //write results to DCO calibration constants in flash. 
-    // Put in first slot (labeled 16mhz)
-    Flash_ptrA = (uint8_t*)0x10C0;              // Point to beginning of seg A
-    FCTL2 = FWKEY + FSSEL0 + FN1;             // MCLK/3 for Flash Timing Generator
-    FCTL1 = FWKEY + ERASE;                    // Set Erase bit
-    FCTL3 = FWKEY + LOCKA;                    // Clear LOCK & LOCKA bits
-    *Flash_ptrA = 0x00;                       // Dummy write to erase Flash seg A
-    FCTL1 = FWKEY + WRT;                      // Set WRT bit for write operation
-    Flash_ptrA = (uint8_t*)0x10F8;              // Point to beginning of cal consts
-    *Flash_ptrA = DCOCTL;                     // record DCOCTL
-    Flash_ptrA++;                             // next byte
-    *Flash_ptrA = BCSCTL1;                    // record BCSCTL
-    FCTL1 = FWKEY;                            // Clear WRT bit
-    FCTL3 = FWKEY + LOCKA + LOCK;             // Set LOCK & LOCKA bit
+    e.bcsctl1 = BCSCTL1;
+    e.dcoctl = DCOCTL;
+    call TLVStorage.addEntry(TAG_DCO_CUSTOM, 2, (tlv_entry_t*)&e, tlvs, 0);
+    call TLVStorage.persistTLVStorage(tlvs);
   }
 
   void initClocks(){
-    if ((CALBC1_16MHZ == 0xff) || (CALDCO_16MHZ == 0xff)){
+    uint8_t ba[IFLASH_SEGMENT_SIZE];
+    custom_dco_entry_t* e;
+    call TLVStorage.loadTLVStorage(ba);
+    if (0 == call TLVStorage.findEntry(TAG_DCO_CUSTOM, 0,
+      (tlv_entry_t**)&e, ba)){
         #ifdef PLATFORM_HAS_32KHZ_CRYSTAL
             #warning "calibrating DCO with 32khz crystal"
             ////External crystal
@@ -118,7 +117,7 @@ module PlatformClockP {
             ////LFXT1Sx= 00 : 32768 Hz crystal on LFXT1
             ////XCAPx  = 01 : capacitance on LFXT1-- 7pF on Toast Board 
             BCSCTL3 = XCAP_1;
-            set_dco(DELTA_4MHZ_BINARY_32khz_aclk);
+            set_dco(DELTA_4MHZ_BINARY_32khz_aclk, ba);
         #else
             #warning "calibrating DCO with VLOCLK"
             //VLOCLK : 12 khz (11.75khz, actually)
@@ -126,12 +125,11 @@ module PlatformClockP {
             //LFXT1Sx 10  : VLOCLK
             //XCAPX   00  : don't know
             BCSCTL3 = 0x20;
-            set_dco(DELTA_4MHZ_BINARY_VLOCLK_aclk);
+            set_dco(DELTA_4MHZ_BINARY_VLOCLK_aclk, ba);
         #endif
     } else{
-        //The first DCO/BC calib data location is labeled 16mhz.
-        BCSCTL1 = CALBC1_16MHZ;
-        DCOCTL = CALDCO_16MHZ;
+        BCSCTL1 = e->bcsctl1;
+        DCOCTL = e->dcoctl;
     }
     //XT2OFF = 1 : XT2 is off if it is not used for MCLK or SMCLK
     //XTS = 0

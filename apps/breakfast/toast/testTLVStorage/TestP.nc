@@ -55,7 +55,7 @@ module TestP{
       memset(uid.id, 0, 8);
       uid.id[7] = 1;
       offset = call TLVStorage.addEntry(TAG_UNIQUE_ID, 8, (tlv_entry_t*)&uid,
-        tlvs_ba, offset);
+        tlvs_ba, 0);
       if (offset != 0){
         printf("Added at offset %x\n\r", offset);
         error = call TLVStorage.persistTLVStorage(tlvs_ba);

@@ -29,4 +29,10 @@ typedef struct{
   tlv_entry_t header;
   uint8_t id[8];
 } unique_id_entry_t;
+
+typedef struct{
+  tlv_entry_t header;
+  uint8_t bcsctl1;
+  uint8_t dcoctl;
+} custom_dco_entry_t;
 #endif
