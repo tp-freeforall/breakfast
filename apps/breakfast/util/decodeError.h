@@ -1,6 +1,6 @@
 #ifndef decode_error_h
 #define decode_error_h
-char* error_strings[] = {
+const char* error_strings[] = {
     "SUCCESS",
     "FAIL",
     "ESIZE",
@@ -16,7 +16,7 @@ char* error_strings[] = {
     "ELAST",
 };
 
-char* decodeError(error_t err){
+const char* decodeError(error_t err){
   return error_strings[err];
 }
 #endif

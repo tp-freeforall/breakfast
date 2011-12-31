@@ -10,6 +10,8 @@
 
 #define TLV_CHECKSUM_LENGTH 2
 
+#define TLV_LEN IFLASH_SEGMENT_SIZE
+
 typedef struct {
   uint8_t tag;
   uint8_t len;
