@@ -5,7 +5,6 @@
 
 #define TAG_VERSION    (0x02)
 #define TAG_DCO_CUSTOM (0x03)
-#define TAG_UNIQUE_ID  (0x04)
 //flag value for "match any tag"
 #define TAG_ANY        (0x00)
 
@@ -24,11 +23,6 @@ typedef struct{
   tlv_entry_t header;
   uint16_t version;
 } version_entry_t;
-
-typedef struct{
-  tlv_entry_t header;
-  uint8_t id[8];
-} unique_id_entry_t;
 
 typedef struct{
   tlv_entry_t header;

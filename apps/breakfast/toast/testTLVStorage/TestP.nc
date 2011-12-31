@@ -2,6 +2,8 @@
 #include "InternalFlash.h"
 #include "TLVStorage.h"
 #include "decodeError.h"
+#include "GlobalID.h"
+
 module TestP{
   uses interface Boot;
   uses interface UartStream;
@@ -47,14 +49,14 @@ module TestP{
   task void addUniqueIDTag(){
     error_t error = call TLVStorage.loadTLVStorage(tlvs_ba);
     tlv_entry_t* e;
-    unique_id_entry_t uid;
+    global_id_entry_t uid;
     uint8_t offset;
     uint8_t i;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    if( 0 == call TLVStorage.findEntry(TAG_UNIQUE_ID, 0, &e, tlvs_ba)){
+    if( 0 == call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, &e, tlvs_ba)){
       memset(uid.id, 0, 8);
       uid.id[7] = 1;
-      offset = call TLVStorage.addEntry(TAG_UNIQUE_ID, 8, (tlv_entry_t*)&uid,
+      offset = call TLVStorage.addEntry(TAG_GLOBAL_ID, 8, (tlv_entry_t*)&uid,
         tlvs_ba, 0);
       if (offset != 0){
         printf("Added at offset %x\n\r", offset);
@@ -67,7 +69,7 @@ module TestP{
     }else {
       printf("Unique ID already present: ");
       for ( i = 0 ; i < 8 ; i++){
-        printf("%x ", ((unique_id_entry_t*)e)->id[i]);
+        printf("%x ", ((global_id_entry_t*)e)->id[i]);
       }
       printf("\n\r");
     }
@@ -75,10 +77,10 @@ module TestP{
 
   task void updateUniqueIDTag(){
     error_t error = call TLVStorage.loadTLVStorage(tlvs_ba);
-    unique_id_entry_t* uid;
+    global_id_entry_t* uid;
     uint8_t offset;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    offset = call TLVStorage.findEntry(TAG_UNIQUE_ID, 0, (tlv_entry_t**)&uid,
+    offset = call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs_ba);
     if (NULL == uid){
       printf("No unique Id tag found.\n\r");
@@ -92,10 +94,10 @@ module TestP{
 
   task void deleteUniqueIDTag(){
     error_t error = call TLVStorage.loadTLVStorage(tlvs_ba);
-    unique_id_entry_t* uid;
+    global_id_entry_t* uid;
     uint8_t offset;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    offset = call TLVStorage.findEntry(TAG_UNIQUE_ID, 0, (tlv_entry_t**)&uid,
+    offset = call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs_ba);
     if (offset != 0){
       printf("Unique ID found at %x.\n\r", offset);
