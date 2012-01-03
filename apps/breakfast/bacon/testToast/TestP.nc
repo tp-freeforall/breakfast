@@ -8,6 +8,9 @@ module TestP{
   uses interface StdControl;
   uses interface I2CPersistentStorageMaster;
 } implementation {
+  enum {
+    MAX_SLAVES = 4,
+  };
   uint16_t slaves[MAX_SLAVES];
   uint8_t slaveCount;
 
@@ -55,7 +58,7 @@ module TestP{
     }
   }
   event void I2CPersistentStorageMaster.readDone(error_t error,
-      void* buf){
+      void* buf_){
     uint8_t i;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     if (error == SUCCESS){
@@ -81,7 +84,7 @@ module TestP{
   }
 
   event void I2CPersistentStorageMaster.writeDone(error_t error,
-      void* buf){
+      void* buf_){
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
@@ -101,4 +104,8 @@ module TestP{
     }
   }
   
+  async event void UartStream.receiveDone( uint8_t* buf_, uint16_t len,
+    error_t error ){}
+  async event void UartStream.sendDone( uint8_t* buf_, uint16_t len,
+    error_t error ){}
 }

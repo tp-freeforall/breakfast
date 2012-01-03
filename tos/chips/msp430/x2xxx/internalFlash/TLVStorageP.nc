@@ -1,5 +1,6 @@
 #include "TLVStorage.h"
 #include "InternalFlash.h"
+#include "InternalFlashFunctions.h"
 
 module TLVStorageP{
   provides interface TLVStorage;

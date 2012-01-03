@@ -39,6 +39,7 @@
  */
 
 #include "InternalFlash.h"
+#include "InternalFlashFunctions.h"
 
 generic module InternalFlashx2xxC (uint16_t IFLASH_START, uint8_t IFLASH_NUM_SEGMENTS){
   provides interface InternalFlash;

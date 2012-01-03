@@ -24,6 +24,7 @@ typedef struct{
       uint8_t cmd;
       uint8_t data[MAX_I2C_REGISTER_LEN - 1];
     } body;
+  };
   register_packet_footer_t footer;
 } __attribute__((__packed__)) register_packet_t;
 

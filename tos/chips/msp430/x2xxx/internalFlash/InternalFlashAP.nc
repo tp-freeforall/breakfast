@@ -1,4 +1,5 @@
 #include "InternalFlash.h"
+#include "InternalFlashFunctions.h"
 
 module InternalFlashAP{
   provides interface InternalFlash;

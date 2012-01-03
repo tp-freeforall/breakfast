@@ -1,5 +1,5 @@
 #include "I2CDiscoverable.h"
-
+#include "decodeError.h"
 //TODO: ten-bit addresses: should be parameterized
 
 generic module I2CDiscovererP(){

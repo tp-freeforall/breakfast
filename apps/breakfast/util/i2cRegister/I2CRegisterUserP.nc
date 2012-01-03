@@ -16,7 +16,13 @@ generic module I2CRegisterUserP(uint8_t clientId){
   };
 
   norace uint8_t state;
-  register_packet_t* pkt;
+  norace error_t signalError;
+  norace register_packet_t* pkt;
+
+  task void signalWriteDone();
+  task void signalReadDone();
+  task void readTask();
+  task void write();
 
   void release(){
     atomic{
@@ -25,8 +31,8 @@ generic module I2CRegisterUserP(uint8_t clientId){
     }
   }
 
-  command error_t RegisterUser.write(uint16_t slaveAddr_, uint8_t pos,
-      register_pkt_t* pkt_, uint8_t len_){
+  command error_t I2CRegisterUser.write(uint16_t slaveAddr_, uint8_t pos,
+      register_packet_t* pkt_, uint8_t len_){
     error_t ret = call Resource.request();
     if ( ret == SUCCESS ){
       pkt = pkt_;
@@ -56,7 +62,7 @@ generic module I2CRegisterUserP(uint8_t clientId){
     error_t error = call I2CPacket.write(I2C_START,
       pkt->footer.slaveAddr, sizeof(register_packet_header_t),
       (uint8_t*)pkt);
-    if (error != success){
+    if (error != SUCCESS){
       signalError = error;
       post signalReadDone();
     }
@@ -79,14 +85,14 @@ generic module I2CRegisterUserP(uint8_t clientId){
 
   task void signalWriteDone(){
     release();
-    signal RegisterUser.writeDone(signalError, pkt->footer.slaveAddr,
-      pkt->header.pos, pkt->footer.len, pkt)
+    signal I2CRegisterUser.writeDone(signalError, pkt->footer.slaveAddr,
+      pkt->header.pos, pkt->footer.len, pkt);
   }
 
   task void signalReadDone(){
     release();
-    signal RegisterUser.readDone(signalError, pkt->footer.slaveAddr,
-      pkt->header.pos, pkt->footer.len, pkt);
+    signal I2CRegisterUser.readDone(signalError, pkt->footer.slaveAddr,
+      pkt->header.pos, pkt, pkt->footer.len);
   }
 
   async event void I2CPacket.writeDone(error_t error, uint16_t addr,
@@ -123,10 +129,11 @@ generic module I2CRegisterUserP(uint8_t clientId){
     }
   }
 
-  command error_t RegisterUser.read(uint16_t slaveAddr, uint8_t pos,
-      register_packet_t* pkt, uint8_t len){
+  command error_t I2CRegisterUser.read(uint16_t slaveAddr, uint8_t pos,
+      register_packet_t* pkt_, uint8_t len){
     error_t ret = call Resource.request();
     if (ret == SUCCESS){
+      pkt = pkt_;
       pkt->header.clientId = clientId;
       pkt->header.pos = pos;
       pkt->footer.len = len;
