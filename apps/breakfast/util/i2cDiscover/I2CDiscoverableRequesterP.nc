@@ -12,6 +12,7 @@
  * 
 **/
 #include "I2CDiscoverable.h"
+#include "GlobalID.h"
 //TODO: ten-bit addresses: should be parameterized
 generic module I2CDiscoverableRequesterP(){
   uses interface I2CPacket<TI2CBasicAddr> as SubI2CPacket;
