@@ -34,6 +34,7 @@ generic module I2CRegisterUserP(uint8_t clientId){
   command error_t I2CRegisterUser.write(uint16_t slaveAddr_, uint8_t pos,
       register_packet_t* pkt_, uint8_t len_){
     error_t ret = call Resource.request();
+    printf("%s: \n\r", __FUNCTION__);
     if ( ret == SUCCESS ){
       pkt = pkt_;
       pkt->header.clientId = clientId;
@@ -69,6 +70,7 @@ generic module I2CRegisterUserP(uint8_t clientId){
   }
 
   event void Resource.granted(){
+    printf("%s: \n\r", __FUNCTION__);
     switch (state){
       case S_WRITE_REQUESTED:
         state = S_WRITING;

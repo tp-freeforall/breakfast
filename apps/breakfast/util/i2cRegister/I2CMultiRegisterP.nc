@@ -107,8 +107,8 @@ generic module I2CMultiRegisterP () {
   }
 
   void transmit(){
-//    printf("%s: p %d (%d): %c\n\r", __FUNCTION__, 
-//      pos, (pos -1)%bufLen, buf[(pos-1)%bufLen]);
+    printf("%s: p %d (%d): %c\n\r", __FUNCTION__, 
+      pos, (pos -1)%bufLen, buf[(pos-1)%bufLen]);
     call I2CSlave.slaveTransmit(buf[(pos-1)%bufLen]);
     pos++;
     transCount++;
@@ -116,7 +116,7 @@ generic module I2CMultiRegisterP () {
   }
   
   async event bool I2CSlave.slaveReceiveRequested(){
-//    printf("%s: p %d ac %x tc %d\n\r", __FUNCTION__, pos, activeClient, transCount);
+    printf("%s: p %d ac %x tc %d\n\r", __FUNCTION__, pos, activeClient, transCount);
     if (isGC){
       //ignore
       call I2CSlave.slaveReceive();
@@ -151,7 +151,7 @@ generic module I2CMultiRegisterP () {
   //  starting so that they can provide the buffer from which the
   //  master will read and pause it if needed.
   async event bool I2CSlave.slaveTransmitRequested(){
-//    printf("%s: p %d ac %x tc %d\n\r", __FUNCTION__, pos, activeClient, transCount);
+    printf("%s: p %d ac %x tc %d\n\r", __FUNCTION__, pos, activeClient, transCount);
     if (isGC){
       printf("GC, ignore\n\r");
       //ignore
@@ -174,13 +174,13 @@ generic module I2CMultiRegisterP () {
   }
   
   async event void I2CSlave.slaveStart(bool generalCall){
-//    printf("%s: \n\r", __FUNCTION__);
+    printf("%s: \n\r", __FUNCTION__);
     isGC = generalCall;
     transCount = 0;
   }
 
   async event void I2CSlave.slaveStop(){
-//    printf("%s: \n\r", __FUNCTION__);
+    printf("%s: \n\r", __FUNCTION__);
     if (! isGC){
       signal I2CRegister.transactionStop[activeClient](buf, pos);
     }

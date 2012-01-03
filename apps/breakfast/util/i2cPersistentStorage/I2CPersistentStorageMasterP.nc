@@ -11,6 +11,7 @@ module I2CPersistentStorageMasterP{
   command error_t I2CPersistentStorageMaster.write(uint16_t slaveAddr,
       void* data){
     error_t ret;
+    printf("%s: \n\r", __FUNCTION__);
     if (busy){
       return EBUSY;
     }

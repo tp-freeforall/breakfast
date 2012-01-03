@@ -7,8 +7,8 @@
 
 //should these be nx types?
 typedef struct{
-  uint8_t clientId;
   uint8_t pos;
+  uint8_t clientId;
 } __attribute__((__packed__)) register_packet_header_t;
 
 typedef struct{
