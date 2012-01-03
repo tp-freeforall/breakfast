@@ -7,6 +7,7 @@ module TestP{
   uses interface UartStream;
   uses interface StdControl;
   uses interface I2CPersistentStorageMaster;
+  uses interface Leds;
 } implementation {
   enum {
     MAX_SLAVES = 4,
@@ -89,6 +90,7 @@ module TestP{
   }
 
   async event void UartStream.receivedByte(uint8_t byte){
+    call Leds.led0Toggle();
     switch ( byte ){
       case 'd':
         post startDiscovery();
@@ -99,7 +101,14 @@ module TestP{
       case 'w':
         post writePersistentStorage();
         break;
+      case 'q':
+        WDTCTL = 0;
+        break;
+      case '\r':
+        printf("\n\r");
+        break;
       default:
+        printf("%c", byte);
         break;
     }
   }
