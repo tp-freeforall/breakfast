@@ -1,7 +1,7 @@
-#include "RegisterUser.h"
+#include "I2CRegisterUser.h"
 
-generic module RegisterUserP(uint8_t clientId){
-  provides interface RegisterUser;
+generic module I2CRegisterUserP(uint8_t clientId){
+  provides interface I2CRegisterUser;
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface Resource;
 } implementation {

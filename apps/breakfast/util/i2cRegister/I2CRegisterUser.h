@@ -2,7 +2,7 @@
 #define REGISTER_USER_H
 
 #ifndef MAX_I2C_REGISTER_LEN
-#define MAX_I2C_REGISTER_LEN 64
+#define MAX_I2C_REGISTER_LEN 65
 #endif
 
 //should these be nx types?
@@ -18,7 +18,12 @@ typedef struct{
 
 typedef struct{
   register_packet_header_t header;
-  uint8_t data[MAX_I2C_REGISTER_LEN];
+  union{
+    uint8_t data[MAX_I2C_REGISTER_LEN];
+    struct {
+      uint8_t cmd;
+      uint8_t data[MAX_I2C_REGISTER_LEN - 1];
+    } body;
   register_packet_footer_t footer;
 } __attribute__((__packed__)) register_packet_t;
 
