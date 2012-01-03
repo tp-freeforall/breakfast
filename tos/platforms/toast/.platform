@@ -16,6 +16,7 @@ for (split(/\n/, <<'EOText'
   %P/hardware/usci
   %P/hardware/leds
   %P/hardware/lpm
+  %P/hardware/sensorPower
 
   %T/chips/msp430
   %T/chips/msp430/pins

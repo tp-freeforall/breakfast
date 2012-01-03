@@ -96,8 +96,8 @@ module I2CADCReaderP{
       uint8_t pos){ 
     //TODO: timestamping: mark transactionStop time
     if (processingCommand 
-        && ((void*)reg == (void*)&pkt)
-        && (pkt.command == ADC_READER_CMD_SAMPLE)){
+        && ((void*)reg == (void*)(&pkt))
+        && (pkt.cmd == ADC_READER_CMD_SAMPLE)){
       call I2CRegister.pause();
       post startSamples();
     }else if ((void*)reg == (void*)sampleBuffer){

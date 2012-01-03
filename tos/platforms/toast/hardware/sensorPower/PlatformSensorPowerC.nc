@@ -1,5 +1,5 @@
 configuration PlatformSensorPowerC{
-  provides interface GeneralIO[uint8_t channelNum] as SensorPower;
+  provides interface GeneralIO as SensorPower[uint8_t channelNum];
 } implementation {
   components HplMsp430GeneralIOC;
 

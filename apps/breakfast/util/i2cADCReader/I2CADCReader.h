@@ -34,7 +34,7 @@ typedef struct {
 // for each sensor how it needs to be warmed up/how many times it
 // should get sampled. 
 typedef struct {
-  uint8_t command;
+  uint8_t cmd;
   adc_reader_config_t cfg[ADC_NUM_CHANNELS];
 } __attribute__((__packed__)) adc_reader_pkt_t;
 
