@@ -40,7 +40,10 @@ module I2CPersistentStorageMasterP{
       return EBUSY;
     }
     readBuf = data;
-    ret = call I2CRegisterUser.read(slaveAddr, 0, &pkt,
+    //TODO: have to write I2C_STORGE_READ_CMD into command slot
+    pkt.body.cmd = I2C_STORAGE_READ_CMD;
+    //last byte will be garbage, lookout
+    ret = call I2CRegisterUser.read(slaveAddr, 1, &pkt,
       PERSISTENT_STORAGE_REGISTER_SIZE);
     if (ret == SUCCESS){
       busy = TRUE;
