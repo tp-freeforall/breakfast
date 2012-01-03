@@ -58,7 +58,7 @@ generic module I2CDiscoverableRequesterP(){
   typedef struct {
     uint8_t pos;
     uint8_t cmd;
-    uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
+    uint8_t globalAddr[GLOBAL_ID_LEN];
   } __attribute__((__packed__)) discoverable_reservation_msg_t;
 
   typedef union{
@@ -76,12 +76,14 @@ generic module I2CDiscoverableRequesterP(){
     setState(S_WAITING);
     _reservation.msg.pos = 0;
     _reservation.msg.cmd = I2C_DISCOVERABLE_REQUEST_ADDR;
-    memcpy(_reservation.msg.globalAddr, signal I2CDiscoverable.getGlobalAddr(), I2C_GLOBAL_ADDR_LENGTH);
+    memcpy(_reservation.msg.globalAddr,
+      signal I2CDiscoverable.getGlobalAddr(), 
+      GLOBAL_ID_LEN);
     call SubI2CSlave.setOwnAddress(lastLocalAddr);
     call SubI2CSlave.enableGeneralCall();
 
     //TODO: should randomize with hash of the whole address
-    call RandomInit.init(_reservation.msg.globalAddr[I2C_GLOBAL_ADDR_LENGTH-1]);
+    call RandomInit.init(_reservation.msg.globalAddr[GLOBAL_ID_LEN-1]);
   }
 
   async command error_t Resource.request(){

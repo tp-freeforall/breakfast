@@ -2,6 +2,27 @@
 //TODO: should do VCC and internal temp measurements here, too.
 //TODO: ADC calibration constants should be retrieved from an
 //  I2CTLVStorage component
+//TODO: timestamps. how to do them?
+//      - option 1: completely ignore
+//      - option 2: slave stamps with local time, out-of-band synch
+//        - gpio edge? that will make kind of a mess of the other
+//          clients.
+//        - master knows when it powered on the bus: 
+//      - * option 3: in-band synch
+//        - record time of start interrupt at slave/master
+//          - master set UCTXSTT + (time to send start bit + slave
+//            addr) ~= slave start interrupt
+//          - rough approximation: difference between call to
+//            i2cpacket.write (master) and i2cslave.slavestart (slave)
+//          - this should be off by a constant value: t_master +
+//            (master function call overhead) + (start + slave) +
+//            (interrupt handling time) + (slave function call
+//            overhead) = t_slave
+//        - I2C register app that just reads back this value: should
+//          be OK- get transactionStart, read the value into buffer,
+//          no pause. just add getLastStart into both interfaces
+//          (I2CRegister and I2CRegisterUser). 
+//        - can repeat this several times to check clock skew?
 module I2CADCReaderP{
   uses interface I2CRegister;
   uses interface Msp430Adc12SingleChannel;
@@ -27,7 +48,12 @@ module I2CADCReaderP{
   }
 
   async event uint8_t I2CRegister.registerLen(){
-    
+    if (processingCommand){
+      return sizeof(pkt);
+    } else {
+      //TODO: can this be sizeof(sampleBuffer)?
+      return sizeof(uint16_t) * ADC_TOTAL_SAMPLES;
+    }
   }
 
   task void startSamples(){
@@ -105,6 +131,10 @@ module I2CADCReaderP{
     }
   }
 
+  //unused
+  async event error_t Msp430Adc12SingleChannel.singleDataReady(uint16_t data){ return FAIL;}
+  
+  //defaults
   default async command void SensorPower.set[uint8_t channelNum_](){}
   default async command void SensorPower.clr[uint8_t channelNum_](){}
   default async command void SensorPower.toggle[uint8_t channelNum_](){}

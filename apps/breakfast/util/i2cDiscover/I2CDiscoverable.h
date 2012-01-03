@@ -1,9 +1,7 @@
 #ifndef I2C_DISCOVERABLE_H
 #define I2C_DISCOVERABLE_H
 
-#ifndef I2C_GLOBAL_ADDR_LENGTH
-#define I2C_GLOBAL_ADDR_LENGTH 8
-#endif
+#include "GlobalID.h"
 
 #define I2C_DISCOVERY_INITIAL_TIMEOUT 30*1024
 #define I2C_DISCOVERY_ROUND_TIMEOUT 512
@@ -22,7 +20,7 @@
 
   typedef struct {
     uint8_t cmd;
-    uint8_t globalAddr[I2C_GLOBAL_ADDR_LENGTH];
+    uint8_t globalAddr[GLOBAL_ID_LEN];
     uint16_t localAddr;
   } __attribute__((__packed__)) discoverer_register_t;
 
