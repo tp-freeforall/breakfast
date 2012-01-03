@@ -1,0 +1,8 @@
+COMPONENT=AnalogSensorBoardC
+CFLAGS+=-I$(TOSDIR)/lib/serialprintf
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cRegister
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cADCReader
+
+
+include $(MAKERULES)
