@@ -1,6 +1,8 @@
 #ifndef I2C_ADCREADER_H
 #define I2C_ADCREADER_H
 
+#include "Msp430Adc12.h"
+
 #define REGISTER_CLIENT_ID_ADCREADER 0x03
 #define ADC_READER_CMD_SAMPLE 0x03
 
@@ -21,10 +23,10 @@
 //  module (e.g. so that the master can enter LPM, or so that sensors
 //  can warm up).
 typedef struct {
-  uint32_t delayMS,
-  msp430adc12_channel_config_t config,
-  uint16_t numSamples,
-  uint16_t jiffies,
+  uint32_t delayMS;
+  msp430adc12_channel_config_t config;
+  uint16_t numSamples;
+  uint16_t jiffies;
 } adc_reader_config_t;
 
 //a packet consists of a set of these configs: up to 1 per sensor
@@ -32,8 +34,8 @@ typedef struct {
 // for each sensor how it needs to be warmed up/how many times it
 // should get sampled. 
 typedef struct {
-  uint8_t command,
-  adc_reader_config_t cfg[ADC_NUM_CHANNELS],
-} __attribute__(__packed__) adc_reader_pkt_t;
+  uint8_t command;
+  adc_reader_config_t cfg[ADC_NUM_CHANNELS];
+} __attribute__((__packed__)) adc_reader_pkt_t;
 
 #endif
