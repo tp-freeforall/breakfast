@@ -1,5 +1,6 @@
 #include "InternalFlash.h"
 #include "I2CPersistentStorage.h"
+#include "decodeError.h"
 
 module I2CPersistentStorageP{
   uses interface I2CRegister;

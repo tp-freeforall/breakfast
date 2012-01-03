@@ -88,23 +88,23 @@ generic module I2CDiscoverableRequesterP(){
   }
 
   async command error_t Resource.request(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     return call SubResource.request();
   }
 
   async command error_t Resource.release(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     return call SubResource.release();
   }
 
   async command bool Resource.isOwner(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     return call SubResource.isOwner();
   }
 
   async command error_t Resource.immediateRequest(){
     error_t ret = call SubResource.immediateRequest();
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     if (SUCCESS == ret){
       init();
     }
@@ -113,7 +113,7 @@ generic module I2CDiscoverableRequesterP(){
 
   event void SubResource.granted(){
     init();
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     signal Resource.granted();
   }
 
