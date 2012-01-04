@@ -9,6 +9,37 @@ module TLVStorageP{
   provides interface Init;
   uses interface TLVUtils;
 } implementation {
+  int16_t computeChecksum(void* tlvs);
+
+  void debugTLV(void* tlvs_){
+    tlv_entry_t* e;
+    uint8_t offset = 0;
+    uint8_t i;
+    printf("======== %p =====\n\r", tlvs_);
+    printf("Stored checksum: %d (%x)\n\r", 
+      *(uint16_t*)tlvs_, *(uint16_t*)tlvs_);
+    printf("Computed checksum: %d (%x)\n\r", 
+      computeChecksum(tlvs_),
+      computeChecksum(tlvs_));
+    do{
+      offset = call TLVUtils.findEntry(TAG_ANY, offset+1, &e, tlvs_);
+      if (e != NULL){
+        printf("------------\n\r");
+        printf(" Offset: %d\n\r", offset);
+        printf(" Tag:\t[%d]\t%x\n\r", offset, e->tag);
+        printf(" Len:\t[%d]\t%x\n\r", offset+1, e->len);
+        if (e->tag != TAG_EMPTY){
+        printf(" Data:\n\r");
+        for (i = 0; i < e->len; i++){
+          printf("  [%d]\t(%d)\t%x\n\r", offset+2+i, i, e->data.b[i]);
+        }
+        }else{
+          printf("  [%d]->[%d] (empty)\n\r", offset+2,
+          offset+2+e->len-1);
+        }
+      }
+    } while( offset != 0);
+  }
 
   int16_t computeChecksum(void* tlvs){
     int16_t* wa = (int16_t*) tlvs;
@@ -51,6 +82,11 @@ module TLVStorageP{
     tlv_entry_t* vb;
     call TLVUtils.findEntry(TAG_VERSION, 0, &va, tlvsA);
     call TLVUtils.findEntry(TAG_VERSION, 0, &vb, tlvsB);
+    printf("copy if dirty\n\r");
+    printf("TLV in A\n\r");
+    debugTLV(tlvsA);
+    printf("TLV in B\n\r");
+    debugTLV(tlvsB);
     //check 
     if (vb == NULL){
       //TODO: error condition
@@ -69,6 +105,7 @@ module TLVStorageP{
       memcpy(IFLASH_A_START, IFLASH_B_START, IFLASH_SEGMENT_SIZE);
       FCTL1 = FWKEY;
       lockInternalFlash(IFLASH_A_START);
+      printf("copy done\n\r");
     }else{
       printf("no copy needed: va %p vb %p.\n\r", va, vb);
       if (vb != NULL && va != NULL){ 
@@ -83,6 +120,7 @@ module TLVStorageP{
 
   void writeToB(void* tlvs){
     printf("Writing to B\n\r");
+    debugTLV(tlvs);
     unlockInternalFlash(IFLASH_B_START);
     FCTL1 = FWKEY + ERASE;
     *((uint8_t*)IFLASH_B_START) = 0;
@@ -90,6 +128,8 @@ module TLVStorageP{
     memcpy(IFLASH_B_START, tlvs, IFLASH_SEGMENT_SIZE);
     FCTL1 = FWKEY;
     lockInternalFlash(IFLASH_B_START);
+    printf("Done. Now in B:\n\r");
+    debugTLV(IFLASH_B_START);
   }
 
   //persist TLV structure (to internal flash)
@@ -117,8 +157,6 @@ module TLVStorageP{
     //then adding the result to the checksum-to-be-verified. if the
     //result is NOT 0, then it is flagged as bad.
     wa[0] = -1*computeChecksum(tlvs);
-    printf("Verify: stored %d computed %d verify %x", wa[0],
-      computeChecksum(tlvs), verifyChecksum(tlvs));
     writeToB(tlvs);
     copyIfDirty();
     return SUCCESS;
