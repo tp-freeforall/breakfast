@@ -35,10 +35,10 @@ generic module I2CMultiRegisterP () {
 //    printf("%s: \n\r", __FUNCTION__);
     if (clientId == activeClient){
       if (isPaused){
-        printf("already paused\n\r");
+//        printf("already paused\n\r");
         return EALREADY;
       } else {
-        printf("Pausing\n\r");
+//        printf("Pausing\n\r");
         isPaused = TRUE;
         return SUCCESS;
       }
@@ -55,7 +55,7 @@ generic module I2CMultiRegisterP () {
       if (isPaused){
         isPaused = FALSE;
         if (receivePending && transmitPending){
-          printf("Nothing pending\n\r");
+//          printf("Nothing pending\n\r");
           return FAIL;
         }
         if (transmitPending){
