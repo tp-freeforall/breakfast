@@ -4,6 +4,7 @@
 module GlobalIDP{
   provides interface GlobalID;
   uses interface TLVStorage;
+  uses interface TLVUtils;
 } implementation {
   command error_t GlobalID.getID(uint8_t* idBuf, uint8_t maxLen){
     if (maxLen < GLOBAL_ID_LEN){
@@ -16,7 +17,7 @@ module GlobalIDP{
       if (err != SUCCESS){
         return err;
       }
-      call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&gid, ba);
+      call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&gid, ba);
       if (gid != NULL){
         memcpy(idBuf, gid->id, GLOBAL_ID_LEN);
         return SUCCESS;
@@ -44,15 +45,15 @@ module GlobalIDP{
     if (err != SUCCESS){
       return err;
     }
-    offset = call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, &previous,
+    offset = call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, &previous,
       ba);
     if (previous != NULL){
-      err = call TLVStorage.deleteEntry(offset, ba);
+      err = call TLVUtils.deleteEntry(offset, ba);
       if (SUCCESS != err){
         return err;
       }
     }
-    offset = call TLVStorage.addEntry(TAG_GLOBAL_ID, len, (tlv_entry_t*)&gid, 
+    offset = call TLVUtils.addEntry(TAG_GLOBAL_ID, len, (tlv_entry_t*)&gid, 
       ba, 0);
     if (offset != 0){
       return call TLVStorage.persistTLVStorage(ba);

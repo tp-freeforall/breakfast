@@ -7,6 +7,7 @@ configuration GlobalIDC{
   components TLVStorageC;
 
   GlobalIDP.TLVStorage -> TLVStorageC;
+  GlobalIDP.TLVUtils -> TLVStorageC;
 
   GlobalID = GlobalIDP;
 }

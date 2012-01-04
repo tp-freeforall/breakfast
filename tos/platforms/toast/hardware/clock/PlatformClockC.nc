@@ -43,4 +43,5 @@ configuration PlatformClockC {
   components TLVStorageC;
   Init = PlatformClockP;
   PlatformClockP.TLVStorage -> TLVStorageC;
+  PlatformClockP.TLVUtils -> TLVStorageC;
 }

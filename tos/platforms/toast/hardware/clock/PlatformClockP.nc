@@ -45,6 +45,7 @@ module PlatformClockP {
   provides interface Init;
   uses interface Init as SubInit;
   uses interface TLVStorage;
+  uses interface TLVUtils;
 } implementation {
 
   default command error_t SubInit.init () {
@@ -100,7 +101,7 @@ module PlatformClockP {
 
     e.bcsctl1 = BCSCTL1;
     e.dcoctl = DCOCTL;
-    call TLVStorage.addEntry(TAG_DCO_CUSTOM, 2, (tlv_entry_t*)&e, tlvs, 0);
+    call TLVUtils.addEntry(TAG_DCO_CUSTOM, 2, (tlv_entry_t*)&e, tlvs, 0);
     call TLVStorage.persistTLVStorage(tlvs);
   }
 
@@ -108,7 +109,7 @@ module PlatformClockP {
     uint8_t ba[IFLASH_SEGMENT_SIZE];
     custom_dco_entry_t* e;
     call TLVStorage.loadTLVStorage(ba);
-    if (0 == call TLVStorage.findEntry(TAG_DCO_CUSTOM, 0,
+    if (0 == call TLVUtils.findEntry(TAG_DCO_CUSTOM, 0,
       (tlv_entry_t**)&e, ba)){
         #ifdef PLATFORM_HAS_32KHZ_CRYSTAL
             #warning "calibrating DCO with 32khz crystal"
