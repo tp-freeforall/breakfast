@@ -53,7 +53,7 @@ module TLVUtilsC{
     }
     
     //seek to next available TAG_EMPTY and put it in
-    while (index < IFLASH_SEGMENT_SIZE){
+    while (index < TLV_LEN){
       e = (tlv_entry_t*) &ba[index];
       if(e->tag == TAG_EMPTY && e->len >= len){
         emptyLen = e->len;
@@ -83,11 +83,11 @@ module TLVUtilsC{
     uint16_t index = TLV_CHECKSUM_LENGTH;
     tlv_entry_t* e;
     tlv_entry_t* n;
-    while (index < IFLASH_SEGMENT_SIZE){
+    while (index < TLV_LEN){
       e = (tlv_entry_t*)(&ba[index]);
       n = (tlv_entry_t*)(&ba[index+e->len+2]);
       //current entry hits the end of the segment, so stop
-      if (e->len + index + 2 >= IFLASH_SEGMENT_SIZE){
+      if (e->len + index + 2 >= TLV_LEN){
         break;
       }
       //this entry and next are both empty, so merge them.
@@ -136,7 +136,7 @@ module TLVUtilsC{
     tlv_entry_t* e;
     uint8_t* ba = (uint8_t*) tlvs;
     uint16_t index = TLV_CHECKSUM_LENGTH;
-    while (index < IFLASH_SEGMENT_SIZE){
+    while (index < TLV_LEN){
       e = (tlv_entry_t*)(&ba[index]);
       if(index >= startOffset && (tag == TAG_ANY || e->tag == tag)){
         *entry = e;

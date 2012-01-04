@@ -1,16 +1,28 @@
 #ifndef TLVSTORAGE_H
 #define TLVSTORAGE_H
-//See msp430f235.h for TAG_DCO_30, TAG_ADC12_1, TAG_EMPTY, and other
-//  constants
 
 #define TAG_VERSION    (0x02)
 #define TAG_DCO_CUSTOM (0x03)
 //flag value for "match any tag"
 #define TAG_ANY        (0x00)
 
+//See msp430f235.h for TAG_DCO_30, TAG_ADC12_1, TAG_EMPTY, and other
+//  constants. OK, the cc430f5137 uses different conventions, awesome.
+#ifndef TAG_EMPTY
+#define TAG_EMPTY (0xfe)
+#endif
+#ifndef TAG_DCO_30
+#define TAG_DCO_30 (0x01)
+#endif
+#ifndef TAG_ADC12_1
+#define TAG_ADC12_1 (0x08)
+#endif
+
 #define TLV_CHECKSUM_LENGTH 2
 
-#define TLV_LEN IFLASH_SEGMENT_SIZE
+#ifndef TLV_LEN
+#define TLV_LEN 64
+#endif
 
 typedef struct {
   uint8_t tag;

@@ -13,7 +13,7 @@ configuration I2CTLVStorageMasterC{
 
   I2CTLVStorageMasterP.I2CRegisterUser -> I2CRegisterUserC;
 
-  TLVStorage = I2CTLVStorageMasterP;
+  SplitTLVStorage = I2CTLVStorageMasterP;
   Set = I2CTLVStorageMasterP;
 
   TLVUtils = TLVUtilsC;

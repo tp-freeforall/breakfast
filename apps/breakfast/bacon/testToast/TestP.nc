@@ -1,13 +1,21 @@
 #include "I2CDiscoverable.h"
+#include "TLVStorage.h"
 #include "decodeError.h"
 
 module TestP{
   uses interface Boot;
-  uses interface I2CDiscoverer;
   uses interface UartStream;
   uses interface StdControl;
-  uses interface I2CPersistentStorageMaster;
   uses interface Leds;
+
+  uses interface I2CDiscoverer;
+
+  uses interface I2CPersistentStorageMaster;
+
+  uses interface SplitTLVStorage;
+  uses interface TLVUtils;
+  uses interface Set<uint16_t>;
+
 } implementation {
   enum {
     MAX_SLAVES = 4,
@@ -98,6 +106,33 @@ module TestP{
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
+  uint8_t tlv_ba[TLV_LEN];
+  void* tlvs = tlv_ba;
+
+  task void loadTLVStorage(){
+    error_t error;
+    printf("%s: \n\r", __FUNCTION__);
+    call Set.set(slaves[0]);
+    error = call SplitTLVStorage.loadTLVStorage(tlvs);
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+  }
+
+  event void SplitTLVStorage.loaded(error_t error, void* tlvs_){
+    //TODO: print out what was loaded
+  }
+
+  task void persistTLVStorage(){
+    error_t error;
+    printf("%s: \n\r", __FUNCTION__);
+    call Set.set(slaves[0]);
+    error = call SplitTLVStorage.persistTLVStorage(tlvs);
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+  }
+
+  event void SplitTLVStorage.persisted(error_t error, void* tlvs_){
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+  }
+
   async event void UartStream.receivedByte(uint8_t byte){
     call Leds.led0Toggle();
     switch ( byte ){
@@ -110,6 +145,15 @@ module TestP{
       case 'w':
         post writePersistentStorage();
         break;
+
+      case 'l':
+        post loadTLVStorage();
+        break;
+      case 'p':
+        post persistTLVStorage();
+        break;
+      //TODO: commands 
+
       case 'q':
         WDTCTL = 0;
         break;

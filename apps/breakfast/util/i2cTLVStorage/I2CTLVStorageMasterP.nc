@@ -21,13 +21,17 @@ module I2CTLVStorageMasterP{
   }
 
   task void readTask(){
-    error_t error = call I2CRegisterUser.read(slaveAddr, 1, &pkt,
+    error_t error = call I2CRegisterUser.read(curSlave, 1, &pkt,
       TLV_STORAGE_REGISTER_LEN - 1);
+    if (error != SUCCESS){
+      state = S_IDLE;
+      signal SplitTLVStorage.loaded(error, buf);
+    }
   }
 
   event void I2CRegisterUser.writeDone(error_t error, 
       uint16_t slaveAddr, uint8_t pos, uint8_t len, 
-      register_packet_t* pkt){
+      register_packet_t* pkt_){
     if (state == S_LOADING){
       if (error == SUCCESS){
         post readTask();
@@ -41,10 +45,10 @@ module I2CTLVStorageMasterP{
   }
 
   event void I2CRegisterUser.readDone(error_t error, 
-      uint16_t slaveAddr, uint8_t pos, register_packet_t* pkt, 
+      uint16_t slaveAddr, uint8_t pos, register_packet_t* pkt_, 
       uint8_t len){
     if (error == SUCCESS){
-      memcpy(buf, reg.buf, TLV_STORAGE_REGISTER_LEN - 1);
+      memcpy(buf, pkt.data, TLV_STORAGE_REGISTER_LEN - 1);
     }
     state = S_IDLE;
     signal SplitTLVStorage.loaded(error, buf);
@@ -56,14 +60,14 @@ module I2CTLVStorageMasterP{
     if (state != S_IDLE){
       return EBUSY;
     }
-    if (slaveAddr == 0){
+    if (curSlave == 0){
       return FAIL;
     }
     pkt.body.cmd = TLV_STORAGE_READ_CMD;
-    ret = call I2CRegisterUser.write(slaveAddr, 0, &pkt, 1);
+    ret = call I2CRegisterUser.write(curSlave, 0, &pkt, 1);
     if (ret == SUCCESS){
       buf = tlvs;
-      state = S_READING;
+      state = S_LOADING;
     }
     return ret;
   }
@@ -73,12 +77,12 @@ module I2CTLVStorageMasterP{
     if (state != S_IDLE){
       return EBUSY;
     }
-    if (slaveAddr == 0){
+    if (curSlave == 0){
       return FAIL;
     }
     pkt.body.cmd = TLV_STORAGE_WRITE_CMD;
     memcpy(pkt.body.data, tlvs, TLV_STORAGE_REGISTER_LEN - 1);
-    error = call I2CRegisterUser.write(slaveAddr, 0, &pkt,
+    error = call I2CRegisterUser.write(curSlave, 0, &pkt,
       TLV_STORAGE_REGISTER_LEN);
     return error;
   }
