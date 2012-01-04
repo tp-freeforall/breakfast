@@ -9,6 +9,7 @@ module TestP{
   uses interface UartStream;
   uses interface StdControl;
   uses interface TLVStorage;
+  uses interface TLVUtils;
 } implementation {
   uint8_t tlvs_ba[IFLASH_SEGMENT_SIZE];
 
@@ -27,7 +28,7 @@ module TestP{
     uint8_t i;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     do{
-      offset = call TLVStorage.findEntry(TAG_ANY, offset+1, &e, tlvs_ba);
+      offset = call TLVUtils.findEntry(TAG_ANY, offset+1, &e, tlvs_ba);
       if (e != NULL){
         printf("------------\n\r");
         printf(" Offset: %d\n\r", offset);
@@ -53,10 +54,10 @@ module TestP{
     uint8_t offset;
     uint8_t i;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    if( 0 == call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, &e, tlvs_ba)){
+    if( 0 == call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, &e, tlvs_ba)){
       memset(uid.id, 0, 8);
       uid.id[7] = 1;
-      offset = call TLVStorage.addEntry(TAG_GLOBAL_ID, 8, (tlv_entry_t*)&uid,
+      offset = call TLVUtils.addEntry(TAG_GLOBAL_ID, 8, (tlv_entry_t*)&uid,
         tlvs_ba, 0);
       if (offset != 0){
         printf("Added at offset %x\n\r", offset);
@@ -80,7 +81,7 @@ module TestP{
     global_id_entry_t* uid;
     uint8_t offset;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    offset = call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
+    offset = call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs_ba);
     if (NULL == uid){
       printf("No unique Id tag found.\n\r");
@@ -97,11 +98,11 @@ module TestP{
     global_id_entry_t* uid;
     uint8_t offset;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    offset = call TLVStorage.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
+    offset = call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs_ba);
     if (offset != 0){
       printf("Unique ID found at %x.\n\r", offset);
-      error = call TLVStorage.deleteEntry(offset, tlvs_ba);
+      error = call TLVUtils.deleteEntry(offset, tlvs_ba);
       printf("delete: %s\n\r", decodeError(error));
       call TLVStorage.persistTLVStorage(tlvs_ba);
       printf("persist: %s\n\r", decodeError(error));

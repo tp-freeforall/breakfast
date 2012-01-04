@@ -10,4 +10,5 @@ configuration TestAppC{
   TestP.UartStream -> PlatformSerialC;
   TestP.StdControl -> PlatformSerialC;
   TestP.TLVStorage -> TLVStorageC;
+  TestP.TLVUtils -> TLVStorageC;
 }
