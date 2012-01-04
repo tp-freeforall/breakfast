@@ -8,4 +8,13 @@
 #define TLV_STORAGE_WRITE_CMD 0xa0
 #define TLV_STORAGE_READ_CMD  0xa1
 
+typedef union{
+  uint8_t buf[TLV_STORAGE_REGISTER_LEN];
+  struct{
+    uint8_t cmd;
+    uint8_t buf[TLV_STORAGE_REGISTER_LEN - 1];
+  } s;
+} __attribute__((__packed__)) tlv_register_t;
+
+
 #endif

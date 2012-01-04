@@ -1,5 +1,4 @@
 #include "TLVStorage.h"
-
 //Interface that handles reading/writing "tag-length-value" entries in
 //information memory according to msp430 user guide.
 interface TLVStorage{

@@ -5,14 +5,6 @@ module I2CTLVStorageP{
   uses interface TLVUtils;
   uses interface I2CRegister;
 } implementation {
-  typedef union{
-    uint8_t buf[TLV_STORAGE_REGISTER_LEN];
-    struct{
-      uint8_t cmd;
-      uint8_t buf[TLV_STORAGE_REGISTER_LEN - 1];
-    } s;
-  } __attribute__((__packed__)) tlv_register_t;
-
   tlv_register_t reg;
 
   async event uint8_t* I2CRegister.transactionStart(bool isTransmit){
