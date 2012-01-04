@@ -12,6 +12,7 @@ configuration I2CTLVStorageMasterC{
   components new I2CRegisterUserC(REGISTER_CLIENT_ID_TLV_STORAGE);
 
   I2CTLVStorageMasterP.I2CRegisterUser -> I2CRegisterUserC;
+  I2CTLVStorageMasterP.TLVUtils -> TLVUtilsC;
 
   SplitTLVStorage = I2CTLVStorageMasterP;
   Set = I2CTLVStorageMasterP;

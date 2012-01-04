@@ -2,6 +2,8 @@
 #include "InternalFlash.h"
 #include "InternalFlashFunctions.h"
 
+#include <stdio.h>
+
 module TLVStorageP{
   provides interface TLVStorage;
   provides interface Init;
@@ -28,6 +30,7 @@ module TLVStorageP{
     version_entry_t e;
     memcpy(tlvs, IFLASH_A_START, IFLASH_SEGMENT_SIZE);
     if (!verifyChecksum(tlvs)){
+      printf("invalid TLV checksum in A, clearing\n\r");
       memset(tlvs, 0xff, IFLASH_SEGMENT_SIZE);
       e.version = 0;
       ba[TLV_CHECKSUM_LENGTH] = TAG_EMPTY;
@@ -56,6 +59,7 @@ module TLVStorageP{
     //B's version = A's version + 1
     if ((va == NULL && vb != NULL) 
       || (vb->data.w[0]  == 1 + va->data.w[0])){
+      printf("copying from B to A\n\r");
       unlockInternalFlash(IFLASH_A_START);
       FCTL1 = FWKEY+ERASE;
       *((uint8_t*)IFLASH_A_START) = 0;
@@ -73,6 +77,7 @@ module TLVStorageP{
   }
 
   void writeToB(void* tlvs){
+    printf("Writing to B\n\r");
     unlockInternalFlash(IFLASH_B_START);
     FCTL1 = FWKEY + ERASE;
     *((uint8_t*)IFLASH_B_START) = 0;
@@ -87,6 +92,7 @@ module TLVStorageP{
     tlv_entry_t* versionTag;
     int16_t* wa = (int16_t*)tlvs;
     if (0 == call TLVUtils.findEntry(TAG_VERSION, 0, &versionTag, tlvs)){
+      printf("No TAG_VERSION found, not persisting\n\r");
       //there should always be a TAG_VERSION in here if tlvs was
       //loaded via this component.
       return FAIL; 

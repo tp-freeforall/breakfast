@@ -4,6 +4,7 @@ module I2CTLVStorageMasterP{
   provides interface SplitTLVStorage;
   provides interface Set<uint16_t>;
   uses interface I2CRegisterUser;
+  uses interface TLVUtils;
 } implementation {
   enum {
     S_IDLE = 0,
@@ -21,7 +22,7 @@ module I2CTLVStorageMasterP{
   }
 
   task void readTask(){
-    error_t error = call I2CRegisterUser.read(curSlave, 1, &pkt,
+    error_t error = call I2CRegisterUser.read(curSlave, 0, &pkt,
       TLV_STORAGE_REGISTER_LEN - 1);
     if (error != SUCCESS){
       state = S_IDLE;
@@ -44,6 +45,31 @@ module I2CTLVStorageMasterP{
     }
   }
 
+  void debugTLV(void* tlvs_){
+    tlv_entry_t* e;
+    uint8_t offset = 0;
+    uint8_t i;
+    do{
+      offset = call TLVUtils.findEntry(TAG_ANY, offset+1, &e, tlvs_);
+      if (e != NULL){
+        printf("------------\n\r");
+        printf(" Offset: %d\n\r", offset);
+        printf(" Tag:\t[%d]\t%x\n\r", offset, e->tag);
+        printf(" Len:\t[%d]\t%x\n\r", offset+1, e->len);
+        if (e->tag != TAG_EMPTY){
+        printf(" Data:\n\r");
+        for (i = 0; i < e->len; i++){
+          printf("  [%d]\t(%d)\t%x\n\r", offset+2+i, i, e->data.b[i]);
+        }
+        }else{
+          printf("  [%d]->[%d] (empty)\n\r", offset+2,
+          offset+2+e->len-1);
+        }
+      }
+    } while( offset != 0);
+  }
+
+ 
   event void I2CRegisterUser.readDone(error_t error, 
       uint16_t slaveAddr, uint8_t pos, register_packet_t* pkt_, 
       uint8_t len){
