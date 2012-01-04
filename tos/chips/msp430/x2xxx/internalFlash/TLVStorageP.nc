@@ -68,7 +68,10 @@ module TLVStorageP{
       FCTL1 = FWKEY;
       lockInternalFlash(IFLASH_A_START);
     }else{
-      //no copy needed
+      printf("no copy needed: va %p vb %p.\n\r", va, vb);
+      if (vb != NULL && va != NULL){ 
+        printf("vb: %d, va: %d\n\r", vb->data.w[0], va->data.w[0]);
+      }
     }
   }
 
@@ -91,14 +94,21 @@ module TLVStorageP{
   command error_t TLVStorage.persistTLVStorage(void* tlvs){
     tlv_entry_t* versionTag;
     int16_t* wa = (int16_t*)tlvs;
-    if (0 == call TLVUtils.findEntry(TAG_VERSION, 0, &versionTag, tlvs)){
+    uint8_t versionOffset = call TLVUtils.findEntry(TAG_VERSION, 0,
+      &versionTag, tlvs);
+    if (0 == versionOffset ){
       printf("No TAG_VERSION found, not persisting\n\r");
       //there should always be a TAG_VERSION in here if tlvs was
       //loaded via this component.
       return FAIL; 
     } else {
+//      printf("Persisting version (offset %d) %d (pre)\n\r",
+//        versionOffset,
+//        ((version_entry_t*)versionTag)->version);
+//      printf("tlv start %p version start %p version %p\n\r", tlvs,
+//        versionTag, &(((version_entry_t*)versionTag)->version));
       //increment version
-      (versionTag->data.w)[0] ++;
+      ((version_entry_t*)versionTag)->version ++;
     }
     //checksum: bitwise XOR of the data, stored as -1*checksum (see
     //24.3 in user guide: verification is done by xoring the data,

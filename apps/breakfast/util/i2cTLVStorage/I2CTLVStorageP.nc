@@ -45,7 +45,8 @@ module I2CTLVStorageP{
   }
 
   task void writeTask(){
-    error_t error = call TLVStorage.persistTLVStorage(reg.s.buf);
+    error_t error;
+    error = call TLVStorage.persistTLVStorage(reg.s.buf);
     call I2CRegister.unPause();
   }
 

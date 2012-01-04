@@ -31,16 +31,16 @@ typedef struct {
     uint8_t b[0];
     uint16_t w[0];
   } data;
-} tlv_entry_t;
+} __attribute__((__packed__)) tlv_entry_t;
 
 typedef struct{
   tlv_entry_t header;
   uint16_t version;
-} version_entry_t;
+} __attribute__((__packed__)) version_entry_t;
 
 typedef struct{
   tlv_entry_t header;
   uint8_t bcsctl1;
   uint8_t dcoctl;
-} custom_dco_entry_t;
+} __attribute__((__packed__)) custom_dco_entry_t;
 #endif
