@@ -1,10 +1,13 @@
+#include "I2CCom.h"
+#include "I2CTLVStorage.h"
+
 module TLVStorageTestP{
-  uses interface SplitTLVStorage;
+  uses interface I2CTLVStorageMaster;
   uses interface TLVUtils;
-  uses interface Set<uint16_t>;
 
   provides interface Get<const char*> as GetDesc;
   uses interface Get<test_state_t*>;
+  uses interface UartStream;
 } implementation{
 
   const char* testDesc = "TLV Storage test:\n\r l: load\n\r a: add uid tag\n\r p: persist\n\r d: delete\n\r"; 
@@ -12,22 +15,24 @@ module TLVStorageTestP{
   command const char* GetDesc.get(){
     return testDesc;
   }
-
-  uint8_t tlv_ba[TLV_LEN];
-  void* tlvs = tlv_ba;
+  
+  i2c_message_t msg;
 
   task void loadTLVStorage(){
     error_t error;
+    test_state_t* state = call Get.get();
     printf("%s: \n\r", __FUNCTION__);
-    call Set.set(slaves[0]);
-    error = call SplitTLVStorage.loadTLVStorage(tlvs);
+    error = call
+    I2CTLVStorageMaster.loadTLVStorage(state->slaves[state->currentSlave],
+      &msg);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
-  event void SplitTLVStorage.loaded(error_t error, void* tlvs_){
+  event void I2CTLVStorageMaster.loaded(error_t error, i2c_message_t* msg_){
     tlv_entry_t* e;
     uint8_t offset = 0;
     uint8_t i;
+    void* tlvs_ = call I2CTLVStorageMaster.getPayload(msg_);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     do{
       offset = call TLVUtils.findEntry(TAG_ANY, offset+1, &e, tlvs_);
@@ -51,13 +56,13 @@ module TLVStorageTestP{
 
   task void persistTLVStorage(){
     error_t error;
+    test_state_t* state = call Get.get();
     printf("%s: \n\r", __FUNCTION__);
-    call Set.set(slaves[0]);
-    error = call SplitTLVStorage.persistTLVStorage(tlvs);
+    error = call I2CTLVStorageMaster.persistTLVStorage(state->slaves[state->currentSlave], &msg);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
-  event void SplitTLVStorage.persisted(error_t error, void* tlvs_){
+  event void I2CTLVStorageMaster.persisted(error_t error, i2c_message_t* tlvs_){
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
@@ -66,6 +71,7 @@ module TLVStorageTestP{
     global_id_entry_t uid;
     uint8_t offset;
     uint8_t i;
+    void* tlvs = call I2CTLVStorageMaster.getPayload(&msg);
     printf("%s: \n\r", __FUNCTION__);
     if( 0 == call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, &e, tlvs)){
       memset(uid.id, 0, 8);
@@ -90,6 +96,7 @@ module TLVStorageTestP{
   task void updateUniqueIDTag(){
     global_id_entry_t* uid;
     uint8_t offset;
+    void* tlvs = call I2CTLVStorageMaster.getPayload(&msg);
     printf("%s: \n\r", __FUNCTION__);
     offset = call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs);
@@ -105,6 +112,7 @@ module TLVStorageTestP{
     global_id_entry_t* uid;
     uint8_t offset;
     error_t error;
+    void* tlvs = call I2CTLVStorageMaster.getPayload(&msg);
     offset = call TLVUtils.findEntry(TAG_GLOBAL_ID, 0, (tlv_entry_t**)&uid,
       tlvs);
     if (offset != 0){
@@ -116,7 +124,7 @@ module TLVStorageTestP{
     }
   }
 
-  async event void SubUartStream.receivedByte(uint8_t byte){
+  async event void UartStream.receivedByte(uint8_t byte){
     switch(byte){
       case 'l':
         post loadTLVStorage();
@@ -135,4 +143,9 @@ module TLVStorageTestP{
         break;
     }
   }
+
+  async event void UartStream.receiveDone( uint8_t* buf_, uint16_t len,
+    error_t error ){}
+  async event void UartStream.sendDone( uint8_t* buf_, uint16_t len,
+    error_t error ){}
 }

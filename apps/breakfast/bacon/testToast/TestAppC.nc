@@ -25,8 +25,12 @@ configuration TestAppC{
   StorageTestC.Get -> TestP.Get;
   TestP.GetDesc[STORAGE_TEST_ID] -> StorageTestC.GetDesc;
 
-//  components TLVStorageTestC;
-//  TLVStorageTestC.UartStream = TestP.UartStream[unique(UQ_TEST_CLIENT)];
-//  TLVStorageTestC.Get = TestP.Get;
+  enum{
+    TLV_STORAGE_TEST_ID = unique(UQ_TEST_CLIENT),
+  };
+  components TLVStorageTestC;
+  TLVStorageTestC.UartStream -> TestP.UartStream[TLV_STORAGE_TEST_ID];
+  TLVStorageTestC.Get -> TestP.Get;
+  TestP.GetDesc[TLV_STORAGE_TEST_ID] -> TLVStorageTestC.GetDesc;
 
 }

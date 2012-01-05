@@ -3,7 +3,7 @@
 
 module I2CTLVStorageMasterP{
   provides interface I2CTLVStorageMaster;
-  uses interface I2CRegisterUser;
+  uses interface I2CComMaster;
   uses interface TLVUtils;
 } implementation {
   enum {
@@ -13,7 +13,11 @@ module I2CTLVStorageMasterP{
   }; 
   
   uint8_t state = S_IDLE;
-  message_t* readMsg;
+  i2c_message_t* readMsg;
+
+  command void* I2CTLVStorageMaster.getPayload(i2c_message_t* msg){
+    return &(((i2c_tlv_storage_t*)call I2CComMaster.getPayload(msg))->data);
+  }
 
   task void readTask(){
     error_t error = call
@@ -34,7 +38,7 @@ module I2CTLVStorageMasterP{
         readMsg = msg;
         post readTask();
       } else {
-        signal SplitTLVStorage.loaded(error, msg);
+        signal I2CTLVStorageMaster.loaded(error, msg);
       }
     } else if (state == S_PERSISTING){
       state = S_IDLE;
@@ -46,7 +50,7 @@ module I2CTLVStorageMasterP{
   event void I2CComMaster.receiveDone(error_t error, 
       i2c_message_t* msg){
     state = S_IDLE;
-    signal I2CComMaster.loaded(error, msg);
+    signal I2CTLVStorageMaster.loaded(error, msg);
   }
 
 
@@ -65,7 +69,7 @@ module I2CTLVStorageMasterP{
     return ret;
   }
 
-  command error_t I2CTLVStorage.persistTLVStorage(uint16_t slaveAddr,
+  command error_t I2CTLVStorageMaster.persistTLVStorage(uint16_t slaveAddr,
       i2c_message_t* msg){
     error_t error;
     i2c_tlv_storage_t* payload = (i2c_tlv_storage_t*)call I2CComMaster.getPayload(msg);
