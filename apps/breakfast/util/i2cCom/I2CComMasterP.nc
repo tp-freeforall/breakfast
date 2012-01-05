@@ -32,21 +32,27 @@ generic module I2CComMasterP(uint8_t clientId){
   command error_t I2CComMaster.send(uint16_t slaveAddr,
       i2c_message_t* msg_, uint8_t payloadLen){
     error_t ret = call Resource.request();
+    printf("%s: \n\r", __FUNCTION__);
     if ( ret == SUCCESS ){
       msg = msg_;
       msg->body.header.slaveAddr = slaveAddr;
       msg->body.header.clientId = clientId;
       msg->body.header.len = payloadLen + sizeof(i2c_message_header_t);
+      printf("Payload len %d packet len %d\n\r", payloadLen,
+        msg->body.header.len);
       state = S_WRITE_REQUESTED;
     } 
     return ret;
   }
 
   task void write(){
-    error_t error = call I2CPacket.write(I2C_START|I2C_STOP,
+    error_t error;
+    printf("writing %d bytes\n\r", msg->body.header.len);
+    error = call I2CPacket.write(I2C_START|I2C_STOP,
       msg->body.header.slaveAddr, 
       msg->body.header.len, 
       (uint8_t*)msg->buf); 
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     if (error != SUCCESS){
       signalError = error;
       post signalSendDone();
@@ -63,11 +69,13 @@ generic module I2CComMasterP(uint8_t clientId){
   }
 
   task void signalSendDone(){
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(signalError));
     release();
     signal I2CComMaster.sendDone(signalError, msg);
   }
 
   void release(){
+    printf("%s: \n\r", __FUNCTION__);
     atomic{
       call Resource.release();
       state = S_IDLE;
@@ -75,6 +83,7 @@ generic module I2CComMasterP(uint8_t clientId){
   }
 
   event void Resource.granted(){
+    printf("%s: \n\r", __FUNCTION__);
     switch (state){
       case S_WRITE_REQUESTED:
         state = S_WRITING;
@@ -91,6 +100,7 @@ generic module I2CComMasterP(uint8_t clientId){
   command error_t I2CComMaster.receive(uint16_t slaveAddr, i2c_message_t*
   msg_, uint8_t len){
     error_t ret = call Resource.request();
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(ret));
     if (ret == SUCCESS){
       msg = msg_;
       msg->body.header.slaveAddr = slaveAddr;
@@ -104,6 +114,7 @@ generic module I2CComMasterP(uint8_t clientId){
   task void read(){
     signalError = call I2CPacket.read(I2C_START|I2C_STOP,
       msg->body.header.slaveAddr, msg->body.header.len, (uint8_t*)msg->body.buf);
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(signalError));
     if (signalError == SUCCESS){
       state = S_READING;
     } else {
@@ -114,6 +125,7 @@ generic module I2CComMasterP(uint8_t clientId){
   }
 
   task void signalReceiveDone(){
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(signalError));
     release();
     signal I2CComMaster.receiveDone(signalError, msg);
   }
