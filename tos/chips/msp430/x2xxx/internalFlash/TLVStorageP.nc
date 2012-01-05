@@ -62,8 +62,10 @@ module TLVStorageP{
     memcpy(tlvs, IFLASH_A_START, IFLASH_SEGMENT_SIZE);
     if (!verifyChecksum(tlvs)){
       printf("invalid TLV checksum in A, clearing\n\r");
-      printf("Verify: found %d computed %d\n\r", ((int16_t*)tlvs)[0],
-        computeChecksum(tlvs));
+      printf("In A:\n\r");
+      debugTLV(IFLASH_A_START);
+      printf("In buffer:\n\r");
+      debugTLV(tlvs);
       memset(tlvs, 0xff, IFLASH_SEGMENT_SIZE);
       e.version = 0;
       ba[TLV_CHECKSUM_LENGTH] = TAG_EMPTY;

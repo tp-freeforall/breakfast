@@ -62,7 +62,7 @@ module I2CTLVStorageMasterP{
       return EBUSY;
     }
     payload-> cmd = TLV_STORAGE_READ_CMD;
-    ret = call I2CComMaster.send(slaveAddr, msg, 1);
+    ret = call I2CComMaster.send(slaveAddr, msg, sizeof(payload->cmd));
     if (ret == SUCCESS){
       state = S_LOADING;
     }

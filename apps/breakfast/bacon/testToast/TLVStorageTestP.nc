@@ -10,7 +10,7 @@ module TLVStorageTestP{
   uses interface UartStream;
 } implementation{
 
-  const char* testDesc = "TLV Storage test:\n\r l: load\n\r a: add uid tag\n\r p: persist\n\r d: delete\n\r"; 
+  const char* testDesc = "TLV Storage test:\n\r l: load\n\r a: add uid tag\n\r p: persist\n\r r: remove\n\r"; 
 
   command const char* GetDesc.get(){
     return testDesc;
@@ -108,7 +108,7 @@ module TLVStorageTestP{
     }
   }
 
-  task void deleteUniqueIDTag(){
+  task void removeUniqueIDTag(){
     global_id_entry_t* uid;
     uint8_t offset;
     error_t error;
@@ -118,7 +118,7 @@ module TLVStorageTestP{
     if (offset != 0){
       printf("Unique ID found at %x.\n\r", offset);
       error = call TLVUtils.deleteEntry(offset, tlvs);
-      printf("delete: %s\n\r", decodeError(error));
+      printf("remove: %s\n\r", decodeError(error));
     }else{
       printf("No Unique ID tag to delete.\n\r");
     }
@@ -138,8 +138,8 @@ module TLVStorageTestP{
       case 'u':
         post updateUniqueIDTag();
         break;
-      case 'D':
-        post deleteUniqueIDTag();
+      case 'r':
+        post removeUniqueIDTag();
         break;
     }
   }
