@@ -8,6 +8,7 @@
 
 #define TLV_STORAGE_WRITE_CMD 0xa0
 #define TLV_STORAGE_READ_CMD  0xa1
+#define TLV_STORAGE_RESPONSE_CMD  0xa2
 
 //TODO: check alignment on this: if data isn't word-aligned, then
 //  checksums don't get computed correctly

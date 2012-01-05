@@ -1,8 +1,8 @@
-//man I wish I could avoid all these stupid copies
 #include "I2CTLVStorage.h"
+#include "I2CCom.h"
+
 module I2CTLVStorageMasterP{
-  provides interface SplitTLVStorage;
-  provides interface Set<uint16_t>;
+  provides interface I2CTLVStorageMaster;
   uses interface I2CRegisterUser;
   uses interface TLVUtils;
 } implementation {
@@ -13,103 +13,72 @@ module I2CTLVStorageMasterP{
   }; 
   
   uint8_t state = S_IDLE;
-  uint16_t curSlave = 0;
-  register_packet_t pkt;
-  void* buf;
-
-  command void Set.set(uint16_t val){
-    curSlave = val;
-  }
+  message_t* readMsg;
 
   task void readTask(){
-    error_t error = call I2CRegisterUser.read(curSlave, 0, &pkt,
-      TLV_STORAGE_REGISTER_LEN - 1);
+    error_t error = call
+    I2CComMaster.receive(readMsg->body.header.slaveAddr, readMsg,
+      sizeof(i2c_tlv_storage_t));
+
     if (error != SUCCESS){
       state = S_IDLE;
-      signal SplitTLVStorage.loaded(error, buf);
+      readMsg->body.header.len = 0;
+      signal I2CTLVStorageMaster.loaded(error, readMsg);
     }
   }
 
-  event void I2CRegisterUser.writeDone(error_t error, 
-      uint16_t slaveAddr, uint8_t pos, uint8_t len, 
-      register_packet_t* pkt_){
+  event void I2CComMaster.sendDone(error_t error, 
+      i2c_message_t* msg){
     if (state == S_LOADING){
       if (error == SUCCESS){
+        readMsg = msg;
         post readTask();
       } else {
-        signal SplitTLVStorage.loaded(error, buf);
+        signal SplitTLVStorage.loaded(error, msg);
       }
     } else if (state == S_PERSISTING){
       state = S_IDLE;
-      signal SplitTLVStorage.persisted(error, buf);
+      signal I2CTLVStorageMaster.persisted(error, msg);
     }
-  }
-
-  void debugTLV(void* tlvs_){
-    tlv_entry_t* e;
-    uint8_t offset = 0;
-    uint8_t i;
-    do{
-      offset = call TLVUtils.findEntry(TAG_ANY, offset+1, &e, tlvs_);
-      if (e != NULL){
-        printf("------------\n\r");
-        printf(" Offset: %d\n\r", offset);
-        printf(" Tag:\t[%d]\t%x\n\r", offset, e->tag);
-        printf(" Len:\t[%d]\t%x\n\r", offset+1, e->len);
-        if (e->tag != TAG_EMPTY){
-        printf(" Data:\n\r");
-        for (i = 0; i < e->len; i++){
-          printf("  [%d]\t(%d)\t%x\n\r", offset+2+i, i, e->data.b[i]);
-        }
-        }else{
-          printf("  [%d]->[%d] (empty)\n\r", offset+2,
-          offset+2+e->len-1);
-        }
-      }
-    } while( offset != 0);
   }
 
  
-  event void I2CRegisterUser.readDone(error_t error, 
-      uint16_t slaveAddr, uint8_t pos, register_packet_t* pkt_, 
-      uint8_t len){
-    if (error == SUCCESS){
-      memcpy(buf, pkt.data, TLV_STORAGE_REGISTER_LEN - 1);
-    }
+  event void I2CComMaster.receiveDone(error_t error, 
+      i2c_message_t* msg){
     state = S_IDLE;
-    signal SplitTLVStorage.loaded(error, buf);
+    signal I2CComMaster.loaded(error, msg);
   }
 
 
-  command error_t SplitTLVStorage.loadTLVStorage(void* tlvs){
+  command error_t I2CTLVStorageMaster.loadTLVStorage(uint16_t slaveAddr, 
+      i2c_message_t* msg){
     error_t ret;
+    i2c_tlv_storage_t* payload = (i2c_tlv_storage_t*)call I2CComMaster.getPayload(msg);
     if (state != S_IDLE){
       return EBUSY;
     }
-    if (curSlave == 0){
-      return FAIL;
-    }
-    pkt.body.cmd = TLV_STORAGE_READ_CMD;
-    ret = call I2CRegisterUser.write(curSlave, 0, &pkt, 1);
+    payload-> cmd = TLV_STORAGE_READ_CMD;
+    ret = call I2CComMaster.send(slaveAddr, msg, 1);
     if (ret == SUCCESS){
-      buf = tlvs;
       state = S_LOADING;
     }
     return ret;
   }
 
-  command error_t SplitTLVStorage.persistTLVStorage(void* tlvs){
+  command error_t I2CTLVStorage.persistTLVStorage(uint16_t slaveAddr,
+      i2c_message_t* msg){
     error_t error;
+    i2c_tlv_storage_t* payload = (i2c_tlv_storage_t*)call I2CComMaster.getPayload(msg);
     if (state != S_IDLE){
       return EBUSY;
     }
-    if (curSlave == 0){
-      return FAIL;
+
+    payload->cmd = TLV_STORAGE_WRITE_CMD;
+    error = call I2CComMaster.send(slaveAddr,
+      msg,sizeof(i2c_tlv_storage_t));
+    if (error == SUCCESS){
+      state = S_PERSISTING;
     }
-    pkt.body.cmd = TLV_STORAGE_WRITE_CMD;
-    memcpy(pkt.body.data, tlvs, TLV_STORAGE_REGISTER_LEN - 1);
-    error = call I2CRegisterUser.write(curSlave, 0, &pkt,
-      TLV_STORAGE_REGISTER_LEN);
     return error;
   }
 }

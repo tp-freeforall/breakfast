@@ -2,20 +2,18 @@
 //wrap storage commands with I2C behavior
 //to preserve storage interface, use Set to determine slave addr
 configuration I2CTLVStorageMasterC{
-  provides interface SplitTLVStorage;
+  provides interface I2CTLVStorageMaster;
   provides interface TLVUtils;
-  provides interface Set<uint16_t>;
 } implementation {
   components I2CTLVStorageMasterP;
   components TLVUtilsC;
   
-  components new I2CRegisterUserC(REGISTER_CLIENT_ID_TLV_STORAGE);
+  components new I2CComMasterC(I2C_COM_CLIENT_ID_TLV_STORAGE);
 
-  I2CTLVStorageMasterP.I2CRegisterUser -> I2CRegisterUserC;
+  I2CTLVStorageMasterP.I2CComMaster -> I2CComMasterC;
   I2CTLVStorageMasterP.TLVUtils -> TLVUtilsC;
 
-  SplitTLVStorage = I2CTLVStorageMasterP;
-  Set = I2CTLVStorageMasterP;
+  I2CTLVStorageMaster = I2CTLVStorageMasterP;
 
   TLVUtils = TLVUtilsC;
 }
