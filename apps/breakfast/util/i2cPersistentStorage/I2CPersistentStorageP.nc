@@ -1,56 +1,58 @@
 #include "InternalFlash.h"
 #include "I2CPersistentStorage.h"
 #include "decodeError.h"
+#include "I2CCom.h"
 
 module I2CPersistentStorageP{
-  uses interface I2CRegister;
+  uses interface I2CComSlave;
   uses interface InternalFlash;
 } implementation {
-  enum {
-    REGISTER_LEN = IFLASH_SEGMENT_SIZE,
-  };
+  i2c_message_t msg_internal;
+  i2c_message_t* msg = &msg_internal;
+  
+  i2c_message_t* swap(i2c_message_t* msg_){
+    i2c_message_t* swp = msg;
+    msg = msg_;
+    return swp;
+  }
 
-  uint8_t buf[REGISTER_LEN];
-
-  task void readFlashTask(){
-//    printf("%s: %s \n\r", __FUNCTION__, decodeError( call InternalFlash.read(0, &buf[1], IFLASH_SEGMENT_SIZE - 1)));
+  task void readTask(){
     //last byte is version
-    call I2CRegister.unPause();
+    call InternalFlash.read(0, msg->body.buf, IFLASH_SEGMENT_SIZE - 1);
+    call I2CComSlave.unpause();
   }
 
-  async event uint8_t* I2CRegister.transactionStart(bool isTransmit){
-//    printf("%s: it %x\n\r", __FUNCTION__, isTransmit);
-    if (isTransmit){
-      call I2CRegister.pause();
-      post readFlashTask();
-    }
-    return buf;
-  }
-
-  async event uint8_t I2CRegister.registerLen(){
-    return REGISTER_LEN;
+  //we don't unpause the lower layer until the data is filled into
+  //  msg, so it's fine to just return that and do the swap.
+  async event i2c_message_t* I2CComSlave.slaveTXStart(i2c_message_t* msg_){
+    return swap(msg_);
   }
 
   task void writeTask(){
-//    printf("%s: %s\n\r", __FUNCTION__, decodeError(call InternalFlash.write(0, &buf[1], IFLASH_SEGMENT_SIZE - 1)));
+    i2c_persistent_storage_t* payload =
+      (i2c_persistent_storage_t*) call I2CComSlave.getPayload(msg);
+    call InternalFlash.write(0, payload.data, IFLASH_SEGMENT_SIZE - 1);
     call I2CRegister.unPause();
   }
 
-  async event void I2CRegister.transactionStop(uint8_t* reg, 
-      uint8_t pos){ 
-//    printf("%s: buf: %p cmd: %x\n\r", __FUNCTION__, reg, reg[0]);
-    switch(reg[0]){
+  async event i2c_message_t* I2CComSlave.received(i2c_message_t* msg_){ 
+    i2c_persistent_storage_t* payload =
+      (i2c_persistent_storage_t*) call I2CComSlave.getPayload(msg);
+    switch(payload.cmd){
       case I2C_STORAGE_WRITE_CMD:
-//        printf("write cmd\n\r");
-        call I2CRegister.pause();
+        //do not let any other commands come in until we're done with
+        //  this one.
+        call I2CComSlave.pause();
         post writeTask();
-        break;
+        //we need to hang onto this buffer, since we're going to
+        //  persist the data to flash. do a swap.
+        return swap(msg_);
       case I2C_STORAGE_READ_CMD:
-//        printf("read cmd\n\r");
-        break;
+        call I2CComSlave.pause();
+        post readTask();
+        return msg_;
       default:
-//        printf("unrecognized cmd %x\n\r", reg[0]);
-        break;
+        return msg_;
     }
   }
 

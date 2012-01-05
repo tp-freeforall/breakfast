@@ -99,6 +99,9 @@ module I2CComSlaveMultiP {
   }
 
   void transmit(){
+    if(transCount == 0){
+      txPkt = signal I2CComSlave.slaveTXStart[lastClient](txPkt);
+    } 
     eventPending = FALSE;
     call I2CSlave.slaveTransmit(txPkt->body.buf[transCount]);
     transCount++;
@@ -127,9 +130,6 @@ module I2CComSlaveMultiP {
       return TRUE;
     }else {
       isReceive = FALSE;
-      if(transCount == 0){
-        txPkt = signal I2CComSlave.slaveTXStart[lastClient](txPkt);
-      } 
       if (isPaused){
         return FALSE;
       } else {

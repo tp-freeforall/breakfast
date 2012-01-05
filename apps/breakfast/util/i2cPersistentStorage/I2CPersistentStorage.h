@@ -15,4 +15,9 @@
 #error PERSISTENT_STORAGE_REGISTER_SIZE is greater than MAX_I2C_REGISTER_LEN.  Redefine MAX_I2C_REGISTER_LEN in order to use the I2CPersistenStorage app.
 #endif
 
+typedef nx_struct i2c_persistent_storage_t {
+  nxuint8_t cmd;
+  nxuint8_t data[IFLASH_SEGMENT_SIZE - 1];
+}
+
 #endif
