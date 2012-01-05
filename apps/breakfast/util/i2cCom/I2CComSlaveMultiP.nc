@@ -85,6 +85,13 @@ module I2CComSlaveMultiP {
     signal SplitControl.startDone(SUCCESS);
   }
 
+  //Note: slave receive gets entire packet (including header). Slave
+  //  transmit, however, only sends back the body. This is because:
+  //  a. slave can't know len (up to master)
+  //  b. at the master, only a single client could be using I2c, so
+  //     there's no need for multiplexing
+  //  c. "slaveAddr" field is meaningless in this context.
+  //  d. less bytes, so faster
   void receive(){
     eventPending = FALSE;
     rxPkt->buf[transCount] = call I2CSlave.slaveReceive();
@@ -93,7 +100,7 @@ module I2CComSlaveMultiP {
 
   void transmit(){
     eventPending = FALSE;
-    call I2CSlave.slaveTransmit(txPkt->buf[transCount]);
+    call I2CSlave.slaveTransmit(txPkt->body.buf[transCount]);
     transCount++;
   }
   

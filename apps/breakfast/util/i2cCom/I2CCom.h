@@ -2,6 +2,7 @@
 #define I2C_COM_H
 
 typedef nx_struct i2c_message_header_t {
+  nxuint16_t slaveAddr;
   nxuint8_t clientId;
   nxuint8_t len;
 } i2c_message_header_t;
