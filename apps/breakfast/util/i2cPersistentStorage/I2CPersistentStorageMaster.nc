@@ -1,3 +1,4 @@
+#include "I2CCom.h"
 interface I2CPersistentStorageMaster {
   command void* getPayload(i2c_message_t* msg);
 

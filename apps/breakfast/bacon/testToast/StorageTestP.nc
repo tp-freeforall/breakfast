@@ -1,3 +1,5 @@
+#include "I2CCom.h"
+#include "I2CPersistentStorage.h"
 module StorageTestP{
   uses interface UartStream;
   uses interface Get<test_state_t*>;
@@ -5,17 +7,7 @@ module StorageTestP{
   provides interface Get<const char*> as GetDesc;
 } implementation {
   const char* testDesc = "Persistent Storage\n\r r: read\n\r w: write";
-
-  uint8_t buf[63] = { 
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0xde, 0xfa, 0xce,
-  };
+  i2c_message_t msg;
 
   command const char* GetDesc.get(){
     return testDesc;
@@ -28,13 +20,14 @@ module StorageTestP{
       printf("No slaves found yet ('d' to discover)\n\r");
     } else {
       printf("Reading from local addr %x\n\r", state->slaves[state->currentSlave]);
-      error = call I2CPersistentStorageMaster.read(state->slaves[state->currentSlave], buf);
+      error = call I2CPersistentStorageMaster.read(state->slaves[state->currentSlave], &msg);
       printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     }
   }
   event void I2CPersistentStorageMaster.readDone(error_t error,
-      void* buf_){
+      i2c_message_t* msg_){
     uint8_t i;
+    void* buf = call I2CPersistentStorageMaster.getPayload(msg_);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     if (error == SUCCESS){
       for (i = 0; i < 63; i++){
@@ -50,17 +43,22 @@ module StorageTestP{
   task void writePersistentStorage(){
     error_t error;
     test_state_t* state = call Get.get();
+    uint8_t* payload = (uint8_t*)call I2CPersistentStorageMaster.getPayload(&msg);
+    uint8_t i;
     if (state->slaveCount == 0){
       printf("No slaves found yet ('d' to discover)\n\r");
     } else {
+      for (i = 0; i < sizeof(i2c_persistent_storage_t)-1; i++){
+        payload[i] = i;
+      }
       printf("writing to local addr %x\n\r", state->slaves[state->currentSlave]);
-      error = call I2CPersistentStorageMaster.write(state->slaves[state->currentSlave], buf);
+      error = call I2CPersistentStorageMaster.write(state->slaves[state->currentSlave], &msg);
       printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     }
   }
 
   event void I2CPersistentStorageMaster.writeDone(error_t error,
-      void* buf_){
+      i2c_message_t* msg_){
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
   }
 
