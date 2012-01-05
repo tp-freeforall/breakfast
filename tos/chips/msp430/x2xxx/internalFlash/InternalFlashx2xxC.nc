@@ -92,7 +92,7 @@ implementation {
       return ESIZE;
     }
     targetSegmentStart = getNextSegmentStart();
-    printf("InternalFlash: write to %p\n\r", targetSegmentStart);
+//    printf("InternalFlash: write to %p\n\r", targetSegmentStart);
     //pause watchdog
     wdState = WDTCTL & 0x00ff;
     WDTCTL = WDTPW + WDTHOLD;
@@ -124,7 +124,7 @@ implementation {
     if ((size + (uint16_t)addr) > (IFLASH_SEGMENT_SIZE - 1 )){
       return ESIZE;
     }
-    printf("InternalFlash: read from %p\n\r", targetSegmentStart);
+//    printf("InternalFlash: read from %p\n\r", targetSegmentStart);
     addr = (void*)((uint16_t)targetSegmentStart + (uint16_t)addr);
 
     //bingo-bango

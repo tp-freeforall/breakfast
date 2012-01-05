@@ -99,7 +99,7 @@ module I2CComSlaveMultiP {
   void receive(){
     eventPending = FALSE;
     rxPkt->buf[transCount] = call I2CSlave.slaveReceive();
-    printf("r %d %x\n\r", transCount, rxPkt->buf[transCount]);
+//    printf("r %d %x\n\r", transCount, rxPkt->buf[transCount]);
     transCount++;
   }
 
@@ -155,7 +155,7 @@ module I2CComSlaveMultiP {
   //TODO: what should happen if we are paused when the stop arrives?
   //  can that happen?
   async event void I2CSlave.slaveStop(){
-    printf("%s: \n\r", __FUNCTION__);
+//    printf("%s: \n\r", __FUNCTION__);
     if (! isGC && isReceive){
       lastClient = rxPkt->body.header.clientId;
       atomic{
