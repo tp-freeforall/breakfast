@@ -8,7 +8,7 @@ module I2CPersistentStorageP{
   uses interface InternalFlash;
 } implementation {
   i2c_message_t msg_internal;
-  i2c_message_t* msg = &msg_internal;
+  norace i2c_message_t* msg = &msg_internal;
   
   i2c_message_t* swap(i2c_message_t* msg_){
     i2c_message_t* swp = msg;

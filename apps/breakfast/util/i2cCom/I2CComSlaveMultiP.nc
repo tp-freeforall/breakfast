@@ -17,8 +17,8 @@ module I2CComSlaveMultiP {
   i2c_message_t txPkt_;
   i2c_message_t rxPkt_;
 
-  i2c_message_t* txPkt = &txPkt_;
-  i2c_message_t* rxPkt = &rxPkt_;
+  norace i2c_message_t* txPkt = &txPkt_;
+  norace i2c_message_t* rxPkt = &rxPkt_;
 
   enum{
     I2C_COM_SLAVE_INVALID = 0xff,
@@ -104,7 +104,9 @@ module I2CComSlaveMultiP {
 
   void transmit(){
     if(transCount == 0){
-      txPkt = signal I2CComSlave.slaveTXStart[lastClient](txPkt);
+      atomic{
+        txPkt = signal I2CComSlave.slaveTXStart[lastClient](txPkt);
+      }
     } 
     eventPending = FALSE;
     call I2CSlave.slaveTransmit(txPkt->body.buf[transCount]);
@@ -147,11 +149,16 @@ module I2CComSlaveMultiP {
     isGC = generalCall;
     transCount = 0;
   }
+  
 
+  //TODO: what should happen if we are paused when the stop arrives?
+  //  can that happen?
   async event void I2CSlave.slaveStop(){
     if (! isGC && isReceive){
       lastClient = rxPkt->body.header.clientId;
-      rxPkt = signal I2CComSlave.received[lastClient](rxPkt);
+      atomic{
+        rxPkt = signal I2CComSlave.received[lastClient](rxPkt);
+      }
     }
   }
 
