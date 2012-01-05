@@ -105,7 +105,9 @@ generic module I2CComMasterP(uint8_t clientId){
       msg = msg_;
       msg->body.header.slaveAddr = slaveAddr;
       msg->body.header.clientId = clientId;
-      msg->body.header.len = len + sizeof(i2c_message_header_t);
+      //Reading from slave: DOES NOT get header! just the body. see
+      //  note in I2CComSlaveMultiP.
+      msg->body.header.len = len;
       state = S_READ_REQUESTED;
     }
     return ret;
