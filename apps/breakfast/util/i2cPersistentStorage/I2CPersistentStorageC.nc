@@ -1,5 +1,6 @@
 //TODO: generic? client ID, start, numSegments
 #include "InternalFlash.h"
+#include "I2CPersistentStorage.h"
 configuration I2CPersistentStorageC{
 } implementation {
   components I2CPersistentStorageP;
@@ -8,5 +9,5 @@ configuration I2CPersistentStorageC{
   components I2CComSlaveMultiC;
 
   I2CPersistentStorageP.InternalFlash -> InternalFlashx2xxC;
-  I2CPersistentStorageP.I2CComSlave -> I2CComSlaveMultiC.I2CComSlave[REGISTER_CLIENT_ID_STORAGE];
+  I2CPersistentStorageP.I2CComSlave -> I2CComSlaveMultiC.I2CComSlave[I2C_COM_CLIENT_ID_STORAGE];
 }

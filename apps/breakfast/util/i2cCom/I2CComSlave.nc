@@ -1,6 +1,9 @@
 #include "I2CCom.h"
 
 interface I2CComSlave {
+
+  async command void* getPayload(i2c_message_t* msg);
+
   //indicates "We have been asked to transmit data. Here is a free
   //  buffer. Give me a buffer to use to field the coming requests"
   async event i2c_message_t* slaveTXStart(i2c_message_t* msg);
@@ -16,5 +19,5 @@ interface I2CComSlave {
   //  need to do some stuff before we can provide a usable buffer for
   //  fielding upcoming tx requests.
   async command error_t pause();
-  async command error_t unPause();
+  async command error_t unpause();
 }

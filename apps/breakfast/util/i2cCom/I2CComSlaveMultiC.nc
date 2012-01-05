@@ -10,7 +10,7 @@ configuration I2CComSlaveMultiC{
   I2CComSlaveMultiP.I2CSlave -> I2CProvider.I2CSlave;
   I2CComSlaveMultiP.Resource -> I2CProvider.Resource;
 
-  I2CRegister = I2CComSlaveMultiP;
+  I2CComSlave = I2CComSlaveMultiP;
   SplitControl = I2CComSlaveMultiP;
   I2CDiscoverable = I2CProvider.I2CDiscoverable;
 

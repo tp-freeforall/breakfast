@@ -5,9 +5,9 @@ configuration AnalogSensorBoardC{
   //I2C Clients
   //TODO: I2CADCReaderC
   components I2CPersistentStorageC;
-  components I2CTLVStorageC;
+  //components I2CTLVStorageC;
   
-  components I2CMultiRegisterC;
+  components I2CComSlaveMultiC;
   components GlobalIDC;
 
   components AnalogSensorBoardP;
@@ -15,8 +15,8 @@ configuration AnalogSensorBoardC{
   components SerialPrintfC;
 
   AnalogSensorBoardP.Boot -> MainC.Boot;
-  AnalogSensorBoardP.SplitControl -> I2CMultiRegisterC;
-  AnalogSensorBoardP.I2CDiscoverable -> I2CMultiRegisterC;
+  AnalogSensorBoardP.SplitControl -> I2CComSlaveMultiC;
+  AnalogSensorBoardP.I2CDiscoverable -> I2CComSlaveMultiC;
   AnalogSensorBoardP.GlobalID -> GlobalIDC;
   
 }

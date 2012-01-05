@@ -34,14 +34,14 @@ module I2CPersistentStorageP{
   task void writeTask(){
     i2c_persistent_storage_t* payload =
       (i2c_persistent_storage_t*) call I2CComSlave.getPayload(msg);
-    call InternalFlash.write(0, payload.data, IFLASH_SEGMENT_SIZE - 1);
-    call I2CRegister.unPause();
+    call InternalFlash.write(0, payload->data, IFLASH_SEGMENT_SIZE - 1);
+    call I2CComSlave.unpause();
   }
 
   async event i2c_message_t* I2CComSlave.received(i2c_message_t* msg_){ 
     i2c_persistent_storage_t* payload =
       (i2c_persistent_storage_t*) call I2CComSlave.getPayload(msg);
-    switch(payload.cmd){
+    switch(payload->cmd){
       case I2C_STORAGE_WRITE_CMD:
         //do not let any other commands come in until we're done with
         //  this one.

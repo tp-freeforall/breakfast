@@ -29,6 +29,10 @@ module I2CComSlaveMultiP {
   void transmit();
   void receive();
 
+  async command void* I2CComSlave.getPayload[uint8_t clientId](i2c_message_t* msg){
+    return & msg->body.buf;
+  }
+
   async command error_t I2CComSlave.pause[uint8_t clientId](){
     if (clientId == lastClient){
       if (isPaused){
@@ -43,7 +47,7 @@ module I2CComSlaveMultiP {
     }
   }
 
-  async command error_t I2CComSlave.unPause[uint8_t clientId](){
+  async command error_t I2CComSlave.unpause[uint8_t clientId](){
     if (clientId == lastClient){
       if (isPaused){
         isPaused = FALSE;
