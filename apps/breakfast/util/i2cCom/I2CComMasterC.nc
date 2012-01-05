@@ -7,5 +7,5 @@ generic configuration I2CComMasterC(uint8_t clientId){
   I2CComMasterP.I2CPacket -> I2CProvider.I2CPacket;
   I2CComMasterP.Resource -> I2CProvider.Resource;
 
-  I2CComMaster = I2CComMasterP();
+  I2CComMaster = I2CComMasterP;
 }
