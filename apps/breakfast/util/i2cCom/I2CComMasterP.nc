@@ -20,6 +20,10 @@ generic module I2CComMasterP(uint8_t clientId){
   error_t signalError;
   i2c_message_t* msg;
 
+  command void* I2CComMaster.getPayload(i2c_message_t* msg){
+    return &msg->body.buf;
+  }
+
   command error_t I2CComMaster.write(uint16_t slaveAddr,
       i2c_message_t* msg_, uint8_t payloadLen){
     error_t ret = call Resource.request();
