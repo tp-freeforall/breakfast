@@ -3,17 +3,8 @@
 module I2CTLVStorageP{
   uses interface TLVStorage;
   uses interface TLVUtils;
-  uses interface I2CRegister;
+  uses interface I2CComSlave;
 } implementation {
-  tlv_register_t reg;
-
-  async event uint8_t* I2CRegister.transactionStart(bool isTransmit){
-    return reg.buf;
-  }
-
-  async event uint8_t I2CRegister.registerLen(){
-    return TLV_STORAGE_REGISTER_LEN;
-  }
 
   void debugTLV(void* tlvs_){
     tlv_entry_t* e;
@@ -39,35 +30,52 @@ module I2CTLVStorageP{
     } while( offset != 0);
   }
 
+  i2c_message_t msg_internal;
+  norace i2c_message_t* msg = &msg_internal;
+
+  i2c_message_t* swap(i2c_message_t* msg_){
+    i2c_message_t* swp = msg;
+    msg = msg_;
+    return swp;
+  }
+
+  async event i2c_message_t* I2CComSlave.slaveTXStart(i2c_message_t* msg_){
+    return swap(msg_);
+  }
+
   task void readTask(){
-    error_t error = call TLVStorage.loadTLVStorage(reg.buf);
-    call I2CRegister.unPause();
+    error_t error;
+    i2c_tlv_storage_t* tlvs = 
+      (i2c_tlv_storage_t*) call I2CComSlave.getPayload(msg);
+    error = call TLVStorage.loadTLVStorage(tlvs->data);
+    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+    call I2CComSlave.unpause();
   }
 
   task void writeTask(){
     error_t error;
-    error = call TLVStorage.persistTLVStorage(reg.s.buf);
-    call I2CRegister.unPause();
+    i2c_tlv_storage_t* tlvs = 
+      (i2c_tlv_storage_t*) call I2CComSlave.getPayload(msg);
+    error = call TLVStorage.persistTLVStorage(tlvs->data);
+    call I2CComSlave.unpause();
   }
 
-  async event void I2CRegister.transactionStop(uint8_t* reg_,
-      uint8_t pos){
-    //commands:
-    // simple slave: read/write (entire buffer). master has to
-    //   manipulate on their own.
-    //   pro: easy to implement
-    //   con: extra code at master (will use TLVStorage interface
-    switch ( reg.s.cmd ){
+  async event i2c_message_t* I2CComSlave.received(i2c_message_t* msg_){
+    i2c_tlv_storage_t* payload = 
+      (i2c_tlv_storage_t*) call I2CComSlave.getPayload(msg_);
+
+    switch ( payload->cmd ){
       case TLV_STORAGE_WRITE_CMD:
-        call I2CRegister.pause();
+        call I2CComSlave.pause();
         post writeTask();
-        break;
+        return swap(msg_);
       case TLV_STORAGE_READ_CMD:
-        call I2CRegister.pause();
+        call I2CComSlave.pause();
         post readTask();
-        break;
+        return msg_;
       default:
-        break;
+        printf("unknown command\n\r");
+        return msg_;
     }
   }
 

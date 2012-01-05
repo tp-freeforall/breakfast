@@ -5,9 +5,10 @@
 #include "InternalFlash.h"
 
 #define I2C_COM_CLIENT_ID_STORAGE 0x02
-#define I2C_STORAGE_READ_CMD 0x01
-#define I2C_STORAGE_WRITE_CMD 0x02
-#define I2C_STORAGE_RESPONSE_CMD 0x03
+
+#define I2C_STORAGE_READ_CMD     0xb0
+#define I2C_STORAGE_WRITE_CMD    0xb1
+#define I2C_STORAGE_RESPONSE_CMD 0xb2
 
 
 typedef nx_struct i2c_persistent_storage_t {

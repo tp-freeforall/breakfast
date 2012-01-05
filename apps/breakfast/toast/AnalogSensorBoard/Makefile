@@ -7,7 +7,7 @@ CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cDiscover
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cPersistentStorage
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cCom
 
-#CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cTLVStorage
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cTLVStorage
 #CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cADCReader
 
 
