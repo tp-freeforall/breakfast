@@ -17,8 +17,11 @@ module I2CPersistentStorageP{
   }
 
   task void readTask(){
+    i2c_persistent_storage_t* payload =
+      (i2c_persistent_storage_t*) call I2CComSlave.getPayload(msg);
+    payload->cmd = I2C_STORAGE_RESPONSE_CMD;
     //last byte is version
-    call InternalFlash.read(0, msg->body.buf, IFLASH_SEGMENT_SIZE - 1);
+    call InternalFlash.read(0, payload->data, IFLASH_SEGMENT_SIZE - 1);
     call I2CComSlave.unpause();
   }
 

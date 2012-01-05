@@ -1,71 +1,70 @@
 #include "I2CPersistentStorage.h"
 module I2CPersistentStorageMasterP{
   provides interface I2CPersistentStorageMaster;
-  uses interface I2CRegisterUser;
+  uses interface I2CComMaster;
 } implementation {
   enum{
     S_BUSY = 1 << 0,
     S_WRITING = 1 << 1,
     S_READING = 1 << 2,
   };
-  register_packet_t pkt;
-  uint16_t slaveAddr;
+  //have to keep track of this between sendDone (writing READ_CMD) and
+  // calling receive command.
+  i2c_message_t* readMsg;
+
   uint8_t state;
-  void* readBuf;
-  void* writeBuf;
 
   task void readTask();
 
+  command void* I2CPersistentStorageMaster.getPayload(i2c_message_t*
+  msg){
+    i2c_persistent_storage_t* payload = (i2c_persistent_storage_t*)
+      call I2CComMaster.getPayload(msg);
+    return &payload->data;
+  }
+
   command error_t I2CPersistentStorageMaster.write(uint16_t slaveAddr_,
-      void* data){
+      i2c_message_t* msg){
     error_t ret;
+    i2c_persistent_storage_t* payload = (i2c_persistent_storage_t*)
+      call I2CComMaster.getPayload(msg);
+
     printf("%s: \n\r", __FUNCTION__);
     if (state & S_BUSY){
       return EBUSY;
     }
-    //whelp, wish that I could figure out a better way to do this
-    writeBuf = data;
-    memcpy(pkt.body.data, data, PERSISTENT_STORAGE_REGISTER_SIZE - 1);
-    pkt.body.cmd = I2C_STORAGE_WRITE_CMD;
+    payload -> cmd = I2C_STORAGE_WRITE_CMD;
     slaveAddr = slaveAddr_;
-    ret =  call I2CRegisterUser.write(slaveAddr, 0, &pkt,
-      PERSISTENT_STORAGE_REGISTER_SIZE);
+    ret =  call I2CComMaster.send(slaveAddr, &msg,
+      sizeof(i2c_persistent_storage_t));
     if (ret == SUCCESS){
       state |= (S_BUSY|S_WRITING);
     } 
     return ret;
   }
 
-  event void I2CRegisterUser.writeDone(error_t error, uint16_t slaveAddr_, 
-      uint8_t pos, uint8_t len, register_packet_t* pkt_){
+  event void I2CComMaster.sendDone(error_t error, i2c_message_t* msg){
     printf("%s: \n\r", __FUNCTION__);
     if (state & S_WRITING){
       state = 0;
-      signal I2CPersistentStorageMaster.writeDone(error, writeBuf);
+      signal I2CPersistentStorageMaster.writeDone(error, msg);
     } else if (state & S_READING){
+      readMsg = msg;
       post readTask();
     }
   }
 
   command error_t I2CPersistentStorageMaster.read(uint16_t slaveAddr_,
-      void* data){
+      i2c_message_t* msg){
     error_t ret;
+    i2c_persistent_storage_t* payload = (i2c_persistent_storage_t*)
+      call I2CComMaster.getPayload(msg);
     printf("%s: \n\r", __FUNCTION__);
     if (state & S_BUSY){
       return EBUSY;
     }
-    readBuf = data;
-    //have to write I2C_STORAGE_READ_CMD into command slot before
-    //reading. yuck. This is going to turn into:
-    // start, write I2C_STORAGE_READ_CMD to 0, stop
-    // start, write 1 to position
-    // restart, read from 1
-    //it would be better if it was
-    // start, write I2C_STORAGE_READ_CMD to 0, restart, read from 1
-
-    pkt.body.cmd = I2C_STORAGE_READ_CMD;
-    slaveAddr = slaveAddr_;
-    ret = call I2CRegisterUser.write(slaveAddr, 0, &pkt, 1);
+    payload->cmd = I2C_STORAGE_READ_CMD;
+    ret = call I2CComMaster.write(slaveAddr, 0, msg, 1);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(ret));
     if (ret == SUCCESS){
       state |= (S_BUSY|S_READING);
@@ -74,23 +73,23 @@ module I2CPersistentStorageMasterP{
   }
 
   task void readTask(){
-    //last byte will be garbage, lookout
-    error_t ret = call I2CRegisterUser.read(slaveAddr, 1, &pkt,
-      PERSISTENT_STORAGE_REGISTER_SIZE);
+    error_t ret;
+    readMsg -> body.header.len = sizeof(i2c_persistent_storage_t);
+    ret = call I2CComMaster.receive(readMsg->body.header.slaveAddr,
+      readMsg, sizeof(i2c_persistent_storage_t));
     printf("%s: %s\n\r", __FUNCTION__, decodeError(ret));
     if (ret != SUCCESS){
       state = 0;
-      signal I2CPersistentStorageMaster.readDone(ret, readBuf);
+      signal I2CPersistentStorageMaster.readDone(ret, readMsg);
     }
   }
 
 
-  event void I2CRegisterUser.readDone(error_t error, 
-      uint16_t slaveAddr_, uint8_t pos, 
-      register_packet_t* pkt_, uint8_t len){
+  event void I2CComMaster.receiveDone(error_t error, 
+      i2c_message_t* msg){
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
-    memcpy(readBuf, pkt.data, PERSISTENT_STORAGE_REGISTER_SIZE);
     state = 0;
-    signal I2CPersistentStorageMaster.readDone(error, readBuf);
+    signal I2CPersistentStorageMaster.readDone(error, msg,
+      ((i2c_persistent_storage_t*)(call I2CComMaster.getPayload(msg)))->data);
   }
 }

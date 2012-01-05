@@ -15,6 +15,7 @@ generic module I2CComMasterP(uint8_t clientId){
     S_READING = 0x05,
     S_IDLE = 0x06,
   };
+
   uint8_t state;
   error_t signalError;
   i2c_message_t* msg;
@@ -78,7 +79,7 @@ generic module I2CComMasterP(uint8_t clientId){
     }
   }
 
-  command error_t I2CComMaster.read(uint16_t slaveAddr, i2c_message_t*
+  command error_t I2CComMaster.receive(uint16_t slaveAddr, i2c_message_t*
   msg_, uint8_t len){
     error_t ret = call Resource.request();
     if (ret == SUCCESS){
