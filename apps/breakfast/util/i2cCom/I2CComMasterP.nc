@@ -5,7 +5,7 @@ generic module I2CComMasterP(uint8_t clientId){
   uses interface I2CPacket<TI2CBasicAddr>;
   uses interface Resource;
 } implementation {
-  i2c_message_t* msg;
+  norace i2c_message_t* msg;
 
   enum {
     S_WRITE_REQUESTED = 0x01,
@@ -17,7 +17,7 @@ generic module I2CComMasterP(uint8_t clientId){
   };
 
   uint8_t state;
-  error_t signalError;
+  norace error_t signalError;
   i2c_message_t* msg;
 
   task void signalSendDone();
@@ -98,6 +98,7 @@ generic module I2CComMasterP(uint8_t clientId){
       msg->body.header.len = len + sizeof(i2c_message_header_t);
       state = S_READ_REQUESTED;
     }
+    return ret;
   }
 
   task void read(){

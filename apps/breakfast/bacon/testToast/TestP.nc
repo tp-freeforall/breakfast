@@ -15,8 +15,8 @@ module TestP{
   provides interface UartStream[uint8_t testClient];
 
 } implementation {
-  test_state_t state;
-  uint8_t currentTest;
+  norace test_state_t state;
+  norace uint8_t currentTest;
 
   command test_state_t* Get.get(){
     return &state;
