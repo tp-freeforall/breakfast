@@ -88,4 +88,11 @@ module TestP{
   async command error_t UartStream.receive[uint8_t clientId]( uint8_t* buf, uint16_t len ){ return FAIL; }
   async command error_t UartStream.enableReceiveInterrupt[uint8_t clientId](){return FAIL;}
   async command error_t UartStream.disableReceiveInterrupt[uint8_t clientId](){return FAIL;}
+  
+  const char* noDesc = "NONE\n\r";
+  default command const char* GetDesc.get[uint8_t clientId](){
+    return noDesc;
+  }
+  default async event void UartStream.receivedByte
+    [uint8_t clientId](uint8_t byte){}
 }

@@ -34,8 +34,7 @@ module I2CPersistentStorageMasterP{
       return EBUSY;
     }
     payload -> cmd = I2C_STORAGE_WRITE_CMD;
-    slaveAddr = slaveAddr_;
-    ret =  call I2CComMaster.send(slaveAddr, &msg,
+    ret =  call I2CComMaster.send(slaveAddr_, msg,
       sizeof(i2c_persistent_storage_t));
     if (ret == SUCCESS){
       state |= (S_BUSY|S_WRITING);
@@ -64,7 +63,7 @@ module I2CPersistentStorageMasterP{
       return EBUSY;
     }
     payload->cmd = I2C_STORAGE_READ_CMD;
-    ret = call I2CComMaster.write(slaveAddr, 0, msg, 1);
+    ret = call I2CComMaster.send(slaveAddr_, msg, 1);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(ret));
     if (ret == SUCCESS){
       state |= (S_BUSY|S_READING);
@@ -75,6 +74,8 @@ module I2CPersistentStorageMasterP{
   task void readTask(){
     error_t ret;
     readMsg -> body.header.len = sizeof(i2c_persistent_storage_t);
+    //Note: slave address is in the header once it's been touched by
+    //  I2CComMaster (filled in when sent earlier)
     ret = call I2CComMaster.receive(readMsg->body.header.slaveAddr,
       readMsg, sizeof(i2c_persistent_storage_t));
     printf("%s: %s\n\r", __FUNCTION__, decodeError(ret));
@@ -89,7 +90,6 @@ module I2CPersistentStorageMasterP{
       i2c_message_t* msg){
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     state = 0;
-    signal I2CPersistentStorageMaster.readDone(error, msg,
-      ((i2c_persistent_storage_t*)(call I2CComMaster.getPayload(msg)))->data);
+    signal I2CPersistentStorageMaster.readDone(error, msg);
   }
 }
