@@ -48,10 +48,12 @@ generic module I2CComMasterP(uint8_t clientId){
   task void write(){
     error_t error;
     printf("writing %d bytes\n\r", msg->body.header.len);
+    P1OUT |= BIT1;
     error = call I2CPacket.write(I2C_START|I2C_STOP,
       msg->body.header.slaveAddr, 
       msg->body.header.len, 
       (uint8_t*)msg->buf); 
+    P1OUT &= ~BIT1;
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     if (error != SUCCESS){
       signalError = error;
