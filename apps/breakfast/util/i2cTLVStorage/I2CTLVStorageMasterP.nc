@@ -20,9 +20,11 @@ module I2CTLVStorageMasterP{
   }
 
   task void readTask(){
-    error_t error = call
-    I2CComMaster.receive(readMsg->body.header.slaveAddr, readMsg,
+    error_t error;
+    P1OUT |= BIT1;
+    call I2CComMaster.receive(readMsg->body.header.slaveAddr, readMsg,
       sizeof(i2c_tlv_storage_t));
+    P1OUT &= ~BIT1;
 
     if (error != SUCCESS){
       state = S_IDLE;

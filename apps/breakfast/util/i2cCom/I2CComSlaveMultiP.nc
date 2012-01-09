@@ -147,8 +147,6 @@ module I2CComSlaveMultiP {
   }
   
   async event void I2CSlave.slaveStart(bool generalCall){
-    P6OUT |= BIT0;
-    P6OUT &= ~BIT0;
     isGC = generalCall;
     transCount = 0;
   }

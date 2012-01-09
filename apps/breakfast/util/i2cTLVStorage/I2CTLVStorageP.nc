@@ -40,6 +40,8 @@ module I2CTLVStorageP{
   }
 
   async event i2c_message_t* I2CComSlave.slaveTXStart(i2c_message_t* msg_){
+    P6OUT |= BIT0;
+    P6OUT &= ~BIT0;
     return swap(msg_);
   }
 
