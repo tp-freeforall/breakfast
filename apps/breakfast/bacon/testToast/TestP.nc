@@ -23,6 +23,9 @@ module TestP{
   }
 
   event void Boot.booted(){
+    P1SEL &= ~BIT1;
+    P1DIR |= BIT1;
+    P1OUT &= ~BIT1;
     call StdControl.start();
     printf("Test Toast apps\n\r '~' to switch apps. Current app: %s\n\r", call GetDesc.get[currentTest]());
   }
