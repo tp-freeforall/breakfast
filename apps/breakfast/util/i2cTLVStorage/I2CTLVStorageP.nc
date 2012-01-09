@@ -49,7 +49,7 @@ module I2CTLVStorageP{
       (i2c_tlv_storage_t*) call I2CComSlave.getPayload(msg);
     tlvs->cmd = TLV_STORAGE_RESPONSE_CMD;
     error = call TLVStorage.loadTLVStorage(tlvs->data);
-    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
+//    printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     call I2CComSlave.unpause();
   }
 
