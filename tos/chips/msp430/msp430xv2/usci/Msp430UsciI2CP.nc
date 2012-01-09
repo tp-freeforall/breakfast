@@ -321,8 +321,8 @@ generic module Msp430UsciI2CP () @safe() {
 //      printf("generating start\n\r");
       // UCTXSTT - generate START condition 
       P1OUT |= BIT1;
-      P1OUT &= ~BIT1;
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
+      P1OUT &= ~BIT1;
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts and TX, clear the rest
       //while ( call Usci.getCtl1() & UCTXSTT){}
