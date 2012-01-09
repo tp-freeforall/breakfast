@@ -325,6 +325,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts and TX, clear the rest
+      //while ( call Usci.getCtl1() & UCTXSTT){}
       call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE | UCALIE | UCTXIE);
 //      printRegisters();
     } 

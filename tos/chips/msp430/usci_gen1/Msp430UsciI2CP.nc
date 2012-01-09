@@ -513,6 +513,9 @@ implementation {
       /* START condition */
       else if (call Usci.getStat() & UCSTTIFG) 
       {
+        
+        P6OUT |= BIT0;
+        P6OUT &= ~BIT0;
         //clear start flag, but leave enabled (repeated start)
         //enable stop interrupt
         call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
