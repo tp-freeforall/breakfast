@@ -6,6 +6,7 @@ configuration AnalogSensorBoardC{
   //TODO: I2CADCReaderC
   components I2CPersistentStorageC;
   components I2CTLVStorageC;
+  components I2CSynchC;
   
   components I2CComSlaveMultiC;
   components GlobalIDC;
