@@ -37,7 +37,7 @@
  * @see  Please refer to TEP 102 for more information about this component and its
  *          intended use.
  */
-
+#warning "Using msp430/timer msp430counter32khzC (TimerB)"
 configuration Msp430Counter32khzC
 {
   provides interface Counter<T32khz,uint16_t> as Msp430Counter32khz;

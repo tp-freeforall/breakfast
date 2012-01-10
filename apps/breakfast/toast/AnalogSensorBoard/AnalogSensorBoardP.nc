@@ -8,9 +8,9 @@ module AnalogSensorBoardP{
   uint8_t globalId[GLOBAL_ID_LEN];
 
   event void Boot.booted(){
-    P6SEL &= ~BIT0;
-    P6OUT &= ~BIT0;
-    P6DIR |= BIT0;
+    //ACLK out
+    P5SEL |= BIT6;
+    P5DIR |= BIT6;
     //TODO: check for lastLocalAddr in flash and call
     //  I2CDiscoverable.setLocalAddr before starting
     call SplitControl.start();

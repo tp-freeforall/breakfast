@@ -59,8 +59,10 @@ module PlatformClockP {
   command error_t Init.init ()
   {
 #if defined(PLATFORM_MSP430_HAS_XT1) && (0 == PLATFORM_MSP430_HAS_XT1)
+#warning "No 32khz crystal"
     /* Specifically told that there is no crystal.  Do nothing. */
 #else /* PLATFORM_MSP430_HAS_XT1 */
+#warning "32khz crystal expected"
     /* Either we don't know whether there's a crystal, or we've been
      * told to expect one.  Configure it and see whether a stable XT1
      * can be identified.  If so, run with it; if not, restore the

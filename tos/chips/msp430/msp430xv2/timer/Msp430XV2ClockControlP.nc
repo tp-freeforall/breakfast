@@ -165,6 +165,8 @@ module Msp430XV2ClockControlP @safe() {
        * DIVM (MCLK) uses DCOCLKDIV to produce DCO/2, undivided
        */
       UCSCTL5 = DIVPA__1 | DIVA__1 | divs | DIVM__1;
+
+      //TODO: do we need to adjust UCSCTL6.XCAP?
     }
   }
 
