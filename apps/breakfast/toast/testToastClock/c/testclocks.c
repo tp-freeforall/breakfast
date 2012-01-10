@@ -1,4 +1,4 @@
-#include  <msp430x23x.h>
+#include  <msp430.h>
 
 //mclk: 20mhz
 //aclk: 32khz
@@ -42,7 +42,7 @@ void main(void)
 {
   WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
 
-  clock_1mhz();
+  clock_default();
 
   P6DIR |= 0x01;                            // Set P6.0 to output direction
   P5DIR |= 0x50;                            // Set p5.4, p5.6 output
