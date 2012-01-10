@@ -78,7 +78,7 @@ module Msp430XV2ClockControlP @safe() {
       UCSCTL3 = SELREF__XT1CLK;
       //TODO: do we need to adjust UCSCTL6.XCAP?
       #warning "Tweaking XCAP settings"
-      UCSCTL6 = (UCSCTL6 & ~(XCAP0|XCAP1));
+      UCSCTL6 = (UCSCTL6 & ~(XCAP0|XCAP1)) & ~XTS;
 
       /* The appropriate value for DCORSEL is obtained from the DCO
        * Frequency table of the device datasheet.  Find the DCORSEL
