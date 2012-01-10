@@ -76,6 +76,9 @@ module Msp430XV2ClockControlP @safe() {
        * will fall back to REFOCLK.  Use FLLREFDIV value 1 (selected
        * by bits 000) */
       UCSCTL3 = SELREF__XT1CLK;
+      //TODO: do we need to adjust UCSCTL6.XCAP?
+      #warning "Tweaking XCAP settings"
+      UCSCTL6 = (UCSCTL6 & ~(XCAP0|XCAP1));
 
       /* The appropriate value for DCORSEL is obtained from the DCO
        * Frequency table of the device datasheet.  Find the DCORSEL
@@ -166,7 +169,6 @@ module Msp430XV2ClockControlP @safe() {
        */
       UCSCTL5 = DIVPA__1 | DIVA__1 | divs | DIVM__1;
 
-      //TODO: do we need to adjust UCSCTL6.XCAP?
     }
   }
 
