@@ -38,11 +38,18 @@ void clock_default(void){
   return;
 }
 
+void clock_tune_32khz(void){
+  DCOCTL  = 0x60;
+  BCSCTL1 = 0x87;
+  BCSCTL2 = 0x00;
+  BCSCTL3 = 0x00;
+}
+
 void main(void)
 {
   WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
 
-  clock_default();
+  clock_tune_32khz();
 
   P6DIR |= 0x01;                            // Set P6.0 to output direction
   P5DIR |= 0x50;                            // Set p5.4, p5.6 output
