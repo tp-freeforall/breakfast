@@ -42,6 +42,8 @@ void clock_tune_32khz(void){
   DCOCTL  = 0x60;
   BCSCTL1 = 0x87;
   BCSCTL2 = 0x00;
+  //xcap= 0: 32.7673
+  //xcap= 3: 32.7651
   BCSCTL3 = 0x00 | XCAP_3;
 }
 
