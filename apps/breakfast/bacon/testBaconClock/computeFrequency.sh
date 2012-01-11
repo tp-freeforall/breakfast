@@ -36,7 +36,9 @@ do
       midpoint=$(python -c "print (float($lastRE) + float($firstRE))/2.0")
       echo "$boardType,$board,$xcap,$duration,$midpoint,$frequency"
     fi
+    rm $f
   done
+  rmdir $td
   #move to next file
   shift 1
 done
