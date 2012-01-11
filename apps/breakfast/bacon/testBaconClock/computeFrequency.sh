@@ -13,6 +13,7 @@ do
   td=$(mktemp -d)
   #break up file into chunks, each chunk *roughly* SEGMENT_SECONDS
   #  long
+  echo "processing $1" 1>&2
   tail --lines=+10 $1 | split -l $segmentLen - $td/frag
   for f in $td/frag*
   do 

@@ -17,21 +17,39 @@ merged$ErrorPPM <- ((merged$Frequency.s - 32768)/32768)*1000000
 bpSet <- rawData
 
 #compare different board type/xcap settings
-pdf(paste(outdir,'freq_vs_type.pdf', sep=""))
+pdf(paste(outdir,'freq_vs_type_xcap.pdf', sep=""))
 boxplot(Frequency ~ BoardType*XCAP, data=bpSet, show.names=TRUE, las=2)
 title("Frequency v. BoardType.XCAP")
 garbage <- dev.off()
 
 #compare different boards of same type
-pdf(paste(outdir,'freq_dist_asb.pdf', sep=""))
+pdf(paste(outdir,'freq_dist_asb_xcap.pdf', sep=""))
 boxplot(Frequency~Board*XCAP, data=droplevels(bpSet[bpSet$BoardType == "asb",]), show.names=TRUE, las=2)
 title("Frequency v. Board.XCAP (asb)")
 garbage <- dev.off()
 
-pdf(paste(outdir,'freq_dist_sn.pdf',sep=""))
+pdf(paste(outdir,'freq_dist_sn_xcap.pdf',sep=""))
 boxplot(Frequency~Board*XCAP, data=droplevels(bpSet[bpSet$BoardType == "sn",]), show.names=TRUE, las=2)
 title("Frequency v. Board.XCAP (sn)")
 garbage <- dev.off()
+
+#only look at xcap = 0
+bpSet <- rawData[rawData$XCAP == 0,]
+pdf(paste(outdir,'freq_vs_type.pdf', sep=""))
+boxplot(Frequency ~ BoardType, data=bpSet, show.names=TRUE, las=2)
+title("Frequency v. BoardType (xcap=0)")
+garbage <- dev.off()
+#compare different boards of same type
+pdf(paste(outdir,'freq_dist_asb.pdf', sep=""))
+boxplot(Frequency~Board, data=droplevels(bpSet[bpSet$BoardType == "asb",]), show.names=TRUE, las=2)
+title("Frequency v. Board (xcap=0) (asb)")
+garbage <- dev.off()
+
+pdf(paste(outdir,'freq_dist_sn.pdf',sep=""))
+boxplot(Frequency~Board, data=droplevels(bpSet[bpSet$BoardType == "sn",]), show.names=TRUE, las=2)
+title("Frequency v. Board (xcap=0) (sn)")
+garbage <- dev.off()
+
 
 
 #trend
@@ -55,7 +73,8 @@ legendName <- c()
 legendLty <- c()
 legendCol <- c()
 
-lcols <- rainbow(length(unique(merged$BoardType)))
+#lcols <- rainbow(length(unique(merged$BoardType)))
+lcols <- c("red", "blue")
 lcolIndex <- 1
 
 for( bt in unique(merged$BoardType)){
