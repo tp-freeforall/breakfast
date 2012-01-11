@@ -17,7 +17,7 @@ $(ODIR)/%.hex: $(ODIR)/%.bin
 	$(OBJCOPY) -I elf32-msp430 -O ihex $< $@
 
 $(ODIR)/%.bin: %.c 
-	$(CC) $(CCFLAGS) $< -o $@ 
+	$(CC) $(CCFLAGS) $(CFLAGS) $< -o $@ 
 
 clean:
 	rm -rf $(ODIR)

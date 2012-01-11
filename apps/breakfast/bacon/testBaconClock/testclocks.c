@@ -16,6 +16,12 @@ void clock_tune_32khz(void){
   clock_default();
   UCSCTL6 &= ~XTS;
   UCSCTL6 &= ~(XCAP0 | XCAP1);
+  //UCSCTL6 |= XCAP0 | XCAP1;
+  #ifndef XCAP_SETTING
+  #warning "Using default XCAP_SETTING of 0"
+  #define XCAP_SETTING 0
+  #endif
+  UCSCTL6 |= (XCAP_SETTING << 2);
 }
 
 void main(void)

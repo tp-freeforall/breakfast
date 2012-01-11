@@ -1,6 +1,6 @@
 SOURCES=testclocks.c
 CC=msp430-gcc
-CCFLAGS=-mmcu=cc430f5137
+CCFLAGS+=-mmcu=cc430f5137
 OBJCOPY=msp430-objcopy
 ODIR=bin
 EXES=$(SOURCES:.c=.bin)
@@ -17,7 +17,7 @@ $(ODIR)/%.hex: $(ODIR)/%.bin
 	$(OBJCOPY) -I elf32-msp430 -O ihex $< $@
 
 $(ODIR)/%.bin: %.c 
-	$(CC) $(CCFLAGS) $< -o $@ 
+	$(CC) $(CCFLAGS) $(CFLAGS) $< -o $@ 
 
 clean:
 	rm -rf $(ODIR)

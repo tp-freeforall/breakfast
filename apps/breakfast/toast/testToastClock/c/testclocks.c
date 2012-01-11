@@ -44,7 +44,11 @@ void clock_tune_32khz(void){
   BCSCTL2 = 0x00;
   //xcap= 0: 32.7673
   //xcap= 3: 32.7651
-  BCSCTL3 = 0x00 | XCAP_3;
+  #ifndef XCAP_SETTING
+  #warning "Using default XCAP_SETTING of 0"
+  #define XCAP_SETTING 0
+  #endif
+  BCSCTL3 = 0x00 | (XCAP_SETTING << 2);
 }
 
 void main(void)
@@ -56,6 +60,7 @@ void main(void)
   P6DIR |= 0x01;                            // Set P6.0 to output direction
   P5DIR |= 0x50;                            // Set p5.4, p5.6 output
   P5SEL |= 0x50;                            // use MCLK, aclk
+
   for (;;)
   {
     volatile unsigned int i;
