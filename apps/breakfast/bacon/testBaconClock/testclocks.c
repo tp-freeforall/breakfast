@@ -21,6 +21,7 @@ void clock_tune_32khz(void){
   #warning "Using default XCAP_SETTING of 0"
   #define XCAP_SETTING 0
   #endif
+  UCSCTL6 |= XT1BYPASS;
   UCSCTL6 |= (XCAP_SETTING << 2);
 }
 
@@ -31,7 +32,7 @@ void main(void)
   clock_tune_32khz();
 
   P1DIR |= BIT1|BIT2;                            // Set P1.1, P1.2 to output direction
-
+  P5SEL |= BIT0|BIT1;                     //select function for P5.0/5.1
   P1SEL |= BIT1;                            // put aclk on P1.1
   PMAPPWD = PMAPKEY;
   PMAPCTL = PMAPRECFG;
