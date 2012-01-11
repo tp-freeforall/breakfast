@@ -54,7 +54,7 @@ garbage <- dev.off()
 
 #trend
 XCAPSetting <- 0
-usePPM <- FALSE
+usePPM <- TRUE
 if (usePPM){
   yCol <- "ErrorPPM"
   ylab <- "Error (PPM)"
@@ -92,6 +92,11 @@ for( bt in unique(merged$BoardType)){
     llty <- llty + 1
   }
   lcolIndex <- lcolIndex + 1
+}
+if (usePPM){
+  abline(h=0, col="gray")
+  abline(h=-20, col="gray")
+  abline(h=20, col="gray")
 }
 legend("topright", legend=legendName, lty=legendLty, col=legendCol)
 title(paste("Stability v. time (XCAP=", as.character(XCAPSetting),")"))
