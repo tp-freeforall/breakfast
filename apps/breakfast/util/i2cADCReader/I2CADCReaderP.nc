@@ -1,37 +1,19 @@
 #include "I2CADCReader.h"
-//TODO: should do VCC and internal temp measurements here, too.
-//TODO: ADC calibration constants should be retrieved from an
-//  I2CTLVStorage component
-//TODO: timestamps. how to do them?
-//      - option 1: completely ignore
-//      - option 2: slave stamps with local time, out-of-band synch
-//        - gpio edge? that will make kind of a mess of the other
-//          clients.
-//        - master knows when it powered on the bus: 
-//      - * option 3: in-band synch
-//        - record time of start interrupt at slave/master
-//          - master set UCTXSTT + (time to send start bit + slave
-//            addr) ~= slave start interrupt
-//          - rough approximation: difference between call to
-//            i2cpacket.write (master) and i2cslave.slavestart (slave)
-//          - this should be off by a constant value: t_master +
-//            (master function call overhead) + (start + slave) +
-//            (interrupt handling time) + (slave function call
-//            overhead) = t_slave
-//        - I2C register app that just reads back this value: should
-//          be OK- get transactionStart, read the value into buffer,
-//          no pause. just add getLastStart into both interfaces
-//          (I2CRegister and I2CRegisterUser). 
-//        - can repeat this several times to check clock skew?
+//TODO: add timestamps to each reading
 module I2CADCReaderP{
   uses interface I2CRegister;
   uses interface Msp430Adc12SingleChannel;
   uses interface Resource;
   uses interface GeneralIO as SensorPower[uint8_t channelNum];
   uses interface Timer<TMilli>;
+  uses interface LocalTime<T32khz>;
 } implementation {
-  uint16_t sampleBuffer[ADC_TOTAL_SAMPLES];
-  adc_reader_pkt_t pkt;
+  uint16_t medianBuf[ADC_NUM_SAMPLES];
+  i2c_message_t msg_internal;
+  i2c_message_t* msg = &msg_internal;
+  adc_response_t* response;
+
+
   bool processingCommand;
   uint8_t channelNum;
   uint8_t channelStart;
@@ -51,7 +33,6 @@ module I2CADCReaderP{
     if (processingCommand){
       return sizeof(pkt);
     } else {
-      //TODO: can this be sizeof(sampleBuffer)?
       return sizeof(uint16_t) * ADC_TOTAL_SAMPLES;
     }
   }
@@ -62,17 +43,26 @@ module I2CADCReaderP{
 
   void nextSample(){
     adc_reader_config_t cfg = pkt.cfg[channelNum];
-    call Msp430Adc12SingleChannel.configureMultiple(&cfg.config, &sampleBuffer[channelStart], cfg.numSamples, cfg.jiffies);
+    call Msp430Adc12SingleChannel.configureMultiple(&cfg.config, medianBuf, cfg.numSamples, cfg.jiffies);
+    response->samples[channelNum].sampleTime = call LocalTime.get();
     call Msp430Adc12SingleChannel.getData();
   }
 
+  uint16_t median(uint16_t* mb, uint8_t len){
+    
+  }
+
   async event uint16_t* Msp430Adc12SingleChannel.multipleDataReady(uint16_t * buffer, uint16_t numSamples){
+    uint32_t sampleEnd = call LocalTime.get();
+    uint32_t sampleMid;
     //turn it off
     if (pkt.cfg[channelNum].config.inch <= 7){
       call SensorPower.clr[pkt.cfg[channelNum].config.inch]();
     }
     //cool, data's in the buffer
-    channelStart += pkt.cfg[channelNum].numSamples;
+    response->samples[channelNum].inputChannel = pkt.cfg[channelNum].config.inch;
+    response->samples[channelNum].sampleTime = (response->samples[channelNum].sampleTime + sampleEnd) >> 1;
+    response->samples[channelNum].sample = median(medianBuf, );
     channelNum++;
     post readyNextSample();
     //according to interface, return value is ignored for this
@@ -120,7 +110,6 @@ module I2CADCReaderP{
   
   async event void I2CRegister.transactionStop(uint8_t* reg, 
       uint8_t pos){ 
-    //TODO: timestamping: mark transactionStop time
     if (processingCommand 
         && ((void*)reg == (void*)(&pkt))
         && (pkt.cmd == ADC_READER_CMD_SAMPLE)){

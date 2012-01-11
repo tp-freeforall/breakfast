@@ -6,12 +6,13 @@
 #define REGISTER_CLIENT_ID_ADCREADER 0x03
 #define ADC_READER_CMD_SAMPLE 0x03
 
-#ifndef ADC_READER_MAX_SAMPLES
-#define ADC_READER_MAX_SAMPLES_PER_CHANNEL 5
+#ifndef ADC_NUM_SAMPLES
+#define ADC_NUM_SAMPLES 5
 #endif
 
+//8 external, (Vcc-Vss)/2, temp
 #ifndef ADC_NUM_CHANNELS
-#define ADC_NUM_CHANNELS 8
+#define ADC_NUM_CHANNELS 8 + 2
 #endif
 
 #define ADC_TOTAL_SAMPLES ADC_NUM_CHANNELS * ADC_READER_MAX_SAMPLES_PER_CHANNEL
@@ -22,7 +23,7 @@
 //  some timeout after turning on sensors but before starting the ADC
 //  module (e.g. so that the master can enter LPM, or so that sensors
 //  can warm up).
-typedef struct {
+typedef struct adc_reader_config_t {
   uint32_t delayMS;
   msp430adc12_channel_config_t config;
   uint16_t numSamples;
@@ -30,12 +31,24 @@ typedef struct {
 } adc_reader_config_t;
 
 //a packet consists of a set of these configs: up to 1 per sensor
+//  (plus one for input voltage and one for internal temp)
 // this way, we only have one sensor on at a time, and we can specify
 // for each sensor how it needs to be warmed up/how many times it
 // should get sampled. 
-typedef struct {
+typedef struct adc_reader_pkt_t{
   uint8_t cmd;
   adc_reader_config_t cfg[ADC_NUM_CHANNELS];
 } __attribute__((__packed__)) adc_reader_pkt_t;
+
+
+typedef nx_struct adc_sample_t {
+  nx_uint8_t inputChannel;
+  nx_uint32_t sampleTime;
+  nx_uint16_t sample;
+} adc_sample_t;
+
+typedef nx_struct adc_response_t {
+  adc_sample_t samples[ADC_NUM_CHANNELS];
+} adc_response_t;
 
 #endif
