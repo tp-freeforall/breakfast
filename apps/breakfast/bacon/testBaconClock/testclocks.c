@@ -29,8 +29,8 @@ void clock_tune_32khz(void){
   {
     UCSCTL7 &= ~XT1LFOFFG;                  // Clear XT1 fault flags
     SFRIFG1 &= ~OFIFG;                      // Clear OSC Fault flag
-    P1OUT ^= BIT2;  //toggle to say "still waiting"
-  }while ( (SFRIFG1 & OFIFG) );
+    P1OUT^=BIT4;   //toggle to show status
+  }while ( UCSCTL7&XT1LFOFFG );
 
 }
 

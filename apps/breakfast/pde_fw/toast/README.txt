@@ -31,3 +31,5 @@ connected from each SENSORx PWR to GND.
     - 1.2 mA sensors
     - 2.9005 mA total
   - (0.94*2.9005) + (0.06*3.35) = 2.927 mA average
+- aclk_only.c : source ACLK from 32khz XT1 crystal, output on P5.6
+  (TP28)
