@@ -23,6 +23,20 @@
 //  Built with CCE v3.1 Build 3.2.3.6.4 & IAR Embedded Workbench Version: 4.11B
 //******************************************************************************
 
+/**
+ * DC: expected output:
+ *  P1.1 (J7.1): 32 kHz (sourced from XT1)
+ *  P1.2 (J7.6): 2.45 MHz (DCO, stabilized with XT1)
+ *  P1.3 (J7.2): ~2 Hz when clocks are stable
+ *  P1.4 (J7.4): Toggles while waiting for XT1LF fault to clear
+ *  P2.5 (J7.7): Toggles while waiting for XT1, XT2, and/or DCO faults to
+ *               clear
+ *  You should see up to ~400 ms of the XT1LF fault check, after which
+ *  the ACLK signal should be stabilized at 32.768 kHz. 
+*/
+
+//DC: replace with below for IAR
+//#include "cc430x513x.h"
 #include <msp430.h>
 
 void main(void)

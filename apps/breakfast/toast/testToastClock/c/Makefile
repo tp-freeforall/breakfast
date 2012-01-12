@@ -1,4 +1,4 @@
-SOURCES=testclocks.c
+SOURCES=testclocks.c aclk_only.c
 CC=msp430-gcc
 CCFLAGS=-mmcu=msp430f235
 OBJCOPY=msp430-objcopy
