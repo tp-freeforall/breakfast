@@ -16,12 +16,12 @@ merged$ErrorPPM <- ((merged$Frequency.s - 32768)/32768)*1000000
 
 bpSet <- rawData
 
-#compare different board type/xcap settings
-pdf(paste(outdir,'freq_vs_type_xcap.pdf', sep=""))
-boxplot(Frequency ~ BoardType*XCAP, data=bpSet, show.names=TRUE, las=2)
-title("Frequency v. BoardType.XCAP")
-garbage <- dev.off()
-
+##compare different board type/xcap settings
+#pdf(paste(outdir,'freq_vs_type_xcap.pdf', sep=""))
+#boxplot(Frequency ~ BoardType*XCAP, data=bpSet, show.names=TRUE, las=2)
+#title("Frequency v. BoardType.XCAP")
+#garbage <- dev.off()
+#
 #compare different boards of same type
 pdf(paste(outdir,'freq_dist_asb_xcap.pdf', sep=""))
 boxplot(Frequency~Board*XCAP, data=droplevels(bpSet[bpSet$BoardType == "asb",]), show.names=TRUE, las=2)
@@ -35,10 +35,12 @@ garbage <- dev.off()
 
 #only look at xcap = 0
 bpSet <- rawData[rawData$XCAP == 0,]
+
 pdf(paste(outdir,'freq_vs_type.pdf', sep=""))
 boxplot(Frequency ~ BoardType, data=bpSet, show.names=TRUE, las=2)
 title("Frequency v. BoardType (xcap=0)")
 garbage <- dev.off()
+
 #compare different boards of same type
 pdf(paste(outdir,'freq_dist_asb.pdf', sep=""))
 boxplot(Frequency~Board, data=droplevels(bpSet[bpSet$BoardType == "asb",]), show.names=TRUE, las=2)
@@ -54,17 +56,27 @@ garbage <- dev.off()
 
 #trend
 XCAPSetting <- 0
-usePPM <- TRUE
-if (usePPM){
-  yCol <- "ErrorPPM"
+yCol <- "Frequency.s"
+if (yCol == "ErrorPPM"){
   ylab <- "Error (PPM)"
-} else {
-  yCol <- "Frequency.centered"
+  centerGuide <- 0
+  upperGuide <- 20
+  lowerGuide <- - 20
+} else if (yCol == "Frequency.centered"){
   ylab <- "Hz from mean"
+  centerGuide <- 0
+  lowerGuide <- 0
+  upperGuide <- 0
+} else if (yCol == "Frequency.s"){
+  ylab <- "Hz"
+  centerGuide <- 32768
+  maxErr <- (20/1000000)*32768
+  lowerGuide <- 32768 - maxErr
+  upperGuide <- 32768 + maxErr
 }
 
 pdf(paste(outdir, 'stability_hz.pdf', sep=""))
-ylim <- range(merged[yCol])
+ylim <- range(c(lowerGuide, upperGuide, merged[yCol]))
 xlim <- c(0, max((merged$Midpoint)))
 plot(c(0),c(0), pch="", ylim=ylim, xlim=xlim, xlab="Seconds",
 ylab=ylab)
@@ -93,11 +105,12 @@ for( bt in unique(merged$BoardType)){
   }
   lcolIndex <- lcolIndex + 1
 }
-if (usePPM){
-  abline(h=0, col="gray")
-  abline(h=-20, col="gray")
-  abline(h=20, col="gray")
-}
+
+abline(h=centerGuide, col="gray", lty=2)
+abline(h=lowerGuide, col="gray")
+abline(h=upperGuide, col="gray")
+
+
 legend("topright", legend=legendName, lty=legendLty, col=legendCol)
 title(paste("Stability v. time (XCAP=", as.character(XCAPSetting),")"))
 dev.off()
