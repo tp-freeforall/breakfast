@@ -23,15 +23,6 @@ module TestP{
   }
 
   event void Boot.booted(){
-    //put ACLK on P1.1
-    atomic{
-      PMAPPWD = PMAPKEY;
-      PMAPCTL = PMAPRECFG;
-      P1MAP1 = PM_ACLK;
-      PMAPPWD = 0x0;
-    }
-    P1OUT |= BIT1;
-    P1SEL |= BIT1;
     call StdControl.start();
     printf("Test Toast apps\n\r '~' to switch apps. Current app: %s\n\r", call GetDesc.get[currentTest]());
   }

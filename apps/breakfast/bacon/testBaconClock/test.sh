@@ -1,14 +1,16 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]
+if [ $# -lt 4 ]
 then
-  echo "usage: $0 XCAP_setting comport [ti]" 1>&2
+  echo "usage: $0 XCAP_setting XT1_INITIAL_DRIVE XT1_FINAL_DRIVE comport [ti]" 1>&2
   exit 1
 fi
 xcap=$1
-comport=$2
+xtInitial=$2
+xtFinal=$3
+comport=$4
 
-if [ "$3" == ti ]
+if [ "$5" == ti ]
 then
   echo "using TI test app"
   app=cc430x513x_UCS_4
@@ -17,7 +19,7 @@ else
   app=testclocks
 fi
 
-make clean && make CFLAGS=-DXCAP_SETTING=$xcap && ./burn.sh $comport bin/$app.hex 
+make clean && make CFLAGS="-DXCAP_SETTING=$xcap -DXT1_INITIAL_DRIVE=$xtInitial -DXT1_FINAL_DRIVE=$xtFinal" && ./burn.sh $comport bin/$app.hex 
 echo "hit enter to start test"
 read line
 picocom -b 9600 $comport

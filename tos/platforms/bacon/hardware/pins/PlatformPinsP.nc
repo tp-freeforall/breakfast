@@ -78,9 +78,23 @@ implementation {
 #endif 
     
 #if defined(__msp430_have_port5) || defined(__MSP430_HAS_PORT5__) || defined(__MSP430_HAS_PORT5_R__)
+
+  #ifdef XT1_AVAILABLE
+  //when P5SEL.0 is set:
+  //  If we're not operating in bypass mode (i.e. it's a real crystal
+  //  and not a digital clock signal), P5SEL.1 is
+  //  also don't-care (will be configured as needed for xtal)
+  // according to datasheet, DIR is don't-care for these, but it seems
+  // like in practce, that's *not* true (when DIR is set, XT1 fault
+  // never clears)
+  #warning "configuring p5 for crystal"
+      P5DIR = 0xFC;
+      P5SEL = 0x03;
+      P5OUT = 0x00;
+  #else
       P5DIR = 0xFF;
-      //external crystal
-      P5OUT = 0x03;
+      P5OUT = 0x00;
+  #endif
 #endif 
 
 #if defined(__msp430_have_port6) || defined(__MSP430_HAS_PORT6__) || defined(__MSP430_HAS_PORT6_R__)
