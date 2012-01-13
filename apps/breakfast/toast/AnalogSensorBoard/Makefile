@@ -9,7 +9,7 @@ CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cCom
 
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cTLVStorage
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cSynch
-#CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cADCReader
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cADCReader
 
 
 include $(MAKERULES)

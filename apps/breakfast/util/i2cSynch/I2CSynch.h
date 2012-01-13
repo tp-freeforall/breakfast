@@ -16,6 +16,7 @@ typedef nx_struct synch_message_t{
 
 typedef nx_struct synch_response_t{
   nx_uint32_t remoteTime;
+  nx_uint8_t fault;
 }synch_response_t;
 
 #endif

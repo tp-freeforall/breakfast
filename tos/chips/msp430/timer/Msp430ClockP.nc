@@ -93,7 +93,6 @@ implementation
     // .DCOR = 0; select internal resistor for DCO
     BCSCTL2 = DIVS1;
     
-    //TODO: BCSCTL3.XCAPX?
     BCSCTL3 = (BCSCTL3 & ~(XCAP_3)) | XCAP_3;
 
     // IE1.OFIE = 0; no interrupt for oscillator fault

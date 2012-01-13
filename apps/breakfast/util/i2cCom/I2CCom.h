@@ -19,4 +19,9 @@ typedef nx_union i2c_message_t{
   } body;
 } i2c_message_t; 
 
+i2c_message_t* swapBuffer(i2c_message_t* a, i2c_message_t** b){
+  i2c_message_t* tmp = *b;
+  *b = a;
+  return tmp;
+}
 #endif

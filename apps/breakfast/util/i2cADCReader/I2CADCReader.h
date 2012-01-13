@@ -3,8 +3,8 @@
 
 #include "Msp430Adc12.h"
 
-#define REGISTER_CLIENT_ID_ADCREADER 0x03
-#define ADC_READER_CMD_SAMPLE 0x03
+#define I2C_COM_CLIENT_ID_ADCREADER 0x01
+#define ADC_READER_CMD_SAMPLE 0x0c
 
 #ifndef ADC_NUM_SAMPLES
 #define ADC_NUM_SAMPLES 5
@@ -14,6 +14,9 @@
 #ifndef ADC_NUM_CHANNELS
 #define ADC_NUM_CHANNELS 8 + 2
 #endif
+
+//marker for "stop reading now"
+#define NO_SAMPLE 0xff
 
 #define ADC_TOTAL_SAMPLES ADC_NUM_CHANNELS * ADC_READER_MAX_SAMPLES_PER_CHANNEL
 

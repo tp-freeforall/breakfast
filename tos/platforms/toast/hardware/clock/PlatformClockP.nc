@@ -112,12 +112,11 @@ module PlatformClockP {
     if (0 == call TLVUtils.findEntry(TAG_DCO_CUSTOM, 0,
       (tlv_entry_t**)&e, ba)){
         #ifdef PLATFORM_HAS_32KHZ_CRYSTAL
-            #warning "calibrating DCO with 32khz crystal"
             ////External crystal
             ////XT2S   = 0  : XT2 range (don't care, no XT2)
             ////LFXT1Sx= 00 : 32768 Hz crystal on LFXT1
-            ////XCAPx  = 01 : capacitance on LFXT1-- 7pF on Toast Board 
-            BCSCTL3 = XCAP_1;
+            ////XCAPx  = 00 : no internal load capacitors(all external)
+            BCSCTL3 = XCAP_0;
             set_dco(DELTA_4MHZ_BINARY_32khz_aclk, ba);
         #else
             #warning "calibrating DCO with VLOCLK"
