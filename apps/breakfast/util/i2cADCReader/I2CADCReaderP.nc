@@ -13,7 +13,6 @@ module I2CADCReaderP{
   norace adc_response_t* response;
   norace adc_reader_pkt_t* settings;
 
-
   bool processingCommand;
   norace uint8_t channelNum;
   uint8_t channelStart;

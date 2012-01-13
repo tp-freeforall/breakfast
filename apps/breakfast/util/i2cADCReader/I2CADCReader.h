@@ -29,7 +29,6 @@
 typedef struct adc_reader_config_t {
   uint32_t delayMS;
   msp430adc12_channel_config_t config;
-  uint16_t numSamples;
   uint16_t jiffies;
 } adc_reader_config_t;
 
