@@ -56,15 +56,6 @@ module Msp430XV2ClockControlP @safe() {
     uint16_t divs;
     
     atomic {
-      //TODO: DEBUG, REMOVE
-      PMAPPWD = PMAPKEY;
-      PMAPCTL = PMAPRECFG;
-      P1MAP1 = PM_ACLK;
-      PMAPPWD = 0x0;
-      P1OUT |= BIT1|BIT4;
-      P1SEL |= BIT1;
-      P1SEL &= ~BIT4;
-
       /* ACLK is to be set to XT1CLK, assumed to be 32KHz (2^15Hz),
        * falls back to REFOCLK if absent.
        *
@@ -86,13 +77,13 @@ module Msp430XV2ClockControlP @safe() {
       UCSCTL6 |= (XCAP_SETTING << 2) ; 
 
       //if an external crystal is available, then we'll use that for
-      //  ACLK and for FLLREF. We have to wait until it stabilizes
+      //  ACLK and for FLLREF. We have to wait until it stabilizes.
+      // Note that if XT1 is not available, this flag will remain set,
+      // and so we should skip it.
       #ifdef XT1_AVAILABLE
       do{
         UCSCTL7 &= ~XT1LFOFFG; //clear XT1 fault flag
-        //TODO: DEBUG REMOVE
-        P1OUT^=BIT4; 
-      } while(UCSCTL7 & XT1LFOFFG); //reset by hardware?
+      } while(UCSCTL7 & XT1LFOFFG); //check if reset by hardware
       //reduce drive strength to minimum 
       UCSCTL6 &= ~XT1DRIVE_3;
       #endif
