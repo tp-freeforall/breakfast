@@ -29,7 +29,6 @@
 typedef struct adc_reader_config_t {
   uint32_t delayMS;
   msp430adc12_channel_config_t config;
-  uint16_t jiffies;
 } adc_reader_config_t;
 
 //a packet consists of a set of these configs: up to 1 per sensor
