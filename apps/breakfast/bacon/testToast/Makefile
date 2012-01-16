@@ -6,6 +6,7 @@ CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cCom
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cPersistentStorage
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cTLVStorage
 CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cSynch
+CFLAGS+=-I$(TOSROOT)/apps/breakfast/util/i2cADCReader
 CFLAGS+=-I$(TOSDIR)/lib/serialprintf
 
 #TODO: argh, shouldn't be here

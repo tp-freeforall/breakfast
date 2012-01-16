@@ -16,9 +16,14 @@ module I2CADCReaderMasterP{
     S_WAITING = 0x02,
     S_READING = 0x04,
   };
+  uint8_t state = S_IDLE;
 
-  command adc_reader_pkt_t* I2CADCReaderMaster.getPayload(i2c_message_t* msg){
+  command adc_reader_pkt_t* I2CADCReaderMaster.getSettings(i2c_message_t* msg){
     return (adc_reader_pkt_t*)call I2CComMaster.getPayload(msg);
+  }
+
+  command adc_response_t* I2CADCReaderMaster.getResults(i2c_message_t* msg){
+    return (adc_response_t*)call I2CComMaster.getPayload(msg);
   }
 
   command error_t I2CADCReaderMaster.sample(uint16_t slaveAddr,
@@ -29,7 +34,7 @@ module I2CADCReaderMasterP{
       return EBUSY;
     }
     cmdMsg = msg;
-    settings = call I2CADCReaderMaster.getPayload(cmdMsg);
+    settings = call I2CADCReaderMaster.getSettings(cmdMsg);
     settings->cmd = ADC_READER_CMD_SAMPLE;
     ret = call I2CComMaster.send(slaveAddr, cmdMsg, sizeof(adc_reader_pkt_t));
     if (ret == SUCCESS){
@@ -41,10 +46,10 @@ module I2CADCReaderMasterP{
   event void I2CComMaster.sendDone(error_t error, i2c_message_t* msg){
     uint8_t i;
     uint32_t delay = 0;
-    adc_reader_pkt_t* settings = call I2CADCReaderMaster.getPayload(cmdMsg);
+    adc_reader_pkt_t* settings = call I2CADCReaderMaster.getSettings(cmdMsg);
     //TODO: verify msg==cmdMsg
     if (error == SUCCESS){
-      for (i = 0; i< ADC_NUM_CHANNELS && pl->cfg[i].config.inch !=NO_SAMPLE; i++){
+      for (i = 0; i< ADC_NUM_CHANNELS && settings->cfg[i].config.inch !=NO_SAMPLE; i++){
         delay += settings->cfg[i].delayMS + CHANNEL_DELAY;
         //TODO: also get the sample/hold time numbers
       }
@@ -53,7 +58,7 @@ module I2CADCReaderMasterP{
     } else {
       state = S_IDLE;
       responseMsg = signal I2CADCReaderMaster.sampleDone(error,
-        cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg);
+        cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg, NULL);
     }
   }
 
@@ -63,8 +68,9 @@ module I2CADCReaderMasterP{
       sizeof(adc_response_t));
     if (error != SUCCESS){
       state = S_IDLE;
-      responseMsg = signal I2CComMaster.receiveDone(error,
-        cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg);
+      responseMsg = signal I2CADCReaderMaster.sampleDone(error,
+        cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg,
+        call I2CADCReaderMaster.getResults(responseMsg));
     } else {
       state = S_BUSY | S_READING;
     }
@@ -75,6 +81,7 @@ module I2CADCReaderMasterP{
     //TODO: verify rMsg == responseMsg
     state = S_IDLE;
     responseMsg = signal I2CADCReaderMaster.sampleDone(error,
-      cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg);
+      cmdMsg->body.header.slaveAddr, cmdMsg, responseMsg, 
+      call I2CADCReaderMaster.getResults(responseMsg));
   }
 }

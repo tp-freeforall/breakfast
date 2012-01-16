@@ -18,7 +18,7 @@ module SynchTestP{
 
   uint32_t locals[SYNCH_COUNT];
   uint32_t remotes[SYNCH_COUNT];
-  uint8_t count;
+  norace uint8_t count;
 
   task void read(){
     test_state_t* state = call Get.get();

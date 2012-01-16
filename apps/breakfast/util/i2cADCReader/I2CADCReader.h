@@ -15,8 +15,14 @@
 #define ADC_NUM_CHANNELS 8 + 2
 #endif
 
+//built-in delay required for slave to configure channel/set up
+//measurement (in binary ms)
+#ifndef CHANNEL_DELAY
+#define CHANNEL_DELAY 10
+#endif
+
 //marker for "stop reading now"
-#define NO_SAMPLE 0xff
+#define NO_SAMPLE 0x0f
 
 #define ADC_TOTAL_SAMPLES ADC_NUM_CHANNELS * ADC_READER_MAX_SAMPLES_PER_CHANNEL
 

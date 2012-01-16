@@ -18,6 +18,15 @@ configuration TestAppC{
   TestP.I2CDiscoverer -> I2CDiscovererC;
 
   enum {
+    ADC_TEST_ID = unique(UQ_TEST_CLIENT),
+  };
+  components ADCTestC;
+  ADCTestC.UartStream -> TestP.UartStream[ADC_TEST_ID];
+  ADCTestC.Get -> TestP.Get;
+  TestP.GetDesc[ADC_TEST_ID] -> ADCTestC.GetDesc;
+
+
+  enum {
     SYNCH_TEST_ID = unique(UQ_TEST_CLIENT),
   };
   components SynchTestC;
