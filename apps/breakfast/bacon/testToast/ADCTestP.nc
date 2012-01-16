@@ -1,4 +1,5 @@
 #include "I2CCom.h"
+#include "Msp430Adc12.h"
 #include "I2CADCReader.h"
 
 
@@ -27,8 +28,65 @@ module ADCTestP{
 
   task void addChannel(){
     adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
-    cmd->cfg[channelIndex].config.inch = newChannel;
     cmd->cfg[channelIndex].delayMS = sampleDelay;
+    cmd->cfg[channelIndex].config.inch = newChannel;
+    cmd->cfg[channelIndex].config.sref = REFERENCE_VREFplus_AVss;
+    cmd->cfg[channelIndex].config.ref2_5v = REFVOLT_LEVEL_2_5;
+
+    //TODO: check SMCLK settings, want this in uS
+    //These configure the adc12clk, which is used as the basis for
+    //  t_sample
+    //
+    // Resistance -> t_sample: 
+    //  t_sample > (R_s + 2000)*3.6e-10+ 800e-9
+    /**
+     * R  
+     * (k) t_sample
+     *----+---------
+     * 0   1.52087306778e-06
+     * 5   3.32305573724e-06
+     * 10  5.12523840669e-06
+     * 15  6.92742107615e-06
+     * 20  8.72960374561e-06
+     * 25  1.05317864151e-05
+     * 30  1.23339690845e-05
+     * 35  1.4136151754e-05
+     * 40  1.59383344234e-05
+     * 45  1.77405170929e-05
+     * 50  1.95426997623e-05
+     * 55  2.13448824318e-05
+     * 60  2.31470651013e-05
+     * 65  2.49492477707e-05
+     * 70  2.67514304402e-05
+     * 75  2.85536131096e-05
+     * 80  3.03557957791e-05
+     * 85  3.21579784485e-05
+     * 90  3.3960161118e-05
+     * 95  3.57623437874e-05
+     * 100 3.75645264569e-05
+     */
+    //this is set to 1 binary uS when sourced from SMCLK/1
+    cmd->cfg[channelIndex].config.adc12ssel = SHT_SOURCE_SMCLK;
+    cmd->cfg[channelIndex].config.adc12div = SHT_CLOCK_DIV_1;
+    
+    //This defines the sampling time in terms of divided adc12 clock
+    //  cycles. 
+    //t_sample = adc12clk_period * SAMPLE_HOLD_x_CYCLES
+    // so, this can run for up to 1 mS when adc12clk is 1MHz.
+    cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_4_CYCLES;
+
+    //These define the the sampling period.
+    //If jiffies is 0, these don't matter (we directly set the
+    //  ADC12SC bit when we want to take a sample). (sets SHSx to 0).
+    //  When jiffies is 0, MSC is set, which means it will start
+    //  each sample as soon as it finishes converting the previous.
+    //If jiffies > 0, then these are used to reconfigure timerA
+    //  (source/divider), (sets SHSx to 1)
+    //  When jiffies > 0, MSC is cleared, meaning that successive
+    //  samples are delayed until SHI triggers it again.
+    //These are configured to use aclk (32khz crystal, undivided).
+    cmd->cfg[channelIndex].config.sampcon_ssel = SAMPCON_SOURCE_ACLK;
+    cmd->cfg[channelIndex].config.sampcon_id = SAMPCON_CLOCK_DIV_1;
     printf("Add %x with %lu delay\n\r", newChannel, sampleDelay);
     channelIndex++;  
   }
@@ -39,7 +97,7 @@ module ADCTestP{
     printf("Settings\n\r");
     for (i=0; i < ADC_NUM_CHANNELS; i++){
       printf("  [%d] : %x ", i, cmd->cfg[i].config.inch);
-      if (cmd->cfg[i].config.inch == NO_SAMPLE){
+      if (cmd->cfg[i].config.inch == INPUT_CHANNEL_NONE){
         printf("(None)\n\r");
         break;
       } else {
@@ -53,7 +111,7 @@ module ADCTestP{
     adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
     channelIndex = 0;
     for (i=0; i<ADC_NUM_CHANNELS; i++){
-      cmd->cfg[i].config.inch = NO_SAMPLE;
+      cmd->cfg[i].config.inch = INPUT_CHANNEL_NONE;
     }
     sampleDelay = 0;
     printf("ADC config reset.\n\r");
@@ -96,7 +154,7 @@ module ADCTestP{
     for (i = 0; i < ADC_NUM_CHANNELS; i++){
       cur = response->samples[i];
       printf(" [%d]: ", i);
-      if (cur.inputChannel == NO_SAMPLE){
+      if (cur.inputChannel == INPUT_CHANNEL_NONE){
         printf("(end)\n\r");
         break;
       }

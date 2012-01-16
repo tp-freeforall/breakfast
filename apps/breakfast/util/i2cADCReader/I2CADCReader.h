@@ -21,9 +21,6 @@
 #define CHANNEL_DELAY 10
 #endif
 
-//marker for "stop reading now"
-#define NO_SAMPLE 0x0f
-
 #define ADC_TOTAL_SAMPLES ADC_NUM_CHANNELS * ADC_READER_MAX_SAMPLES_PER_CHANNEL
 
 //see Msp430Adc12SingleChannel.nc for details: these get passed

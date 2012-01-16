@@ -78,7 +78,7 @@ module I2CADCReaderP{
 
   task void readyNextSample(){
     if ( channelNum == ADC_NUM_CHANNELS || 
-        settings->cfg[channelNum].config.inch == NO_SAMPLE){
+        settings->cfg[channelNum].config.inch == INPUT_CHANNEL_NONE){
       //done: out of channels, or end marker
       call Resource.release();
       call I2CComSlave.unpause();

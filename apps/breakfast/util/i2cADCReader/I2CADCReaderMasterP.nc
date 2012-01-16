@@ -49,7 +49,7 @@ module I2CADCReaderMasterP{
     adc_reader_pkt_t* settings = call I2CADCReaderMaster.getSettings(cmdMsg);
     //TODO: verify msg==cmdMsg
     if (error == SUCCESS){
-      for (i = 0; i< ADC_NUM_CHANNELS && settings->cfg[i].config.inch !=NO_SAMPLE; i++){
+      for (i = 0; i< ADC_NUM_CHANNELS && settings->cfg[i].config.inch != INPUT_CHANNEL_NONE; i++){
         delay += settings->cfg[i].delayMS + CHANNEL_DELAY;
         //TODO: also get the sample/hold time numbers
       }
