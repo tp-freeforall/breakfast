@@ -122,6 +122,7 @@ module I2CComSlaveMultiP {
     } else{
       isReceive = TRUE;
       if (isPaused){
+        eventPending = TRUE;
         return FALSE;
       } else {
         receive();
@@ -138,6 +139,7 @@ module I2CComSlaveMultiP {
     }else {
       isReceive = FALSE;
       if (isPaused){
+        eventPending = TRUE;
         return FALSE;
       } else {
         transmit();
