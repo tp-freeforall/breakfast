@@ -31,6 +31,7 @@
 //  can warm up).
 typedef struct adc_reader_config_t {
   uint32_t delayMS;
+  uint16_t samplePeriod;
   msp430adc12_channel_config_t config;
 } adc_reader_config_t;
 

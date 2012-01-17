@@ -27,7 +27,7 @@ module I2CADCReaderP{
   void nextSample(){
     adc_reader_config_t cfg = settings->cfg[channelNum];
     call Msp430Adc12SingleChannel.configureMultiple(&cfg.config,
-      medianBuf, ADC_NUM_SAMPLES, cfg.jiffies);
+      medianBuf, ADC_NUM_SAMPLES, cfg.samplePeriod);
     response->samples[channelNum].sampleTime = call LocalTime.get();
     call Msp430Adc12SingleChannel.getData();
   }

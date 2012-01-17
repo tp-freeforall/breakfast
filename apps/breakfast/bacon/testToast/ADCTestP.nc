@@ -76,7 +76,7 @@ module ADCTestP{
     cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_4_CYCLES;
 
     //These define the the sampling period.
-    //If jiffies is 0, these don't matter (we directly set the
+    //If samplePeriod (jiffies) is 0, these don't matter (we directly set the
     //  ADC12SC bit when we want to take a sample). (sets SHSx to 0).
     //  When jiffies is 0, MSC is set, which means it will start
     //  each sample as soon as it finishes converting the previous.
@@ -85,6 +85,7 @@ module ADCTestP{
     //  When jiffies > 0, MSC is cleared, meaning that successive
     //  samples are delayed until SHI triggers it again.
     //These are configured to use aclk (32khz crystal, undivided).
+    cmd->cfg[channelIndex].samplePeriod = 0;
     cmd->cfg[channelIndex].config.sampcon_ssel = SAMPCON_SOURCE_ACLK;
     cmd->cfg[channelIndex].config.sampcon_id = SAMPCON_CLOCK_DIV_1;
     printf("Add %x with %lu delay\n\r", newChannel, sampleDelay);
@@ -164,7 +165,18 @@ module ADCTestP{
     return responseMsg;
   }
 
+  bool firstUse = TRUE;
+
+
   async event void UartStream.receivedByte(uint8_t byte){
+    if (firstUse){
+      uint8_t i;
+      adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
+      for(i = 0; i< ADC_NUM_CHANNELS; i++){
+        cmd->cfg[i].config.inch = INPUT_CHANNEL_NONE;
+      }
+      firstUse = FALSE;
+    }
     switch(byte){
       case 's':
         post sample();
