@@ -2,7 +2,7 @@
 #define I2C_COM_H
 
 #ifndef I2C_MESSAGE_LEN
-#define I2C_MESSAGE_LEN 66
+#define I2C_MESSAGE_LEN 90
 #endif
 
 typedef nx_struct i2c_message_header_t {
