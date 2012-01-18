@@ -79,8 +79,14 @@ module I2CADCReaderP{
   task void readyNextSample(){
     if ( channelNum == ADC_NUM_CHANNELS || 
         settings->cfg[channelNum].config.inch == INPUT_CHANNEL_NONE){
+      uint8_t i;
       //done: out of channels, or end marker
       call Resource.release();
+      for(i=channelNum; i < ADC_NUM_CHANNELS; i++){
+        response->samples[i].inputChannel = INPUT_CHANNEL_NONE;
+        response->samples[i].sampleTime = 0;
+        response->samples[i].sample = 0xff;
+      }
       call I2CComSlave.unpause();
       //at some point, we'll get the transactionStart and read it back
       //Note that from the master's perspective, it will be able to
