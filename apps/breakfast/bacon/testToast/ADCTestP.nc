@@ -12,6 +12,8 @@ module ADCTestP{
   uses interface Timer<TMilli>;
 } implementation {
   bool retry = FALSE;
+  uint8_t sref_index;
+  uint8_t ref2_5v_index;
   const char* testDesc = "ADC test:\n\r s: sample\n\r [0-f]: add input channel to sample command\n\r R: reset settings\n\r ?: print settings\n\r i: Increment sample delay\n\r D: reset sample delay to 0"; 
 
   command const char* GetDesc.get(){
@@ -24,6 +26,39 @@ module ADCTestP{
   norace uint8_t newChannel;
   uint8_t channelIndex = 0;
   uint32_t sampleDelay = 0;
+  uint8_t sref = 0;
+  uint8_t ref2_5v = 0;
+
+  #define SREF_LEVELS 6
+  uint8_t sref_levels[6] = {
+   REFERENCE_AVcc_AVss,                // VR+ = AVcc   and VR-= AVss
+   REFERENCE_VREFplus_AVss ,           // VR+ = VREF+  and VR-= AVss
+   REFERENCE_VeREFplus_AVss,           // VR+ = VeREF+ and VR-= AVss
+   REFERENCE_AVcc_VREFnegterm,         // VR+ = AVcc   and VR-= VREF-/VeREF- 
+   REFERENCE_VREFplus_VREFnegterm,     // VR+ = VREF+  and VR-= VREF-/VeREF-   
+   REFERENCE_VeREFplus_VREFnegterm     // VR+ = VeREF+ and VR-= VREF-/VeREF-
+  };
+
+  const char* sref_str[6] = {
+   "AVcc_AVss",
+   "VREFplus_AVss",
+   "VeREFplus_AVss",
+   "AVcc_VREFnegterm",
+   "VREFplus_VREFnegterm",
+   "VeREFplus_VREFnegterm"
+  };
+
+  const char* ref2_5v_str[2] = {
+    "1_5",
+    "2_5",
+  };
+
+  #define REF2_5V_LEVELS 2
+  uint8_t ref2_5v_levels[3] = {
+    REFVOLT_LEVEL_1_5 ,                    // reference voltage of 1.5 V
+    REFVOLT_LEVEL_2_5 ,                    // reference voltage of 2.5 V
+    REFVOLT_LEVEL_NONE                     // if e.g. AVcc is chosen 
+  };
   
   //units are binary milliseconds
   #define SAMPLE_DELAY_INCREMENT 256
@@ -32,8 +67,8 @@ module ADCTestP{
     adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
     cmd->cfg[channelIndex].delayMS = sampleDelay;
     cmd->cfg[channelIndex].config.inch = newChannel;
-    cmd->cfg[channelIndex].config.sref = REFERENCE_VREFplus_AVss;
-    cmd->cfg[channelIndex].config.ref2_5v = REFVOLT_LEVEL_2_5;
+    cmd->cfg[channelIndex].config.sref = sref_levels[sref_index];
+    cmd->cfg[channelIndex].config.ref2_5v = ref2_5v_levels[ref2_5v_index];
 
     //TODO: check SMCLK settings, want this in uS
     //These configure the adc12clk, which is used as the basis for
@@ -97,17 +132,22 @@ module ADCTestP{
   task void printSettings(){
     uint8_t i;
     adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
-    printf("Settings\n\r");
+    printf("Settings (inch delayMS sref_enum ref2_5_enum)\n\r");
     for (i=0; i < ADC_NUM_CHANNELS; i++){
       printf("  [%d] : %x ", i, cmd->cfg[i].config.inch);
       if (cmd->cfg[i].config.inch == INPUT_CHANNEL_NONE){
         printf("(None)\n\r");
         break;
       } else {
-        printf("%lu\n\r", cmd->cfg[i].delayMS);
+        printf("%lu\t%s\t%s\n\r", cmd->cfg[i].delayMS,
+          sref_str[cmd->cfg[i].config.sref], 
+          ref2_5v_str[cmd->cfg[i].config.ref2_5v]);
       }
     }
     printf(" Retry: %x\n\r", retry);
+    printf(" sref:  %s\n\r", sref_str[sref_levels[sref_index]]);
+    printf(" ref2_5: %s\n\r", ref2_5v_str[ref2_5v_levels[ref2_5v_index]]);
+    printf(" delay: %lu\n\r", sampleDelay);
   }
 
   task void reset(){
@@ -200,6 +240,14 @@ module ADCTestP{
         break;
       case 'i':
         post incrementDelay();
+        break;
+      case 'r':
+        sref_index = (sref_index + 1)%SREF_LEVELS;
+        printf("sref:  %s\n\r", sref_str[sref_levels[sref_index]]);
+        break;
+      case 'v':
+        ref2_5v_index = (ref2_5v_index+1)%REF2_5V_LEVELS;
+        printf("ref2_5v: %s\n\r", ref2_5v_str[ref2_5v_levels[ref2_5v_index]]);
         break;
       case 'D':
         post resetDelay();
