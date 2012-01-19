@@ -9,7 +9,9 @@ module ADCTestP{
   provides interface Get<const char*> as GetDesc;
   uses interface Get<test_state_t*>;
   uses interface UartStream;
+  uses interface Timer<TMilli>;
 } implementation {
+  bool retry = FALSE;
   const char* testDesc = "ADC test:\n\r s: sample\n\r [0-f]: add input channel to sample command\n\r R: reset settings\n\r ?: print settings\n\r i: Increment sample delay\n\r D: reset sample delay to 0"; 
 
   command const char* GetDesc.get(){
@@ -73,7 +75,7 @@ module ADCTestP{
     //  cycles. 
     //t_sample = adc12clk_period * SAMPLE_HOLD_x_CYCLES
     // so, this can run for up to 1 mS when adc12clk is 1MHz.
-    cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_4_CYCLES;
+    cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_1024_CYCLES;
 
     //These define the the sampling period.
     //If samplePeriod (jiffies) is 0, these don't matter (we directly set the
@@ -105,6 +107,7 @@ module ADCTestP{
         printf("%lu\n\r", cmd->cfg[i].delayMS);
       }
     }
+    printf(" Retry: %x\n\r", retry);
   }
 
   task void reset(){
@@ -147,6 +150,7 @@ module ADCTestP{
       adc_response_t* response){
     uint8_t i;
     adc_sample_t cur;
+    adc_reader_pkt_t* cmd = call I2CADCReaderMaster.getSettings(msg);
     printf("%s: %s\n\r", __FUNCTION__, decodeError(error));
     if (response == NULL){
       printf("No response data\n\r");
@@ -154,15 +158,22 @@ module ADCTestP{
     }
     for (i = 0; i < ADC_NUM_CHANNELS; i++){
       cur = response->samples[i];
-      printf(" [%d]: ", i);
+      printf(" MEASURE [%d]: ", i);
       if (cur.inputChannel == INPUT_CHANNEL_NONE){
         printf("(end)\n\r");
         break;
       }
-      printf("%x\t%lu\t%d\n\r", cur.inputChannel, cur.sampleTime,
-        cur.sample);
+      printf("%x\t%lu\t%d\t%lu\n\r", cur.inputChannel, cur.sampleTime,
+        cur.sample, cmd->cfg[i].delayMS);
+    }
+    if (retry){
+      call Timer.startOneShot(1024);
     }
     return responseMsg;
+  }
+
+  event void Timer.fired(){
+    post sample();
   }
 
   bool firstUse = TRUE;
@@ -195,6 +206,10 @@ module ADCTestP{
         break;
       case '\r':
         printf("\n\r");
+        break;
+      case 't':
+        retry = !retry;
+        printf("periodic retry: %d\n\r", retry);
         break;
       default:
         //0-9

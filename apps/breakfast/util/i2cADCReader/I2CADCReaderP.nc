@@ -6,6 +6,7 @@ module I2CADCReaderP{
   uses interface GeneralIO as SensorPower[uint8_t channelNum];
   uses interface Timer<TMilli>;
   uses interface LocalTime<T32khz>;
+  provides interface AdcConfigure<const msp430adc12_channel_config_t*>;
 } implementation {
   uint16_t medianBuf[ADC_NUM_SAMPLES];
   i2c_message_t msg_internal;
@@ -16,6 +17,23 @@ module I2CADCReaderP{
   bool processingCommand;
   norace uint8_t channelNum;
   uint8_t channelStart;
+  
+  //this is pretty bad: this config is in no way going to be constant.
+  //
+  //Additionally, since the reference voltage usage might differ from
+  //channel to channel, we need to issue a separate resource.request
+  //for each of them. 
+  //
+  //The cleanest way to do this (and it's not clean at all) might be
+  // to instantiate one Msp430Adc12ClientAutoRVGC per channel
+  // (macro?), then wire to array-type interfaces for this module. So,
+  // when we get AdcConfigure.getConfiguration[uint8_t clientId](), we
+  // return &(settings->cfg[clientId].config). We still need to
+  // release/request resources willity-nillity, but maybe it's not
+  // horrible...
+  async command const msp430adc12_channel_config_t* AdcConfigure.getConfiguration(){
+    return &(settings->cfg[channelNum].config);
+  }
 
   task void readyNextSample();
 
@@ -26,6 +44,15 @@ module I2CADCReaderP{
 
   void nextSample(){
     adc_reader_config_t cfg = settings->cfg[channelNum];
+    printf("Using ADC settings:\n\r");
+    printf(" inch  %x\n\r", cfg.config.inch);
+    printf(" sref  %x\n\r", cfg.config.sref);
+    printf(" refv  %x\n\r", cfg.config.ref2_5v);
+    printf(" asel  %x\n\r", cfg.config.adc12ssel);
+    printf(" adiv  %x\n\r", cfg.config.adc12div);
+    printf(" sht   %x\n\r", cfg.config.sht);
+    printf(" ssel  %x\n\r", cfg.config.sampcon_ssel);
+    printf(" sid   %x\n\r", cfg.config.sampcon_id);
     call Msp430Adc12SingleChannel.configureMultiple(&cfg.config,
       medianBuf, ADC_NUM_SAMPLES, cfg.samplePeriod);
     response->samples[channelNum].sampleTime = call LocalTime.get();

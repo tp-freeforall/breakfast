@@ -10,6 +10,7 @@ module AnalogSensorBoardP{
   event void Boot.booted(){
     //TODO: check for lastLocalAddr in flash and call
     //  I2CDiscoverable.setLocalAddr before starting
+    printf("booted\n\r");
     call SplitControl.start();
   }
 
