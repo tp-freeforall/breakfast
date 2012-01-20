@@ -71,8 +71,40 @@ void config_dco(uint16_t delta){
     BCSCTL1 &= ~DIVA_3;                       // ACLK = LFXT1CLK
 }
 
+#define ASCII_ZERO 48
+#define ASCII_A 97
+
+uint8_t nibbleToChar(uint8_t b){
+  if ((b & 0x0f) < 0x0a){
+    return ASCII_ZERO + (b&0x0f);
+  }else{
+    return ASCII_A + ((b&0x0f) - 0x0a);
+  }
+}
+
+void printByte(uint8_t b){
+  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  UCA0TXBUF = nibbleToChar(b >> 4);
+  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  UCA0TXBUF = nibbleToChar(b);
+}
+
+void printChar(uint8_t c){
+  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  UCA0TXBUF = c;
+}
+
+void nl(void){
+  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  UCA0TXBUF ='\n';
+  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  UCA0TXBUF ='\r';
+}
+
+
 void main(void)
 {
+  uint16_t i;
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
   #define DELTA_1MHZ_32khz_aclk    244                   // 244 x 4096Hz = 999.4KHz
   config_dco(DELTA_1MHZ_32khz_aclk);
@@ -98,36 +130,35 @@ void main(void)
   UCA0CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
   //IE2 |= UCA0RXIE;                          // Enable USCI_A0 RX interrupt
 
-  for(;;){
-    __bis_SR_register(CPUOFF + GIE);       // Enter LPM4, interrupts enabled
+  //power pin
+  P4SEL &= (0x01 << 3);
+  P4DIR |= (0x01 << 3);
+  P4OUT |= (0x01 << 3);
+
+  //ADC setup
+  P6SEL |= 0x01;                            // Enable A/D channel A0
+  ADC12CTL0 = ADC12ON+SHT0_2+REFON+REF2_5V; // Turn on and set up ADC12
+  ADC12CTL1 = SHP;                          // Use sampling timer
+  ADC12MCTL0 = SREF_1;                      // Vr+=Vref+
+
+ 
+  ADC12CTL0 |= ENC;                         // Enable conversions
+
+  while (1)
+  {
+    for ( i=0; i<0x3600; i++);                // Delay for reference start-up
+    ADC12CTL0 |= ADC12SC;                   // Start conversion
+    while ((ADC12IFG & BIT0)==0);
+    printChar('D');
+    printChar('A');
+    printChar('T');
+    printChar('A');
+    printChar(' ');
+    printByte((ADC12MEM0 & 0xff00) >> 8);
+    printByte(ADC12MEM0 & 0xff);
+    nl();
   }
 }
-
-#define ASCII_ZERO 48
-#define ASCII_A 97
-
-uint8_t nibbleToChar(uint8_t b){
-  if ((b & 0x0f) < 0x0a){
-    return ASCII_ZERO + (b&0x0f);
-  }else{
-    return ASCII_A + ((b&0x0f) - 0x0a);
-  }
-}
-
-void printByte(uint8_t b){
-  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
-  UCA0TXBUF = nibbleToChar(b >> 4);
-  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
-  UCA0TXBUF = nibbleToChar(b);
-}
-
-void nl(void){
-  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
-  UCA0TXBUF ='\n';
-  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
-  UCA0TXBUF ='\r';
-}
-
 //void USCI0RX_ISR(void) __attribute((wakeup)) __attribute((interrupt(USCIAB0RX_VECTOR)));
 //void USCI0RX_ISR(void)
 //{
@@ -139,8 +170,8 @@ void nl(void){
 //  counter++;
 //}
 
-void ADC12_ISR(void) __attribute((wakeup)) __attribute((interrupt(ADC12_VECTOR)));
-void ADC12_ISR(void){
-  //TODO: log it to serial
-}
+//void ADC12_ISR(void) __attribute((wakeup)) __attribute((interrupt(ADC12_VECTOR)));
+//void ADC12_ISR(void){
+//  //TODO: log it to serial
+//}
 

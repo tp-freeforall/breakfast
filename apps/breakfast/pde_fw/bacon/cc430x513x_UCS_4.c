@@ -58,6 +58,9 @@ void main(void)
   
   P2DIR |= BIT4; //p2.4 will be toggled while DCO stabilizing
   P2SEL &= ~BIT4;
+
+  P3DIR |=BIT0;
+  P3SEL &=~BIT0;
   
   // Initialize LFXT1
   P5SEL |= 0x03;                            // Select XT1
@@ -65,7 +68,7 @@ void main(void)
   #warning "Using default XCAP_SETTING (0)"
   #define XCAP_SETTING 0
   #endif
-  UCSCTL6 |= (XCAP_SETTING << 2);           // Internal load cap
+  UCSCTL6 = (UCSCTL6 & ~(XCAP_3))|(XCAP_SETTING << 2);           // Internal load cap
 
   // Loop until XT1 fault flag is cleared
   do
@@ -104,6 +107,7 @@ void main(void)
   while(1)
   {
     P1OUT ^= BIT3;                          // Toggle P1.3
+    P3OUT ^= BIT0;                          // Toggle P1.3
     __delay_cycles(150000);                 // Delay
     __delay_cycles(150000);                 // Delay
     __delay_cycles(150000);                 // Delay

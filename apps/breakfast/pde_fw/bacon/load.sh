@@ -9,4 +9,4 @@ dev=$1
 file=$2
 shift 2
 
-cc430-bsl --noadg715 -S 115200 -c $dev -e $@ $file
+cc430-bsl --invert-reset --noadg715 -S 115200 -c $dev -e $@ $file
