@@ -98,8 +98,14 @@ implementation
   } 
   
   async command void HplAdc12.startConversion(){ 
+    uint16_t i;
     ADC12CTL0 |= ADC12ON; 
-    ADC12CTL0 |= (ADC12SC + ENC); 
+    ADC12CTL0 |= ENC; 
+    for ( i=0; i<0x3600; i++);                // Delay for reference start-up
+    for ( i=0; i<0x3600; i++);                // Delay for reference start-up
+    for ( i=0; i<0x3600; i++);                // Delay for reference start-up
+    for ( i=0; i<0x3600; i++);                // Delay for reference start-up
+    ADC12CTL0 |= ADC12SC;                   // Start conversion
   }
   
   async command void HplAdc12.stopConversion(){

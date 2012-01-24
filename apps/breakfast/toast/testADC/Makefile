@@ -1,4 +1,4 @@
-SOURCES=adc_serial.c
+SOURCES=adc_serial.c adc_serial_int.c
 CC=msp430-gcc
 CCFLAGS=-mmcu=msp430f235
 OBJCOPY=msp430-objcopy

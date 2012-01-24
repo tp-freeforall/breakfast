@@ -103,14 +103,14 @@ module ADCTestP{
      * 100 3.75645264569e-05
      */
     //this is set to 1 binary uS when sourced from SMCLK/1
-    cmd->cfg[channelIndex].config.adc12ssel = SHT_SOURCE_SMCLK;
+    cmd->cfg[channelIndex].config.adc12ssel = SHT_SOURCE_ADC12OSC;
     cmd->cfg[channelIndex].config.adc12div = SHT_CLOCK_DIV_1;
     
     //This defines the sampling time in terms of divided adc12 clock
     //  cycles. 
     //t_sample = adc12clk_period * SAMPLE_HOLD_x_CYCLES
     // so, this can run for up to 1 mS when adc12clk is 1MHz.
-    cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_1024_CYCLES;
+    cmd->cfg[channelIndex].config.sht = SAMPLE_HOLD_16_CYCLES;
 
     //These define the the sampling period.
     //If samplePeriod (jiffies) is 0, these don't matter (we directly set the
