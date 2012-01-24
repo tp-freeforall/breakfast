@@ -7,7 +7,7 @@
 #define ADC_READER_CMD_SAMPLE 0x0c
 
 #ifndef ADC_NUM_SAMPLES
-#define ADC_NUM_SAMPLES 5
+#define ADC_NUM_SAMPLES 1
 #endif
 
 //8 external, (Vcc-Vss)/2, temp
