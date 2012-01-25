@@ -6,8 +6,9 @@
 #define I2C_COM_CLIENT_ID_ADCREADER 0x01
 #define ADC_READER_CMD_SAMPLE 0x0c
 
+//number of samples to take for each config: median is returned
 #ifndef ADC_NUM_SAMPLES
-#define ADC_NUM_SAMPLES 1
+#define ADC_NUM_SAMPLES 5
 #endif
 
 //8 external, (Vcc-Vss)/2, temp

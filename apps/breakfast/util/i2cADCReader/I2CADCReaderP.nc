@@ -32,8 +32,6 @@ module I2CADCReaderP{
   // release/request resources willity-nillity, but maybe it's not
   // horrible...
   async command const msp430adc12_channel_config_t* AdcConfigure.getConfiguration(){
-    printf("Settings: %p channelNum: %d -> %p\n\r", settings,
-      channelNum, &(settings->cfg[channelNum].config));
     return &(settings->cfg[channelNum].config);
   }
 
@@ -46,23 +44,10 @@ module I2CADCReaderP{
   }
 
   void nextSample(){
-    adc_reader_config_t cfg = settings->cfg[channelNum];
-    printf("Using ADC settings in %p (channelNum %d)\n\r",
-      &(settings->cfg[channelNum].config), channelNum);
-    printf(" inch  %x\n\r", cfg.config.inch);
-    printf(" sref  %x\n\r", cfg.config.sref);
-    printf(" refv  %x\n\r", cfg.config.ref2_5v);
-    printf(" asel  %x\n\r", cfg.config.adc12ssel);
-    printf(" adiv  %x\n\r", cfg.config.adc12div);
-    printf(" sht   %x\n\r", cfg.config.sht);
-    printf(" ssel  %x\n\r", cfg.config.sampcon_ssel);
-    printf(" sid   %x\n\r", cfg.config.sampcon_id);
-    //HEY IDIOT: why are you passing around a pointer to something on
-    //the stack? that's a good way to ruin everything.
-    call
-    Msp430Adc12SingleChannel.configureMultiple(
+    call Msp430Adc12SingleChannel.configureMultiple(
       &(settings->cfg[channelNum].config),
-      medianBuf, ADC_NUM_SAMPLES, cfg.samplePeriod);
+      medianBuf, ADC_NUM_SAMPLES, settings->cfg[channelNum].samplePeriod);
+    
     response->samples[channelNum].sampleTime = call LocalTime.get();
     call Msp430Adc12SingleChannel.getData();
   }
@@ -156,7 +141,6 @@ module I2CADCReaderP{
         call I2CComSlave.pause();
         post startSamples();
         //swap it so we can read out the settings
-        printf("rx settings: %p -> %p\n\r", settings, pl);
         settings = pl;
         return swapBuffer(msg_, &msg);
       default:

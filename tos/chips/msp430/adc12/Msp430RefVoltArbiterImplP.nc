@@ -71,15 +71,6 @@ module Msp430RefVoltArbiterImplP
   event void AdcResource.granted[uint8_t client]()
   {
     const msp430adc12_channel_config_t* settings  = call Config.getConfiguration[client]();
-    printf("RFAImpl.ADCResource.granted: %p\n\r", settings);
-    printf(" inch  %x\n\r", settings->inch);
-    printf(" sref  %x\n\r", settings->sref);
-    printf(" refv  %x\n\r", settings->ref2_5v);
-    printf(" asel  %x\n\r", settings->adc12ssel);
-    printf(" adiv  %x\n\r", settings->adc12div);
-    printf(" sht   %x\n\r", settings->sht);
-    printf(" ssel  %x\n\r", settings->sampcon_ssel);
-    printf(" sid   %x\n\r", settings->sampcon_id);
 
     if (settings->sref == REFERENCE_VREFplus_AVss ||
         settings->sref == REFERENCE_VREFplus_VREFnegterm){
@@ -107,7 +98,6 @@ module Msp430RefVoltArbiterImplP
         call AdcResource.request[client]();
       }
     } else {
-      printf("no need for REF: sref=%x\n\r", settings->sref);
       signal ClientResource.granted[client]();
     }
   }

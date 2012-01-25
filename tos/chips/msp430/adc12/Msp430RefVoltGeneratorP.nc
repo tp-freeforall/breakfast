@@ -245,15 +245,12 @@ implementation {
       } else {
         adc12ctl0_t ctl0 = call HplAdc12.getCtl0();
         ctl0.enc = 0;
-        printf("rg.switchOn_0 %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl0(ctl0);
         ctl0.refon = 1;
         
-        printf("rg.switchOn_1 %x\n\r", ADC12CTL0);
         // This is why we don't change the enum at the top
         ctl0.r2_5v = level - 1;  
         call HplAdc12.setCtl0(ctl0);
-        printf("/rg.switchOn %x\n\r", ADC12CTL0);
         return SUCCESS;
       }
     }
@@ -267,12 +264,9 @@ implementation {
       } else {
         adc12ctl0_t ctl0 = call HplAdc12.getCtl0();
         ctl0.enc = 0;
-        printf("rg.switchOff_0 %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl0(ctl0);
         ctl0.refon = 0;
-        printf("rg.switchOff_1 %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl0(ctl0);
-        printf("/rg.switchOff_0 %x\n\r", ADC12CTL0);
         return SUCCESS;
       }
     }
