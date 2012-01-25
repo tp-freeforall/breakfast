@@ -47,4 +47,7 @@ enum {
 #define ADC12_PIN_AUTO_CONFIGURE 1
 #define ADC12_PINS_AVAILABLE 6
 
+//XT1 is populated
+#define XT1_AVAILABLE
+
 #endif //_H_hardware_h

@@ -71,6 +71,7 @@ module Msp430RefVoltArbiterImplP
   event void AdcResource.granted[uint8_t client]()
   {
     const msp430adc12_channel_config_t* settings  = call Config.getConfiguration[client]();
+
     if (settings->sref == REFERENCE_VREFplus_AVss ||
         settings->sref == REFERENCE_VREFplus_VREFnegterm){
       error_t started;
@@ -96,8 +97,9 @@ module Msp430RefVoltArbiterImplP
         call AdcResource.release[client]();
         call AdcResource.request[client]();
       }
-    } else 
+    } else {
       signal ClientResource.granted[client]();
+    }
   }
    
   event void RefVolt_1_5V.startDone(error_t error)

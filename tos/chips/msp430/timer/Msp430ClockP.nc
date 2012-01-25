@@ -92,6 +92,8 @@ implementation
     // .DIVS = 2; set the divisor of SCLK to 4
     // .DCOR = 0; select internal resistor for DCO
     BCSCTL2 = DIVS1;
+    
+    BCSCTL3 = (BCSCTL3 & ~(XCAP_3)) | XCAP_3;
 
     // IE1.OFIE = 0; no interrupt for oscillator fault
     CLR_FLAG( IE1, OFIE );

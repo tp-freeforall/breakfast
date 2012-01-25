@@ -98,8 +98,7 @@ implementation
   } 
   
   async command void HplAdc12.startConversion(){ 
-    ADC12CTL0 |= ADC12ON; 
-    ADC12CTL0 |= (ADC12SC + ENC); 
+    ADC12CTL0 |= ADC12ON | ENC | ADC12SC; // Start conversion
   }
   
   async command void HplAdc12.stopConversion(){

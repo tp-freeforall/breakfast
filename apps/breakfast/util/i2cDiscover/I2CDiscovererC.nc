@@ -1,3 +1,4 @@
+#include "I2CDiscoverable.h"
 generic configuration I2CDiscovererC(){
   provides interface I2CDiscoverer;
 } implementation {

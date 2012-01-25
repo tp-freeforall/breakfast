@@ -324,6 +324,7 @@ implementation
       uint16_t *buf, uint16_t length, uint16_t jiffies)
   {
     error_t result = ERESERVE;
+    
 #ifdef ADC12_CHECK_ARGS
 #ifndef ADC12_TIMERA_ENABLED
     if (jiffies>0) 
@@ -423,7 +424,6 @@ implementation
         resultBufferLength = length;
         resultBufferStart = buf;
         resultBufferIndex = 0;            
-        
         call HplAdc12.setCtl0(ctl0);
         call HplAdc12.setCtl1(ctl1);
         for (i=0; i<(length-1) && i < 15; i++)

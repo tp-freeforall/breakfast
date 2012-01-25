@@ -27,6 +27,8 @@
  *          intended use.
  */
 
+#warning "Using msp430xv2 msp430counter32khzC (Timer0_A)"
+
 configuration Msp430Counter32khzC
 {
   provides interface Counter<T32khz,uint16_t> as Msp430Counter32khz;

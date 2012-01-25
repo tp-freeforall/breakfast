@@ -64,5 +64,7 @@ implementation {
   Msp430UsciConfigure = I2CP.Msp430UsciConfigure[ CLIENT_ID ];
 
   UsciC.ResourceConfigure[CLIENT_ID] -> I2CP.ResourceConfigure[CLIENT_ID];
+  //TODO: wire resource to I2CP: this way, it can check for whether
+  //the client actually has control and return EOFF appropriately
   
 }

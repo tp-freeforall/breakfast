@@ -34,7 +34,7 @@
 
 #include  <msp430x23x.h>
 //why isn't this included in the above?
-#include <msp430/adc12.h>
+//#include <msp430/adc12.h>
 //for msp430-gcc interrupts
 #include <signal.h>
 

@@ -65,7 +65,7 @@ implementation {
     // Wait an arbitrary 10 milliseconds for the FLL to calibrate the DCO
     // before letting the system continue on into a low power mode.
     //uwait(1024*10);    
-    
+
     return SUCCESS;
   }
   

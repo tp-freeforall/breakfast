@@ -1,4 +1,4 @@
-SOURCES=LPM4.c LPM4_switched_flash_on.c busy.c
+SOURCES=LPM4.c LPM4_switched_flash_on.c busy.c cc430x513x_UCS_4.c
 CC=msp430-gcc
 CCFLAGS=-mmcu=cc430x5137
 OBJCOPY=msp430-objcopy
@@ -17,7 +17,7 @@ $(ODIR)/%.hex: $(ODIR)/%.bin
 	$(OBJCOPY) -I elf32-msp430 -O ihex $< $@
 
 $(ODIR)/%.bin: %.c 
-	$(CC) $(CCFLAGS) $< -o $@ 
+	$(CC) $(CCFLAGS) $(CFLAGS) $< -o $@ 
 
 clean:
 	rm -rf $(ODIR)

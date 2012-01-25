@@ -69,6 +69,25 @@ module Msp430XV2ClockControlP @safe() {
        * The technique used here is cribbed from the TI Example programs
        * for the CC430, cc430x613x_UCS_2.c.  */
 
+      //assume that external load capacitors are sufficient unless
+      //  otherwise directed
+      #ifndef XCAP_SETTING
+      #define XCAP_SETTING 0
+      #endif 
+      UCSCTL6 |= (XCAP_SETTING << 2) ; 
+
+      //if an external crystal is available, then we'll use that for
+      //  ACLK and for FLLREF. We have to wait until it stabilizes.
+      // Note that if XT1 is not available, this flag will remain set,
+      // and so we should skip it.
+      #ifdef XT1_AVAILABLE
+      do{
+        UCSCTL7 &= ~XT1LFOFFG; //clear XT1 fault flag
+      } while(UCSCTL7 & XT1LFOFFG); //check if reset by hardware
+      //reduce drive strength to minimum 
+      UCSCTL6 &= ~XT1DRIVE_3;
+      #endif
+
       /* Disable FLL control */
       __bis_SR_register(SR_SCG0);
 
@@ -76,13 +95,16 @@ module Msp430XV2ClockControlP @safe() {
        * will fall back to REFOCLK.  Use FLLREFDIV value 1 (selected
        * by bits 000) */
       UCSCTL3 = SELREF__XT1CLK;
-
       /* The appropriate value for DCORSEL is obtained from the DCO
        * Frequency table of the device datasheet.  Find the DCORSEL
        * value from that table where the minimum frequency with DCOx=31
        * is closest to your desired DCO frequency. */
       UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
 
+      //so, it seems like these are labeled confusingly: 
+      //for the first case, while the DCO is running at 2MHz, we are
+      //dividing it by two (FLLD_1), so mclk will be
+      //  running at 2^5*2^15 = 2^20, which is 1 mhz. confusing.
       switch (dco_config) {
         /* If unrecognized, default to the CC430 power-up value */
         case MSP430XV2_DCO_2MHz_RSEL2:
@@ -155,9 +177,11 @@ module Msp430XV2ClockControlP @safe() {
         // Clear XT2,XT1,DCO fault flags
         SFRIFG1 &= ~OFIFG;                      // Clear fault flags
       } while (UCSCTL7 & DCOFFG); // Test DCO fault flag
+      
 
-      /* Use REFOCLK for ACLK, and DCOCLKDIV for MCLK and SMCLK */
-      UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+      /* Use XT1 for ACLK, and DCOCLKDIV for MCLK and SMCLK */
+      //if XT1 is unavailble, then it will switch over to REFOCLK
+      UCSCTL4 = SELA__XT1CLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;;
 
       /* DIVPA routes ACLK to external pin, undivided
        * DIVA uses ACLK at 2^15 Hz, undivided
@@ -165,6 +189,7 @@ module Msp430XV2ClockControlP @safe() {
        * DIVM (MCLK) uses DCOCLKDIV to produce DCO/2, undivided
        */
       UCSCTL5 = DIVPA__1 | DIVA__1 | divs | DIVM__1;
+
     }
   }
 

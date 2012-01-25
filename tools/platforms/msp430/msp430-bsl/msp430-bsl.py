@@ -154,7 +154,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:],
             "hc:P:wf:m:eEpvrg:UDudsxbiITNB:S:V14",
             ["help", "comport=", "password=", "wait", "framesize=",
-             "erasecycles=", "masserase", "erasecheck", "program",
+             "erasecycles=", "masserase", "mainerase", "erasecheck", "program",
              "verify", "reset", "go=", "unpatched", "debug",
              "upload=", "download=", "size=", "hex", "bin", "ihex",
              "intelhex", "titext", "notimeout", "bsl=", "speed=",

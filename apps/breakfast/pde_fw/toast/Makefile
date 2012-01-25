@@ -1,5 +1,6 @@
-SOURCES=LPM3_internal.c LPM3_external.c LPM4.c ADC.c
+SOURCES=LPM3_internal.c LPM3_external.c LPM4.c ADC.c aclk_only.c
 CC=msp430-gcc
+CCFLAGS=-mmcu=msp430f235
 OBJCOPY=msp430-objcopy
 ODIR=bin
 EXES=$(SOURCES:.c=.bin)
@@ -16,7 +17,7 @@ $(ODIR)/%.hex: $(ODIR)/%.bin
 	$(OBJCOPY) -I elf32-msp430 -O ihex $< $@
 
 $(ODIR)/%.bin: %.c 
-	$(CC) $< -o $@ 
+	$(CC) $(CCFLAGS) $(CFLAGS) $< -o $@ 
 
 clean:
 	rm -rf $(ODIR)

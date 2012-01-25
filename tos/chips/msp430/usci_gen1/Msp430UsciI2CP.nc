@@ -135,12 +135,18 @@ implementation {
 					   uint16_t addr, uint8_t len, 
 					   uint8_t* buf ) 
   {
+    uint16_t counter;
+//    printf("%s: f %x a %x l %d b %p\n\r", __FUNCTION__, flags, addr, len, buf);
+    //TODO: should be address length-dependent
+    if (addr & 0xff80){
+      return EINVAL;
+    }
+    //TODO: check for resource ownership and fail if it's not valid!
     //According to TI, we can just poll until the start condition
     //clears.  But we're nervous and want to bail out if it doesn't
     //clear fast enough.  This is how many times we loop before we
     //bail out.
-    uint16_t counter = I2C_ONE_BYTE_READ_COUNTER;
-
+    counter = I2C_ONE_BYTE_READ_COUNTER;
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -266,6 +272,11 @@ implementation {
   async command error_t I2CBasicAddr.write[uint8_t client]( i2c_flags_t flags,
 					    uint16_t addr, uint8_t len,
 					    uint8_t* buf ) {
+    //TODO: should be address length-dependent
+    if (addr & 0xff80){
+      return EINVAL;
+    }
+    //TODO: check for resource ownership and fail if it's not valid!
     m_buf = buf;
     m_len = len;
     m_flags = flags;
@@ -306,6 +317,7 @@ implementation {
       //enable relevant state interrupts
       call UsciB.setI2cie((call UsciB.getI2cie() & 0xf0) | UCNACKIE | UCALIE);
       //enable tx interrupts 
+//      printf("enable TXI\n\r");
       call Usci.setIe( call Usci.getIe() | TXIE_MASK);
     } 
     /* is this a restart or a direct continuation */
@@ -363,6 +375,7 @@ implementation {
       }
 
       //disable tx interrupt, we're DONE 
+//      printf("disable TXI\n\r");
       call Usci.setIe(call Usci.getIe() & ~TXIE_MASK );
       /* fail gracefully */      
       if (counter > 0x01){
@@ -381,6 +394,8 @@ implementation {
 
   async event void TXInterrupts.interrupted(uint8_t iv) 
   {
+//    printf("TXI\n\r");
+
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
 //      printf("S%x", call Usci.getStat());
@@ -393,6 +408,7 @@ implementation {
         // note that when this interrupt context ends, txinterrupt
         // will be raised again.
       }else{
+//        printf("disable TXI\n\r");
         //false= "I need to pause for a second"
         //disable TX interrupt.
         call Usci.setIe(call Usci.getIe() & ~TXIE_MASK);
@@ -401,14 +417,17 @@ implementation {
   }
 
   async command void I2CSlave.slaveTransmit[uint8_t clientId](uint8_t data){
+//    printf("%s: \n\r", __FUNCTION__);
     //TODO: safety
     //write it, reenable interrupt (if it was disabled)
     call Usci.setTxbuf(data);
+//    printf("enable TXI\n\r");
     call Usci.setIe(call Usci.getIe() | TXIE_MASK);
   }
 
   async event void RXInterrupts.interrupted(uint8_t iv) 
   {
+//    printf("RXI\n\r");
     /* if master mode */
     if (call Usci.getCtl0() & UCMST){
       nextRead();
@@ -433,6 +452,7 @@ implementation {
   async event void StateInterrupts.interrupted(uint8_t iv) 
   {
     uint8_t counter = 0xFF;
+//    printf("SI\n\r");
 //    if(call Usci.getStat() & UCALIFG){
 //      printf("AL!");
 //    }
@@ -488,15 +508,18 @@ implementation {
         /* disable STOP interrupt, enable START interrupt */
         call UsciB.setI2cie((call UsciB.getI2cie() | UCSTTIE) & ~UCSTPIE);
         signal I2CSlave.slaveStop[call ArbiterInfo.userId()]();
+        //TODO: should this not just call slaveIdle?
       }
       /* START condition */
       else if (call Usci.getStat() & UCSTTIFG) 
       {
+        
         //clear start flag, but leave enabled (repeated start)
         //enable stop interrupt
         call Usci.setStat(call Usci.getStat() &~ UCSTTIFG);
         call UsciB.setI2cie(call UsciB.getI2cie() | UCSTPIE);
         //enable RX/TX interrupts
+//        printf("enable TXI\n\r");
         call Usci.setIe(call Usci.getIe() | RXIE_MASK | TXIE_MASK);
         signal I2CSlave.slaveStart[call ArbiterInfo.userId()]( call Usci.getStat() & UCGC);
       }
@@ -513,20 +536,24 @@ implementation {
   /***** Slave-mode functions ***/
   command error_t I2CSlave.setOwnAddress[uint8_t client](uint16_t addr)
   {
-    //retain UCGCEN bit
-    call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
-    return SUCCESS;
+//    printf("%s: %x\n\r", __FUNCTION__, addr);
+    //TODO: check addr length for this mask
+    if (addr & 0xff80){
+      return EINVAL;
+    } else {
+      //retain UCGCEN bit
+      call UsciB.setI2coa( (call UsciB.getI2coa() & UCGCEN) | addr);
+      return SUCCESS;
+    }
   }
 
   command error_t I2CSlave.enableGeneralCall[uint8_t client](){
-    pdbg(1);
-    showRegisters();
+//    showRegisters();
     if (UCGCEN & (call UsciB.getI2coa())){
       return EALREADY;
     }else {
       call UsciB.setI2coa(UCGCEN | (call UsciB.getI2coa()));
-      pdbg(2);
-      showRegisters();
+//      showRegisters();
       return SUCCESS;
     }
   }

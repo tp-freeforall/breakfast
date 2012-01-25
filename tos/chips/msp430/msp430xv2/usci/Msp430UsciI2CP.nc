@@ -323,6 +323,7 @@ generic module Msp430UsciI2CP () @safe() {
       call Usci.setCtl1(call Usci.getCtl1() | UCTR | UCTXSTT);
 //      printf("MM%x\n\r",call Usci.getCtl0() & UCMM);
       //enable relevant state interrupts and TX, clear the rest
+      //while ( call Usci.getCtl1() & UCTXSTT){}
       call Usci.setIe((call Usci.getIe() & (BIT7|BIT6)) | UCNACKIE | UCALIE | UCTXIE);
 //      printRegisters();
     } 
@@ -418,7 +419,7 @@ generic module Msp430UsciI2CP () @safe() {
   default async event void I2CBasicAddr.readDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async event void I2CBasicAddr.writeDone[uint8_t client](error_t error, uint16_t addr, uint8_t length, uint8_t* data){}
   default async command const msp430_usci_config_t* Msp430UsciConfigure.getConfiguration[uint8_t client](){
-    printf("Using default i2c config\n\r");
+//    printf("Using default i2c config\n\r");
     return &msp430_usci_i2c_default_config;
   }
 
