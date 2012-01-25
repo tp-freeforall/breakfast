@@ -99,6 +99,7 @@ implementation
   
   async command void HplAdc12.startConversion(){ 
     uint16_t i;
+    printf("HplAdc12.startConversion %x\n\r", ADC12CTL0);
     ADC12CTL0 |= ADC12ON; 
     ADC12CTL0 |= ENC; 
     for ( i=0; i<0x3600; i++);                // Delay for reference start-up
@@ -106,19 +107,24 @@ implementation
     for ( i=0; i<0x3600; i++);                // Delay for reference start-up
     for ( i=0; i<0x3600; i++);                // Delay for reference start-up
     ADC12CTL0 |= ADC12SC;                   // Start conversion
+    printf("/HplAdc12.startConversion %x\n\r", ADC12CTL0);
   }
   
   async command void HplAdc12.stopConversion(){
     // stop conversion mode immediately, conversion data is unreliable
     uint16_t ctl1 = ADC12CTL1;
+    printf("HplAdc12.stopConversion %x\n\r", ADC12CTL0);
     ADC12CTL1 &= ~(CONSEQ0 | CONSEQ1);
     ADC12CTL0 &= ~(ADC12SC + ENC); 
     ADC12CTL0 &= ~(ADC12ON);
     ADC12CTL1 |= (ctl1 & (CONSEQ0 | CONSEQ1));
+    printf("/HplAdc12.stopConversion %x\n\r", ADC12CTL0);
   }
   
   async command void HplAdc12.enableConversion(){ 
+    printf("HplAdc12.enableConversion %x\n\r", ADC12CTL0);
     ADC12CTL0 |= ENC; 
+    printf("/HplAdc12.enableConversion %x\n\r", ADC12CTL0);
   }
     
   async command bool HplAdc12.isBusy(){ return (ADC12CTL1 & ADC12BUSY); }

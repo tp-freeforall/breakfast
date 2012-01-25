@@ -117,7 +117,9 @@ implementation
       ctl0 = call HplAdc12.getCtl0();
       ctl0.adc12tovie = 1;
       ctl0.adc12ovie = 1;
+      printf("Impl.Init.init %x\n\r", ADC12CTL0);
       call HplAdc12.setCtl0(ctl0);
+      printf("/Impl.Init.init %x\n\r", ADC12CTL0);
 #ifdef __MSP430_HAS_REF__
       //clear REFMSTR: use ADC12CTL to configure reference generator for
       //backwards compatibility
@@ -257,7 +259,9 @@ implementation
         ctl0.sht1 = config->sht;
 
         state = SINGLE_DATA;
+        printf("Impl.sc.configureSingle %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl0(ctl0);
+        printf("/Impl.sc.configureSingle %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl1(ctl1);
         call HplAdc12.setMCtl(0, memctl);
         call HplAdc12.setIEFlags(0x01);
@@ -305,7 +309,9 @@ implementation
         ctl0.sht1 = config->sht;
 
         state = SINGLE_DATA_REPEAT;
+        printf("Impl.sc.configureSingleRepeat %x\n\r");
         call HplAdc12.setCtl0(ctl0);
+        printf("/Impl.sc.configureSingleRepeat %x\n\r");
         call HplAdc12.setCtl1(ctl1);
         call HplAdc12.setMCtl(0, memctl);
         call HplAdc12.setIEFlags(0x01);
@@ -324,6 +330,16 @@ implementation
       uint16_t *buf, uint16_t length, uint16_t jiffies)
   {
     error_t result = ERESERVE;
+    printf("SC.configureMultiple: %p\n\r", config);
+    printf(" inch  %x\n\r", config->inch);
+    printf(" sref  %x\n\r", config->sref);
+    printf(" refv  %x\n\r", config->ref2_5v);
+    printf(" asel  %x\n\r", config->adc12ssel);
+    printf(" adiv  %x\n\r", config->adc12div);
+    printf(" sht   %x\n\r", config->sht);
+    printf(" ssel  %x\n\r", config->sampcon_ssel);
+    printf(" sid   %x\n\r", config->sampcon_id);
+
 #ifdef ADC12_CHECK_ARGS
 #ifndef ADC12_TIMERA_ENABLED
     if (jiffies>0) 
@@ -362,7 +378,9 @@ implementation
         resultBufferLength = length;
         resultBufferStart = buf;
         resultBufferIndex = 0;
+        printf("Impl.sc.configureMultiple %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl0(ctl0);
+        printf("/Impl.sc.configureMultiple %x\n\r", ADC12CTL0);
         call HplAdc12.setCtl1(ctl1);
         for (i=0; i<(length-1) && i < 15; i++)
           call HplAdc12.setMCtl(i, memctl);
@@ -423,8 +441,9 @@ implementation
         resultBufferLength = length;
         resultBufferStart = buf;
         resultBufferIndex = 0;            
-        
+        printf("Impl.sc.configureMultipleRepeat %x\n\r");
         call HplAdc12.setCtl0(ctl0);
+        printf("/Impl.sc.configureMultipleRepeat %x\n\r");
         call HplAdc12.setCtl1(ctl1);
         for (i=0; i<(length-1) && i < 15; i++)
           call HplAdc12.setMCtl(i, memctl);
@@ -508,7 +527,9 @@ implementation
         resultBufferStart = buf;
         resultBufferIndex = 0;
         numChannels = numMemctl+1;
+        printf("Impl.multichannel.configure %x\n\r");
         call HplAdc12.setCtl0(ctl0);
+        printf("/Impl.multichannel.configure %x\n\r");
         call HplAdc12.setCtl1(ctl1);
         call HplAdc12.setMCtl(0, firstMemctl);
         for (i=0; i<(numMemctl-1) && i < 14; i++){
