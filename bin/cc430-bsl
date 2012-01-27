@@ -299,6 +299,7 @@ class LowLevel:
         set the state of the ADG715 latch.
         get chip's attention, send address, send switch state, disconnect.
         """
+        debug(5, "adg715I2CWriteLatch: %x"%(latchState))
         self.adg715I2CStart()
         self.adg715I2CWriteByte( self.ADG715_COMMAND )
         self.adg715I2CWriteByte( latchState )
@@ -317,6 +318,7 @@ class LowLevel:
            - S2 open: SBWTCK high
            - S2 closed: SBWTCK low
         """
+        debug(4, "setRstTck: %x %x"%(Rst, Tck))
         latchState = ((Rst and 1 or 0)  |     \
                       (Tck and 2 or 0)) ^ 0x3
         self.adg715I2CWriteLatch(latchState)
@@ -340,12 +342,12 @@ class LowLevel:
                 pdb.set_trace()
             debug(3, "invokeBSL")
             if self.adg715:
-                self.setRstTck(0, 0)
-                self.setRstTck(0, 1)
-                self.setRstTck(0, 0)
-                self.setRstTck(0, 1)
-                self.setRstTck(1, 0)
-                self.setRstTck(1, 1)
+                self.setRstTck(0, 0) #looks ok
+                self.setRstTck(0, 1) #OK
+                self.setRstTck(0, 0) #OK
+                self.setRstTck(0, 1) #OK
+                self.setRstTck(1, 1) #swapped 
+                self.setRstTck(1, 0) 
             else:
                 #DC: would love it if I could figure out which step
                 #    was the issue
