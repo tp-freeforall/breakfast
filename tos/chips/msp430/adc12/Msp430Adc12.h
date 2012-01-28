@@ -261,15 +261,26 @@ volatile unsigned int : 0; // align to word boundary (saves significant amount o
   };
   #endif // __MSP430_HAS_ADC12_PLUS__
 
-#else //  ! __MSP430_TI_HEADERS__
-
-  //TODO: these are already defined in the GCC headers. They were in
-  //the #ifdef __MSP430_TI_HEADERS__ block, which seems wrong. moving
-  //them to the else block.
+  //TODO: these appear to be defined in some of the TI headers, but
+  //  not all of them. 
+  #ifndef ENC
   #define ENC ADC12ENC
+  #endif
+  
+  #ifndef CONSEQ0
   #define CONSEQ0 ADC12CONSEQ0
+  #endif
+
+  #ifndef CONSEQ1
   #define CONSEQ1 ADC12CONSEQ1
+  #endif 
+  
+  #ifndef ADC_VECTOR
   #define ADC_VECTOR ADC12_VECTOR
+  #endif
+
+
+#else //  ! __MSP430_TI_HEADERS__
 
   /* Test for GCC bug (bitfield access) - only version 3.2.3 is known to be stable */
   #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__)
