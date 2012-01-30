@@ -59,6 +59,8 @@ configuration Rf1aActiveMessageC {
     interface Rf1aPacket;
     interface Rf1aPhysical;
     interface Rf1aStatus;
+
+    interface DelayedSend[am_id_t id];
   }
   uses interface Rf1aConfigure;
 }
@@ -94,6 +96,7 @@ implementation {
   //configuration if desired. The bottom of the stack has a default
   //defined for this which uses the values in Rf1aConfigure.h
   Rf1aConfigure = PhysicalC;
+
   PhyPacketC.Rf1aPhysicalMetadata -> PhysicalC;
 
   components new Rf1aTinyOsPhysicalC() as TinyOsPhysicalC;
@@ -121,12 +124,15 @@ implementation {
   SendNotifier = AM;
   Receive = AM.Receive;
   Snoop = AM.Snoop;
+  DelayedSend = AM.DelayedSend;
+
   AM.Rf1aPacket -> PhyPacketC;
   AM.Ieee154Packet -> PhyPacketC;
   AM.Packet -> PacketC;
   AM.AMPacket -> PacketC;
   AM.SubSend -> AckC.Send;
   AM.SubReceive -> UniqueReceiveC.Receive;
+  AM.SubDelayedSend -> PhysicalC;
 
 }
 
