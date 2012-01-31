@@ -87,10 +87,10 @@ generic configuration HplMsp430Rf1aC (
   DelayedSend = HplRf1aP;
 
   //DC: added for timing debug
-  components HplMsp430GeneralIOC;
-  components new Msp430GpioC() as IndicatorPin;
-  IndicatorPin.HplGeneralIO -> HplMsp430GeneralIOC.Port23;
-  HplRf1aP.IndicatorPin -> IndicatorPin;
+  //components HplMsp430GeneralIOC;
+  //components new Msp430GpioC() as IndicatorPin;
+  //IndicatorPin.HplGeneralIO -> HplMsp430GeneralIOC.Port23;
+  //HplRf1aP.IndicatorPin -> IndicatorPin;
 
   components HplMsp430Rf1aInterruptP;
   HplRf1aP.Rf1aInterrupts -> HplMsp430Rf1aInterruptP;

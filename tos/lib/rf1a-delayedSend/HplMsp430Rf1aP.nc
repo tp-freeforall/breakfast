@@ -68,7 +68,7 @@ generic module HplMsp430Rf1aP () @safe() {
     interface Rf1aTransmitFragment[uint8_t client];
     interface Rf1aInterrupts[uint8_t client];
     interface Leds;
-    interface GeneralIO as IndicatorPin;
+    //interface GeneralIO as IndicatorPin;
   }
 } implementation {
 
@@ -370,7 +370,7 @@ generic module HplMsp430Rf1aP () @safe() {
       rx_result = tx_result = SUCCESS;
     }
     //DC: ghetto, but this works. This should be in an init function.
-    call IndicatorPin.makeOutput();
+    //call IndicatorPin.makeOutput();
   }
 
   async command void Rf1aPhysical.readConfiguration[uint8_t client] (rf1a_config_t* config)
@@ -482,7 +482,9 @@ generic module HplMsp430Rf1aP () @safe() {
   void receiveData_ ();
   
   /** Task used to do the work of transmitting a fragment of a message. */
-  task void sendFragment_task () { sendFragment_(); }
+  task void sendFragment_task () { 
+    sendFragment_(); 
+  }
 
   /** Task used to do the work of consuming a fragment of a message. */
   task void receiveData_task () { receiveData_(); }
@@ -572,6 +574,7 @@ generic module HplMsp430Rf1aP () @safe() {
   void sendFragment_ ()
   {
     bool need_to_write_length = FALSE;
+    bool need_signal_ds = FALSE;
 
     atomic {
       client_ds = call ArbiterInfo.userId();
@@ -579,6 +582,7 @@ generic module HplMsp430Rf1aP () @safe() {
       wrote_data_ds = FALSE;
       send_done_ds = FALSE;
       need_repost_ds = FALSE;
+
       do {
         const uint8_t* data;
         unsigned int count;
@@ -589,7 +593,6 @@ generic module HplMsp430Rf1aP () @safe() {
           cancelTransmit_();
           break;
         }
-      
         /* If nothing left to do, exit */
         if (0 >= tx_remain) {
           break;
@@ -645,6 +648,7 @@ generic module HplMsp430Rf1aP () @safe() {
         
         /* Account for what we just queued. */
         tx_remain -= count;
+        need_signal_ds = TRUE;
       } while (0);
 
       /* Request task repost if we have more data and the fifo is not
@@ -653,7 +657,17 @@ generic module HplMsp430Rf1aP () @safe() {
 
       //signal sendReady to relevant client_ds: this splits the send into
       //the load/strobe segments
-      signal DelayedSend.sendReady[client_ds]();
+      if (need_signal_ds){
+        signal DelayedSend.sendReady[client_ds]();
+      }else{
+        //This is the case where we are in one of the cleanup
+        //situations and the strobe has already been issued (e.g. when
+        //we get the txFifoAvailable interrupt (because it just
+        //finished clearing out the txfifo for a completed
+        //transmission (for the case where a packet is larger than the
+        //txfifo capacity)))
+        call DelayedSend.completeSend[client_ds]();
+      }
      }//atomic
    }
 
@@ -669,7 +683,9 @@ generic module HplMsp430Rf1aP () @safe() {
          * and CCA fails, the radio transitions to RX mode.  In other
          * cases, it somehow ends up in IDLE.  Try anyway, and if it
          * doesn't work, fail the transmission. */
-        call IndicatorPin.set();
+        //call IndicatorPin.set();
+        //TODO: ideally, this is the point where we split delayed send
+        //(not above). But I don't see how to do this cleanly.
         rc_ds = call Rf1aIf.strobe(RF_STX);
         while ((RF1A_S_TX != (RF1A_S_MASK & rc_ds))
                && (RF1A_S_RX != (RF1A_S_MASK & rc_ds))
@@ -677,7 +693,7 @@ generic module HplMsp430Rf1aP () @safe() {
                && (0 <= --loop_limit)) {
           rc_ds = call Rf1aIf.strobe(RF_SNOP);
         }
-        call IndicatorPin.clr();
+        //call IndicatorPin.clr();
         if (RF1A_S_TX != (RF1A_S_MASK & rc_ds)) {
           tx_result = ERETRY;
           cancelTransmit_();
@@ -1391,6 +1407,7 @@ generic module HplMsp430Rf1aP () @safe() {
       post sendFragment_task();
     }
   }
+
   async event void Rf1aInterrupts.rxOverflow[uint8_t client] ()
   {
     atomic {
