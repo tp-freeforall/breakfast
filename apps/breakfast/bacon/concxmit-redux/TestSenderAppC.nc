@@ -38,6 +38,7 @@ configuration TestSenderAppC {
   components new Msp430GpioC() as ResetPin;
   ResetPin.HplGeneralIO -> HplMsp430GeneralIOC.Port24;
   TestP.ResetPin -> ResetPin;
+  TestP.HplResetPin -> HplMsp430GeneralIOC.Port24;
 
   components new Msp430InterruptC() as ResetInterrupt;
   ResetInterrupt.HplInterrupt -> HplMsp430InterruptC.Port24;
@@ -54,6 +55,7 @@ configuration TestSenderAppC {
   components new Msp430GpioC() as EnablePin;
   EnablePin.HplGeneralIO -> HplMsp430GeneralIOC.Port14;
   TestP.EnablePin -> EnablePin;
+  TestP.HplEnablePin -> HplMsp430GeneralIOC.Port14;
 
   components new Msp430InterruptC() as EnableInterrupt;
   EnableInterrupt.HplInterrupt -> HplMsp430InterruptC.Port14;

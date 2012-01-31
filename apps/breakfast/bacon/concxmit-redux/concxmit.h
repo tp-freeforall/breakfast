@@ -41,6 +41,5 @@ typedef nx_struct{
   nx_uint16_t seqNum;
 } sender_report_t;
 
-#define SEND_TIMEOUT 512
 
 #endif

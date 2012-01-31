@@ -27,13 +27,7 @@ module TestReceiverP {
   uint16_t seqNum = 0;
 
   uint16_t sendCount;
-
-  uint16_t SEND_READY_WAIT = 10;
-  uint16_t STARTUP_WAIT = 10240;
-  uint16_t BOOT_WAIT = 5120;
-  uint16_t INTERPACKET_WAIT = 512;
-  //uint16_t SEND_TIMEOUT = 512;
-  uint16_t period = (1 << 15);
+  uint16_t PERIOD = (1<<15);
 
   event void Boot.booted(){
     printf("Booted\n\r");
@@ -51,28 +45,29 @@ module TestReceiverP {
     //output mode 7: reset/set 
     TA1CCTL1 = OUTMOD_7;
     TA1CTL = TASSEL__SMCLK | MC__UP;
+
     //prevent senders from transmitting. we're running the compare
     //  timer too fast to reliably send a single pulse and stop it. 
     call EnablePin.makeOutput();
     call EnablePin.clr();
+
     //force senders to reset
     call ResetPin.clr();
     call ResetPin.makeOutput();
-    call ResetPin.set();
+
     call SplitControl.start();
   }
 
   event void SplitControl.startDone(error_t err){
-    state = S_BOOT_WAIT;
-    printf("Waiting for senders reset\n\r");
-    call ResetPin.clr();
-    call Timer.startOneShot(BOOT_WAIT);
+    call ResetPin.set();
+    state = S_STARTUP_WAIT;
+    call Timer.startOneShot(STARTUP_WAIT);
   }
 
   task void triggerSend(){
     //tell receivers: there is a send coming momentarily.
     call EnablePin.set();
-    printf("Starting send pulses\n\r");
+    //printf("Starting send pulses\n\r");
     state = S_WAITING;
     call Timer.startOneShot(SEND_TIMEOUT);
     atomic{
@@ -82,20 +77,15 @@ module TestReceiverP {
       UCSCTL5 &= ~(0x07 << 4);
       TA1CCR0 = 0;
       //set pulse width
-      TA1CCR1 = period - SEND_1_OFFSET;
+      TA1CCR1 = PERIOD - SEND_1_OFFSET;
       //and off it goes
-      TA1CCR0 = period - 1;
+      TA1CCR0 = PERIOD - 1;
     }
     call EnablePin.clr();
   }
 
   event void Timer.fired(){
     switch(state){
-      case S_BOOT_WAIT:
-        state = S_STARTUP_WAIT;
-        call Timer.startOneShot(STARTUP_WAIT);
-        printf("Waiting for senders to boot\n\r");
-        break;
       case S_INTERPACKET_WAIT:
       case S_STARTUP_WAIT:
         post triggerSend();
@@ -125,7 +115,7 @@ module TestReceiverP {
 
     //restore SMCLK for serial usage
     UCSCTL5 |= (0x05 << 4);
-    printf("R %d %d %d %d\n\r", 
+    printf("RX %d %d %d %d\n\r", 
       tpl->seqNum, 
       call Rf1aPhysicalMetadata.rssi(&metadata), 
       call Rf1aPhysicalMetadata.lqi(&metadata),

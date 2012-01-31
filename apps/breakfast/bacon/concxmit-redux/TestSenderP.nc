@@ -15,6 +15,8 @@ module TestSenderP {
     interface DelayedSend;
     interface HplMsp430Rf1aIf as Rf1aIf;
   }
+  uses interface HplMsp430GeneralIO as HplResetPin;
+  uses interface HplMsp430GeneralIO as HplEnablePin;
   uses interface Timer<TMilli>;
 } implementation {
   enum{
@@ -42,15 +44,25 @@ module TestSenderP {
 
   event void Boot.booted(){
     printf("Booted\n\r");
-    call Timer.startOneShot(128);
+    #ifdef SENDER1
+    printf("Sender 1 (FE)\n\r");
+    #else
+    printf("Sender 2 (RE)\n\r");
+    #endif
+    //call Timer.startOneShot(128);
     call SendPin.makeInput();
+
     call EnablePin.makeInput();
+    call HplEnablePin.setResistor(MSP430_PORT_RESISTOR_PULLDOWN);
     call EnableInterrupt.enableRisingEdge();
 
     call ResetPin.makeInput();
+    call HplResetPin.setResistor(MSP430_PORT_RESISTOR_PULLDOWN);
     call ResetInterrupt.enableRisingEdge();
+
     call SplitControl.start();
   }
+
   uint8_t counter = 0;
   event void Timer.fired(){
     //call Leds.set(counter);
@@ -70,7 +82,7 @@ module TestSenderP {
   }
 
   event void SplitControl.startDone(error_t err){
-    printf("Radio on\n\r");
+    //printf("Radio on\n\r");
     atomic{
       state = S_NEED_LOAD;
       post loadNextTask();
@@ -86,13 +98,14 @@ module TestSenderP {
 
   task void loadNextTask(){
     test_packet_t* pl = (test_packet_t*)call RadioSend.getPayload(&rmsg, sizeof(test_packet_t));
+    error_t error;
     pl -> seqNum = seqNum;
     atomic{
       state = S_LOADING;
     }
-
-    printf("RS.send %x \n\r", call RadioSend.send(AM_BROADCAST_ADDR,
-      &rmsg, sizeof(test_packet_t)));
+    error = call RadioSend.send(AM_BROADCAST_ADDR, &rmsg,
+      sizeof(test_packet_t));
+    //printf("RS.send %x \n\r", error);
   }
 
   task void unexpectedSendReady(){
@@ -108,7 +121,7 @@ module TestSenderP {
   }
 
   task void reportEnableInterrupt(){
-    printf("EI\n\r");
+    //printf("EI\n\r");
   }
 
   async event void EnableInterrupt.fired(){
@@ -126,7 +139,7 @@ module TestSenderP {
   }
 
   task void reportSendInterrupt(){
-    printf("SI\n\r");
+    //printf("SI\n\r");
   }
 
   async event void SendInterrupt.fired(){
@@ -144,7 +157,7 @@ module TestSenderP {
 
   task void reportTask();
   event void RadioSend.sendDone(message_t* msg, error_t err){
-    printf("SEND DONE\n\r");
+    //printf("SEND DONE\n\r");
     atomic{
       if (state == S_SENDING){
         state = S_REPORTING;
@@ -156,7 +169,7 @@ module TestSenderP {
   }
 
   task void reportTask(){
-    printf("S %x\n\r", seqNum);
+    printf("TX %u\n\r", seqNum);
     seqNum++;
     state = S_NEED_LOAD;
     post loadNextTask();
