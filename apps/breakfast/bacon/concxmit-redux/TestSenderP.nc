@@ -8,9 +8,14 @@ module TestSenderP {
     interface Leds;
     interface GpioInterrupt as SendInterrupt;
     interface GeneralIO as SendPin;
+    interface GpioInterrupt as EnableInterrupt;
+    interface GeneralIO as EnablePin;
+    interface GpioInterrupt as ResetInterrupt;
+    interface GeneralIO as ResetPin;
     interface DelayedSend;
     interface HplMsp430Rf1aIf as Rf1aIf;
   }
+  uses interface Timer<TMilli>;
 } implementation {
   enum{
     S_STARTING          = 0x01,
@@ -25,6 +30,7 @@ module TestSenderP {
     S_SENDING           = 0x0A,
     S_REPORTING         = 0x0B,
     S_ERROR             = 0x0C,
+    S_ENABLED           = 0x0D,
   };
 
   message_t rmsg;
@@ -36,10 +42,33 @@ module TestSenderP {
 
   event void Boot.booted(){
     printf("Booted\n\r");
+    call Timer.startOneShot(128);
     call SendPin.makeInput();
+    call EnablePin.makeInput();
+    call EnableInterrupt.enableRisingEdge();
+
+    call ResetPin.makeInput();
+    call ResetInterrupt.enableRisingEdge();
     call SplitControl.start();
   }
-  
+  uint8_t counter = 0;
+  event void Timer.fired(){
+    //call Leds.set(counter);
+    counter++;
+    printf("Alive: %d %x\n\r", counter, state);
+    call Timer.startOneShot(2048);
+  }
+
+  task void resetInterruptTask(){
+    printf("RESET\n\r");
+    //trigger reset
+    WDTCTL=0;
+  }
+
+  async event void ResetInterrupt.fired(){
+    post resetInterruptTask();
+  }
+
   event void SplitControl.startDone(error_t err){
     printf("Radio on\n\r");
     atomic{
@@ -73,6 +102,18 @@ module TestSenderP {
   async event void DelayedSend.sendReady(){
     if (state == S_LOADING){
       state = S_LOADED;
+    } else {
+      post unexpectedSendReady();
+    }
+  }
+
+  task void reportEnableInterrupt(){
+    printf("EI\n\r");
+  }
+
+  async event void EnableInterrupt.fired(){
+    post reportEnableInterrupt();
+    if (state == S_LOADED){
       //the "send" pulse is negative, so sender1 should fire at the
       //falling edge
       #ifdef SENDER1
@@ -80,13 +121,17 @@ module TestSenderP {
       #else
         call SendInterrupt.enableRisingEdge();
       #endif
-    } else {
-      post unexpectedSendReady();
+      state = S_ENABLED;
     }
   }
 
+  task void reportSendInterrupt(){
+    printf("SI\n\r");
+  }
+
   async event void SendInterrupt.fired(){
-    if (state == S_LOADED){
+    post reportSendInterrupt();
+    if (state == S_ENABLED){
       //turn off send interrupt until we're done sending/reporting this
       //one
       call SendInterrupt.disable();
@@ -99,6 +144,7 @@ module TestSenderP {
 
   task void reportTask();
   event void RadioSend.sendDone(message_t* msg, error_t err){
+    printf("SEND DONE\n\r");
     atomic{
       if (state == S_SENDING){
         state = S_REPORTING;

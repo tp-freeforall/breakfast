@@ -6,9 +6,11 @@ configuration TestSenderAppC {
   components SerialPrintfC;
 
   components TestSenderP as TestP;
+  components new TimerMilliC();
   components MainC;
 
   TestP.Boot -> MainC;
+  TestP.Timer -> TimerMilliC;
   
   components new DelayedAMSenderC(CONCXMIT_RADIO_AM_TEST);
   TestP.RadioSend -> DelayedAMSenderC;
@@ -33,6 +35,14 @@ configuration TestSenderAppC {
   components HplMsp430GeneralIOC;
   components HplMsp430InterruptC;
 
+  components new Msp430GpioC() as ResetPin;
+  ResetPin.HplGeneralIO -> HplMsp430GeneralIOC.Port24;
+  TestP.ResetPin -> ResetPin;
+
+  components new Msp430InterruptC() as ResetInterrupt;
+  ResetInterrupt.HplInterrupt -> HplMsp430InterruptC.Port24;
+  TestP.ResetInterrupt -> ResetInterrupt;
+
   components new Msp430GpioC() as SendPin;
   SendPin.HplGeneralIO -> HplMsp430GeneralIOC.Port11;
   TestP.SendPin -> SendPin;
@@ -40,6 +50,13 @@ configuration TestSenderAppC {
   components new Msp430InterruptC() as SendInterrupt;
   SendInterrupt.HplInterrupt -> HplMsp430InterruptC.Port11;
   TestP.SendInterrupt -> SendInterrupt;
- 
+
+  components new Msp430GpioC() as EnablePin;
+  EnablePin.HplGeneralIO -> HplMsp430GeneralIOC.Port14;
+  TestP.EnablePin -> EnablePin;
+
+  components new Msp430InterruptC() as EnableInterrupt;
+  EnableInterrupt.HplInterrupt -> HplMsp430InterruptC.Port14;
+  TestP.EnableInterrupt -> EnableInterrupt;
 
 }

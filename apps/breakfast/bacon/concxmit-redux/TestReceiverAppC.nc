@@ -31,6 +31,10 @@ configuration TestReceiverAppC {
   ResetPin.HplGeneralIO -> HplMsp430GeneralIOC.Port24;
   TestP.ResetPin -> ResetPin;
 
+  components new Msp430GpioC() as EnablePin;
+  EnablePin.HplGeneralIO -> HplMsp430GeneralIOC.Port14;
+  TestP.EnablePin -> EnablePin;
+
   components Rf1aC;
   TestP.Rf1aPhysicalMetadata -> Rf1aC.Rf1aPhysicalMetadata;
 
