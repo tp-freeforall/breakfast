@@ -5,7 +5,8 @@ PFLAGS += -I$(TOSDIR)/lib/rf1a-delayedSend
 PFLAGS += -I$(TOSDIR)/lib/rf1a-multi/configs/includes
 PFLAGS += -I$(TOSDIR)/lib/rf1a-multi/configs/generated
 
-CFLAGS += -DSEND_1_OFFSET=1
+#units are 1/32 of a binary microsecond
+CFLAGS += -DSEND_1_OFFSET=128
 
 #32mhz mclk
 PFLAGS+=-DMSP430XV2_DCO_CONFIG=MSP430XV2_DCO_64MHz_RSEL7

@@ -74,7 +74,7 @@ module Msp430XV2ClockControlP @safe() {
       #ifndef XCAP_SETTING
       #define XCAP_SETTING 0
       #endif 
-      UCSCTL6 |= (XCAP_SETTING << 2) ; 
+      UCSCTL6 = (UCSCTL6 & ~(0x03 <<2)) | (XCAP_SETTING << 2);
 
       //if an external crystal is available, then we'll use that for
       //  ACLK and for FLLREF. We have to wait until it stabilizes.

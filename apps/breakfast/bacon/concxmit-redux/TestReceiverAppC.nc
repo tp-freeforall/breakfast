@@ -26,6 +26,11 @@ configuration TestReceiverAppC {
   components new TimerMilliC();
   TestP.Timer -> TimerMilliC;
 
+  components HplMsp430GeneralIOC;
+  components new Msp430GpioC() as ResetPin;
+  ResetPin.HplGeneralIO -> HplMsp430GeneralIOC.Port24;
+  TestP.ResetPin -> ResetPin;
+
   components Rf1aC;
   TestP.Rf1aPhysicalMetadata -> Rf1aC.Rf1aPhysicalMetadata;
 
