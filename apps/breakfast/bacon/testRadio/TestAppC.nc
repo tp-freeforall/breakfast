@@ -24,6 +24,7 @@ configuration TestAppC{
   components Rf1aActiveMessageC;
   //for setting tx power
   TestP.Rf1aIf -> Rf1aActiveMessageC;
+  TestP.Rf1aPhysical -> Rf1aActiveMessageC;
 
   components CC1190C;
   TestP.AmpControl -> CC1190C;

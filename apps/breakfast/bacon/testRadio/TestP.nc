@@ -15,6 +15,7 @@ module TestP{
  
   uses interface HplMsp430Rf1aIf as Rf1aIf;
   uses interface Rf1aPhysicalMetadata;
+  uses interface Rf1aPhysical;
 
   uses interface CC1190;
   uses interface StdControl as AmpControl;
@@ -84,6 +85,8 @@ module TestP{
     printf("Radio on\n\r");
 
     call AmpControl.start();
+    call Rf1aPhysical.setChannel(settings.channel);
+
     call Leds.led0Off();
     call Leds.led1Off();
     call Leds.led2Off();
@@ -224,4 +227,16 @@ module TestP{
   async event void UartStream.sendDone( uint8_t* buf_, uint16_t len,
     error_t error ){}
 
+  async event void Rf1aPhysical.sendDone (int result) { }
+  async event void Rf1aPhysical.receiveStarted (unsigned int length) { }
+  async event void Rf1aPhysical.receiveDone (uint8_t* buffer,
+                                             unsigned int count,
+                                             int result) { }
+  async event void Rf1aPhysical.receiveBufferFilled (uint8_t* buffer,
+                                                     unsigned int count) { }
+  async event void Rf1aPhysical.frameStarted () { }
+  async event void Rf1aPhysical.clearChannel () { }
+  async event void Rf1aPhysical.carrierSense () { }
+  async event void Rf1aPhysical.released () { }
+ 
 }
