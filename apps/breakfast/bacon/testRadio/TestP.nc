@@ -10,6 +10,7 @@ module TestP{
   uses interface UartStream;
 
   uses interface AMSend;
+  uses interface AMPacket;
   uses interface Receive;
   uses interface SplitControl;
  
@@ -23,7 +24,7 @@ module TestP{
 } implementation {
   bool needsRestart;
 
-  test_settings_t settings;
+  norace test_settings_t settings;
   uint8_t prrBuf[PRR_BUF_LEN];
   uint8_t prrIndex = 0;
 
@@ -43,6 +44,11 @@ module TestP{
     printf("\n\r");
   }
 
+  void printMinimal(test_settings_t* s){
+    printf("%u %d %x %d\n", s->seqNum, POWER_LEVELS[s->powerIndex],
+      s->hgm, s->channel);
+  }
+
   task void printSettingsTask(){
     printf("SETTINGS");
     printSettings(&settings);
@@ -50,8 +56,9 @@ module TestP{
 
   event void Boot.booted(){
     call SerialControl.start();
+    #ifndef QUIET
     printf("Radio Test app\n\r t: toggle RX/TX mode\n\r p: increment TX power\n\r h: toggle cc1190 HGM\n\r c: increment channel\n\r i: toggle IPI (cont. v. report-able)\n\r r: toggle serial reporting\n\r q: reset\n\r");
-    
+    #endif
     settings.seqNum = 0;
     settings.isSender = IS_SENDER;
     settings.powerIndex = POWER_INDEX;
@@ -66,7 +73,7 @@ module TestP{
 
     memset(prrBuf, 0, PRR_BUF_LEN);
 
-    post printSettingsTask();
+    //post printSettingsTask();
     call SplitControl.start();
   }
 
@@ -82,11 +89,11 @@ module TestP{
 
   event void SplitControl.startDone(error_t error){
     needsRestart = FALSE;
+    #ifndef QUIET
     printf("Radio on\n\r");
-
+    #endif
     call AmpControl.start();
     call Rf1aPhysical.setChannel(settings.channel);
-
     call Leds.led0Off();
     call Leds.led1Off();
     call Leds.led2Off();
@@ -123,41 +130,63 @@ module TestP{
   }
 
   event void AMSend.sendDone(message_t* msg_, error_t err){
-    test_settings_t* pl = call AMSend.getPayload(msg,
+    test_settings_t* pkt = call AMSend.getPayload(msg,
       sizeof(test_settings_t));
     if (settings.report){
       printf("TX ");
-      printSettings(pl);
+      #ifdef QUIET
+      printf("%d ", TOS_NODE_ID);
+      printMinimal(pkt);
+      #else
+      printSettings(pkt);
+      #endif
+
     }
-    if ((pl->seqNum % TX_LED_DOWNSAMPLE) == 0){
+    if ((pkt->ipi == LONG_IPI) || 
+      ((pkt->ipi == SHORT_IPI) 
+        && ((pkt->seqNum % LONG_IPI) == 0))){
       call Leds.led0Toggle();
       call Leds.led1Toggle();
       call Leds.led2Toggle();
     }
-    pl->seqNum++;
+    pkt->seqNum++;
 
     if (needsRestart){
       needsRestart = FALSE;
       post restartRadio();
     } else{
-      call Timer.startOneShot(pl->ipi);
+      call Timer.startOneShot(pkt->ipi);
     }
   }
 
   event message_t* Receive.receive(message_t* msg_, void* pl, uint8_t len){ 
     test_settings_t* pkt = (test_settings_t*)pl;
-    call Leds.led2Toggle();
-    call Leds.led1Toggle();
+    if ((pkt->ipi == LONG_IPI) || 
+      ((pkt->ipi == SHORT_IPI) 
+        && ((pkt->seqNum % LONG_IPI) == 0))){
+      call Leds.led1Toggle();
+      call Leds.led2Toggle();
+    }
     //set periodic timer to fire at missing packets
     call Timer.startPeriodicAt((call
       Timer.getNow())+((pkt->ipi)/2), pkt->ipi);
 
     call Rf1aPhysicalMetadata.store(&metadata);
     if (settings.report){
+      printf("FROM %d\n", call AMPacket.source(msg_));
       printf("RX ");
+      #ifdef QUIET
+      printf("%d ", TOS_NODE_ID);
+      printf("%d ", call Rf1aPhysicalMetadata.rssi(&metadata));
+      printf("%d ", call Rf1aPhysicalMetadata.lqi(&metadata));
+      printf("%x ", settings.hgm);
+      printf("%d ", call AMPacket.source(msg_));
+      printMinimal(pkt);
+      #else
       printf(" (rssi, %d)", call Rf1aPhysicalMetadata.rssi(&metadata));
       printf(" (lqi, %d)", call Rf1aPhysicalMetadata.lqi(&metadata));
       printSettings(pkt);
+      #endif
     }
     prrBuf[prrIndex] = 1;
     prrIndex = (prrIndex + 1)%PRR_BUF_LEN;
@@ -189,7 +218,7 @@ module TestP{
         break;
 
       case 'c':
-        settings.channel = (settings.channel + 1) %NUM_CHANNELS;
+        settings.channel = (settings.channel + CHANNEL_INCREMENT) %NUM_CHANNELS;
         post printSettingsTask();
         post requestRestart();
         break;

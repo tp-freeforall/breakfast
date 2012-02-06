@@ -19,6 +19,7 @@ configuration TestAppC{
   components new AMReceiverC(AM_RADIO_TEST);
   TestP.SplitControl -> ActiveMessageC;
   TestP.AMSend -> AMSenderC;
+  TestP.AMPacket -> AMSenderC;
   TestP.Receive -> AMReceiverC;
 
   components Rf1aActiveMessageC;

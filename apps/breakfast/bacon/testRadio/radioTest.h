@@ -19,12 +19,13 @@ int8_t POWER_LEVELS[NUM_POWER_LEVELS] =   {-12,  -6,   0,    10 };
 int8_t POWER_SETTINGS[NUM_POWER_LEVELS] = {0x25, 0x2d, 0x8d, 0xc3 };
 
 //TODO: what is the actual limit on these? 256, I guess?
-#define NUM_CHANNELS 8
+#define NUM_CHANNELS 255
+#define CHANNEL_INCREMENT 16
 
-#define TX_LED_DOWNSAMPLE 128
+#define LED_DOWNSAMPLE 128
 
 #define SHORT_IPI 1
 //32 looks good, 16 too fast
-#define LONG_IPI 32
+#define LONG_IPI 64
 
 #endif
