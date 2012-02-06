@@ -4,7 +4,7 @@ then
   exit 1
 fi
 
-MAP=nslu10.$1
+MAP=map.bacon
 make $1
 
 for i in `cut -d ' ' -f 2 $MAP`
