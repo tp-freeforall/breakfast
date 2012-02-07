@@ -1,0 +1,8 @@
+COMPONENT=TestAppC
+
+CFLAGS+=-DTIMER_BUG
+
+#CFLAGS+=-DDEBUG_TIMER_BUG
+#CFLAGS+=-I$(TOSDIR)/lib/serialprintf
+
+include $(MAKERULES)

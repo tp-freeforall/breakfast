@@ -70,6 +70,8 @@ implementation
 
   task void updateFromTimer();
 
+  #ifdef TIMER_BUG
+  #warning Reintroducing Timer bug
   void fireTimers(uint32_t now)
   {
     uint16_t num;
@@ -82,9 +84,9 @@ implementation
       {
         uint32_t elapsed = now - timer->t0;
 
-        //if (elapsed >= timer->dt && (now > timer->t0))
         if (elapsed >= timer->dt) 
         {
+          #ifdef DEBUG_TIMER_BUG
           if (now <= timer->t0){
             //for debug
             uint8_t i;
@@ -97,24 +99,49 @@ implementation
               printf("dt: %lu\n\r", tmp_timer->dt); 
             }
           }
-          //printf("e: %lu (%lu - %lu)\n\r", elapsed, now, timer->t0);
+          #endif
           if (timer->isoneshot){
             timer->isrunning = FALSE;
           }else {
-            //printf("%lu + %lu -> ", timer->t0, timer ->dt);
             // Update timer for next event
             timer->t0 += timer->dt;
-            //printf("%lu\n\r", timer->t0);
           }
-          //printf("ft s t.f %lu %d\n\r", now, num);
           signal Timer.fired[num]();
           break;
         }
       }
     }
-    //printf("ft post uft\n\r");
     post updateFromTimer();
   }
+  #else
+  void fireTimers(uint32_t now)
+  {
+    uint16_t num;
+
+    for (num=0; num<NUM_TIMERS; num++)
+    {
+      Timer_t* timer = &m_timers[num];
+
+      if (timer->isrunning)
+      {
+        uint32_t elapsed = now - timer->t0;
+
+        if (elapsed >= timer->dt && (now > timer->t0))
+        {
+          if (timer->isoneshot){
+            timer->isrunning = FALSE;
+          }else {
+            // Update timer for next event
+            timer->t0 += timer->dt;
+          }
+          signal Timer.fired[num]();
+          break;
+        }
+      }
+    }
+    post updateFromTimer();
+  }
+  #endif
   
   task void updateFromTimer()
   {
@@ -126,7 +153,6 @@ implementation
     int32_t min_remaining = (1UL << 31) - 1; /* max int32_t */
     bool min_remaining_isset = FALSE;
     uint16_t num;
-    //printf("uft\n\r");
     call TimerFrom.stop();
 
     for (num=0; num<NUM_TIMERS; num++)
@@ -163,12 +189,10 @@ implementation
   void startTimer(uint8_t num, uint32_t t0, uint32_t dt, bool isoneshot)
   {
     Timer_t* timer = &m_timers[num];
-    //printf("startTimer %d %lu %lu %x\n\r", num, t0, dt, isoneshot);
     timer->t0 = t0;
     timer->dt = dt;
     timer->isoneshot = isoneshot;
     timer->isrunning = TRUE;
-    //printf("st post uft\n\r");
     post updateFromTimer();
   }
 
@@ -199,7 +223,6 @@ implementation
 
   command void Timer.startPeriodicAt[uint8_t num](uint32_t t0, uint32_t dt)
   {
-    ////printf("T.spa %d %lu %lu\n\r", num, t0, dt);
     startTimer(num, t0, dt, FALSE);
   }
 
