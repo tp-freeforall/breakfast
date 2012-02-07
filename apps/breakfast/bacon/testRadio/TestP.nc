@@ -267,7 +267,7 @@ module TestP{
 
     //TODO: periodic timer component seems to be messed up: in some
     //      cases it starts immediately and fires every few ms.
-    printf("at %lu spa %lu %u\n\r", rxTime, lostAt, pkt->ipi);
+    //printf("at %lu spa %lu %u\n\r", rxTime, lostAt, pkt->ipi);
     call Timer.startPeriodicAt(lostAt, (pkt->ipi));
 
     call Rf1aPhysicalMetadata.store(&metadata);

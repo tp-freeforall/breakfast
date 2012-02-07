@@ -82,8 +82,21 @@ implementation
       {
         uint32_t elapsed = now - timer->t0;
 
-        if (elapsed >= timer->dt && (now > timer->t0))
+        //if (elapsed >= timer->dt && (now > timer->t0))
+        if (elapsed >= timer->dt) 
         {
+          if (now <= timer->t0){
+            //for debug
+            uint8_t i;
+            printf("Timer bug! Now: %lu timer %d\n\r", now, num);
+            for(i = 0; i< NUM_TIMERS; i++){
+              Timer_t* tmp_timer = &m_timers[i];
+              printf("Timer %d ",i);
+              printf("isrunning: %x ", tmp_timer->isrunning); 
+              printf("t0: %lu ", tmp_timer->t0); 
+              printf("dt: %lu\n\r", tmp_timer->dt); 
+            }
+          }
           //printf("e: %lu (%lu - %lu)\n\r", elapsed, now, timer->t0);
           if (timer->isoneshot){
             timer->isrunning = FALSE;
