@@ -5,6 +5,7 @@ module TestP{
   uses interface Boot;
   uses interface Leds;
   uses interface Timer<TMilli>;
+  uses interface Timer<TMilli> as IndicatorTimer;
 
   uses interface StdControl as SerialControl;
   uses interface UartStream;
@@ -24,9 +25,12 @@ module TestP{
 } implementation {
   bool needsRestart;
 
+  bool radioBusy = FALSE;
+
   norace test_settings_t settings;
-  uint8_t prrBuf[PRR_BUF_LEN];
-  uint8_t prrIndex = 0;
+  uint32_t rxCounter = 0;
+  //uint8_t prrBuf[PRR_BUF_LEN];
+  //uint8_t prrIndex = 0;
 
   message_t msg_internal;
   message_t* msg = &msg_internal;
@@ -71,7 +75,7 @@ module TestP{
       settings.ipi = SHORT_IPI;
     }
 
-    memset(prrBuf, 0, PRR_BUF_LEN);
+    //memset(prrBuf, 0, PRR_BUF_LEN);
 
     //post printSettingsTask();
     call SplitControl.start();
@@ -103,28 +107,109 @@ module TestP{
         &settings, sizeof(test_settings_t));
       call CC1190.TXMode(settings.hgm);
       call Rf1aIf.writeSinglePATable(POWER_SETTINGS[settings.powerIndex]);
-      call Timer.startOneShot(settings.ipi);
+      call Timer.startPeriodic(settings.ipi);
+      call IndicatorTimer.stop();
     }else{
       call CC1190.RXMode(settings.hgm);
+      call IndicatorTimer.startPeriodic(256);
     }
   }
 
+  uint8_t indicatorSlot = 0;
+  #define RX_LEVELS 5
+  #define LEVEL_5 100UL
+  #define LEVEL_4 95UL
+  #define LEVEL_3 90UL
+  #define LEVEL_2 50UL
+  #define LEVEL_1 20UL
+
+  #define LED_ON 2
+  #define LED_OFF 0
+  #define LED_BLINK 1
+  
+  #define THRESH_1 (LEVEL_1*100UL* MAX_RX_COUNTER)/(10000UL)
+  #define THRESH_2 (LEVEL_2*100UL* MAX_RX_COUNTER)/(10000UL)
+  #define THRESH_3 (LEVEL_3*100UL* MAX_RX_COUNTER)/(10000UL)
+  #define THRESH_4 (LEVEL_4*100UL* MAX_RX_COUNTER)/(10000UL)
+  #define THRESH_5 (LEVEL_5*100UL* MAX_RX_COUNTER)/(10000UL)
+
+  uint32_t thresholds[RX_LEVELS+1] = {0, THRESH_1, THRESH_2, THRESH_3,
+    THRESH_4, THRESH_5};
+
+  event void IndicatorTimer.fired(){
+    uint8_t level;
+    uint8_t led0 = LED_OFF;
+    uint8_t led1 = LED_OFF;
+    uint8_t led2 = LED_OFF;
+    uint8_t ledState = 0;
+
+    call Leds.set(0);
+    for (level = RX_LEVELS; level != 0 ;level--){
+      if (rxCounter >= thresholds[level]){
+        break;
+      }
+    }
+    if (level > 0){
+      led0 = LED_ON;
+    }else{
+      led0 = LED_BLINK;
+    }
+
+    if (level > 2){
+      led1 = LED_ON;
+    }else if (level > 1){
+      led1 = LED_BLINK;
+    }
+
+    if (level > 4 ){
+      led2 = LED_ON;
+    }else if (level > 3){
+      led2 = LED_BLINK;
+    }
+
+    //blink | on: set led
+    ledState |= (led0 == LED_OFF)?(0 << 0):(1<<0);
+    ledState |= (led1 == LED_OFF)?(0 << 1):(1<<1);
+    ledState |= (led2 == LED_OFF)?(0 << 2):(1<<2);
+    //blink & even slot: clear led
+    if ((indicatorSlot % 2) == 0){
+      ledState &= ~((led0 == LED_BLINK)?(1<<0):(0<<0));
+      ledState &= ~((led1 == LED_BLINK)?(1<<1):(0<<1));
+      ledState &= ~((led2 == LED_BLINK)?(1<<2):(0<<2));
+    }
+    call Leds.set(ledState);
+    indicatorSlot++;
+  }
+
+  uint16_t lastSN;
+//  uint32_t lastIpi;
+//  #define IPI_DELAY 16
+//
   event void Timer.fired(){
     if (needsRestart){
       post restartRadio();
     }else{
       if (settings.isSender){
-        call AMSend.send(AM_BROADCAST_ADDR, msg,
-          sizeof(test_settings_t));
+        if (!radioBusy){
+          radioBusy = TRUE;
+          call AMSend.send(AM_BROADCAST_ADDR, msg,
+            sizeof(test_settings_t));
+        }else{
+          printf("TOO FAST\n\r");
+        }
       }else{
-        call Leds.led0Toggle();
+        lastSN++;
+        printf("lost %lu (%u?)\n\r", call Timer.getNow(), lastSN);
+//        call Timer.startOneShot(lastIpi + IPI_DELAY);
+//  
         if (settings.report){
           #ifdef REPORT_LOST
           printf("LOST\n\r");
           #endif
         }
-        prrBuf[prrIndex] = 0;
-        prrIndex = (prrIndex + 1)%PRR_BUF_LEN;
+//        if (rxCounter > 0){
+//          rxCounter --;
+//        }
       }
     }
   }
@@ -132,7 +217,9 @@ module TestP{
   event void AMSend.sendDone(message_t* msg_, error_t err){
     test_settings_t* pkt = call AMSend.getPayload(msg,
       sizeof(test_settings_t));
+    radioBusy = FALSE;
     if (settings.report){
+      //printf("TX %lu", call Timer.getNow());
       printf("TX ");
       #ifdef QUIET
       printf("%d ", TOS_NODE_ID);
@@ -155,25 +242,36 @@ module TestP{
       needsRestart = FALSE;
       post restartRadio();
     } else{
-      call Timer.startOneShot(pkt->ipi);
+      //call Timer.startOneShot(pkt->ipi);
     }
   }
 
+  bool firstRX = TRUE;
   event message_t* Receive.receive(message_t* msg_, void* pl, uint8_t len){ 
     test_settings_t* pkt = (test_settings_t*)pl;
-    if ((pkt->ipi == LONG_IPI) || 
-      ((pkt->ipi == SHORT_IPI) 
-        && ((pkt->seqNum % LONG_IPI) == 0))){
-      call Leds.led1Toggle();
-      call Leds.led2Toggle();
+    uint32_t rxTime = call Timer.getNow();
+    uint32_t lostAt = rxTime + ((pkt->ipi)/2);
+
+    //1 received
+    rxCounter++;
+//    //subtract any intervening ones missed
+//    if (! firstRX){
+//      rxCounter -= (pkt->seqNum - lastSN - 1); 
+//    } 
+//    firstRX = FALSE;
+
+    lastSN = pkt->seqNum;
+    if (rxCounter > MAX_RX_COUNTER){
+      rxCounter = MAX_RX_COUNTER;
     }
-    //set periodic timer to fire at missing packets
-    call Timer.startPeriodicAt((call
-      Timer.getNow())+((pkt->ipi)/2), pkt->ipi);
+
+    //TODO: periodic timer component seems to be messed up: in some
+    //      cases it starts immediately and fires every few ms.
+    printf("at %lu spa %lu %u\n\r", rxTime, lostAt, pkt->ipi);
+    call Timer.startPeriodicAt(lostAt, (pkt->ipi));
 
     call Rf1aPhysicalMetadata.store(&metadata);
     if (settings.report){
-      printf("FROM %d\n", call AMPacket.source(msg_));
       printf("RX ");
       #ifdef QUIET
       printf("%d ", TOS_NODE_ID);
@@ -188,8 +286,7 @@ module TestP{
       printSettings(pkt);
       #endif
     }
-    prrBuf[prrIndex] = 1;
-    prrIndex = (prrIndex + 1)%PRR_BUF_LEN;
+
     return msg_;
   }
 

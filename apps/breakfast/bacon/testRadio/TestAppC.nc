@@ -8,6 +8,8 @@ configuration TestAppC{
   TestP.Boot -> MainC;
   TestP.Leds -> LedsC;
   TestP.Timer -> TimerMilliC;
+  components new TimerMilliC() as IndicatorTimer;
+  TestP.IndicatorTimer -> IndicatorTimer;
 
   components PlatformSerialC;
   components SerialPrintfC;

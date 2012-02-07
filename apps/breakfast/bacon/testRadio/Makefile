@@ -20,7 +20,7 @@ CFLAGS+=-DPRR_BUF_LEN=$(PRR_BUF_LEN)
 CFLAGS+=-DREPORT=$(REPORT)
 CFLAGS+=-DUSE_LONG_IPI=$(USE_LONG_IPI)
 
-CFLAGS+=-DQUIET
+#CFLAGS+=-DQUIET
 
 #TODO: set from command line. not a big deal, though, if non-amp mote
 # thinks it has one
