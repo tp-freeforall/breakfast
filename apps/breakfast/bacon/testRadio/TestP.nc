@@ -199,7 +199,7 @@ module TestP{
         }
       }else{
         lastSN++;
-        printf("lost %lu (%u?)\n\r", call Timer.getNow(), lastSN);
+//        printf("lost %lu (%u?)\n\r", call Timer.getNow(), lastSN);
 //        call Timer.startOneShot(lastIpi + IPI_DELAY);
 //  
         if (settings.report){
@@ -207,9 +207,9 @@ module TestP{
           printf("LOST\n\r");
           #endif
         }
-//        if (rxCounter > 0){
-//          rxCounter --;
-//        }
+        if (rxCounter > 0){
+          rxCounter --;
+        }
       }
     }
   }
