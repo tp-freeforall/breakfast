@@ -75,25 +75,30 @@ implementation
     uint16_t num;
 
     for (num=0; num<NUM_TIMERS; num++)
+    {
+      Timer_t* timer = &m_timers[num];
+
+      if (timer->isrunning)
       {
-	Timer_t* timer = &m_timers[num];
+        uint32_t elapsed = now - timer->t0;
 
-	if (timer->isrunning)
-	  {
-	    uint32_t elapsed = now - timer->t0;
-
-	    if (elapsed >= timer->dt)
-	      {
-		if (timer->isoneshot)
-		  timer->isrunning = FALSE;
-		else // Update timer for next event
-		  timer->t0 += timer->dt;
-        //printf("ft s t.f %lu %d\n\r", now, num);
-		signal Timer.fired[num]();
-    break;
-	      }
-	  }
+        if (elapsed >= timer->dt && (now > timer->t0))
+        {
+          //printf("e: %lu (%lu - %lu)\n\r", elapsed, now, timer->t0);
+          if (timer->isoneshot){
+            timer->isrunning = FALSE;
+          }else {
+            //printf("%lu + %lu -> ", timer->t0, timer ->dt);
+            // Update timer for next event
+            timer->t0 += timer->dt;
+            //printf("%lu\n\r", timer->t0);
+          }
+          //printf("ft s t.f %lu %d\n\r", now, num);
+          signal Timer.fired[num]();
+          break;
+        }
       }
+    }
     //printf("ft post uft\n\r");
     post updateFromTimer();
   }
