@@ -70,50 +70,6 @@ implementation
 
   task void updateFromTimer();
 
-  #ifdef TIMER_BUG
-  #warning Reintroducing Timer bug
-  void fireTimers(uint32_t now)
-  {
-    uint16_t num;
-
-    for (num=0; num<NUM_TIMERS; num++)
-    {
-      Timer_t* timer = &m_timers[num];
-
-      if (timer->isrunning)
-      {
-        uint32_t elapsed = now - timer->t0;
-
-        if (elapsed >= timer->dt) 
-        {
-          #ifdef DEBUG_TIMER_BUG
-          if (now <= timer->t0){
-            //for debug
-            uint8_t i;
-            printf("Timer bug! Now: %lu timer %d\n\r", now, num);
-            for(i = 0; i< NUM_TIMERS; i++){
-              Timer_t* tmp_timer = &m_timers[i];
-              printf("Timer %d ",i);
-              printf("isrunning: %x ", tmp_timer->isrunning); 
-              printf("t0: %lu ", tmp_timer->t0); 
-              printf("dt: %lu\n\r", tmp_timer->dt); 
-            }
-          }
-          #endif
-          if (timer->isoneshot){
-            timer->isrunning = FALSE;
-          }else {
-            // Update timer for next event
-            timer->t0 += timer->dt;
-          }
-          signal Timer.fired[num]();
-          break;
-        }
-      }
-    }
-    post updateFromTimer();
-  }
-  #else
   void fireTimers(uint32_t now)
   {
     uint16_t num;
@@ -141,7 +97,6 @@ implementation
     }
     post updateFromTimer();
   }
-  #endif
   
   task void updateFromTimer()
   {
