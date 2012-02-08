@@ -22,9 +22,9 @@ ch <- odbcDriverConnect(connString)
 #Link stability over time
 #TODO: plot RSSI vs. time  (moving average + raw)
 #TODO: plot moving average of PRR vs. time (left join TX to RX)
+devAskNewPage(T)
 
 testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup")
-
 for (testNum in testNums$testNum){
   #print(testNum)
   txInfoQuery <- paste('SELECT * FROM setup WHERE',
@@ -41,8 +41,12 @@ for (testNum in testNums$testNum){
   rssiLimits <- sqlQuery(ch, rssiLimitsQuery)
   rxInfos <- sqlQuery(ch, rxInfoQuery)
 
-  #TODO: set up plot
-  #TODO: label with TX info
+  plot(c(-10), c(-10), xlim=c(0, testDuration$duration),
+    ylim=c(rssiLimits$rssiMin, rssiLimits$rssiMax), 
+    xlab="Time(s)",
+    ylab="RSSI")
+  title(paste(txInfo$testDesc,': ', txInfo$power, 
+    'dBm HGM: ', txInfo$hgm, ' FE: ', txInfo$fe))
   #print(txInfoQuery)
   #print(txInfo)
 
@@ -54,16 +58,34 @@ for (testNum in testNums$testNum){
 
   #print(rxInfoQuery)
   #print(rxInfos)
+
+  #TODO: since we switch the rx behavior, what I want to do is join
+  #  setup where tx info matches.
+  
   for (rxInfoIndex in seq_along(rxInfos[,1])){
     rxInfo <- rxInfos[rxInfoIndex,]
     #TODO: record RX setup for legend
-    rssiQuery <- paste('SELECT unixTS - ', testDuration$start, ',',
+    rssiQuery <- paste('SELECT unixTS - ', testDuration$start, ' as time,',
       ' rssi',
       ' FROM RX WHERE testNum=', testNum,
       ' AND receiver=', rxInfo$nodeId,
       sep='')
-    #TODO: plot rssi vs. t
+    rssi <- sqlQuery(ch, rssiQuery)
     #print(rssiQuery)
+    if (rxInfo$fe == 1){
+      lineCol <- 'blue'
+    }else{
+      lineCol <- 'red'
+    }
+    if (rxInfo$hgm == 1){
+      linePch <- 1
+    } else{
+      linePch <- ''
+    }
+    lines(rssi$time, rssi$rssi, col=lineCol, pch=linePch, type='o')
   }
+  legend('bottomleft',legend=c('FE','ANT','HGM'),
+    lty=c(1,1,0), pch=c(1), pt.cex=c(0,0,1), col=c('blue','red','blue'))
 }
+devAskNewPage(F)
 close(ch)

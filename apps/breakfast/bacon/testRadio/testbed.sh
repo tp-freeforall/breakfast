@@ -2,7 +2,7 @@
 set -x 
 #around 800 packets per minute, 150 seconds is about 2000 packets
 #testDuration=1600
-testDuration=30
+testDuration=150
 
 ltx=62
 lrx=71
@@ -50,8 +50,8 @@ function install(){
   done
 }
 
-#for power in 0 1 2 3
-for power in 0 
+for power in 0 1 2 3
+#for power in 0 
 do
   for rxHgm in "TRUE" "FALSE"
   #for rxHgm in "TRUE"
