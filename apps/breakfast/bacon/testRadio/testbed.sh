@@ -8,6 +8,14 @@ ltx=62
 lrx=71
 rtx=63
 rrx=66
+if [ $# -lt 2 ]
+then
+  echo "Usage: $0 <first_test_id> <test_desc>"
+  exit 1
+fi
+#start numbering at this 
+testNum=$1
+testDesc=\\\"$2\\\"
 
 function prepareBinary(){
   isSender=$1
@@ -17,7 +25,7 @@ function prepareBinary(){
   channel=$5
   power=$6
   hasFe=$7
-  make bacon IS_SENDER=$isSender POWER_INDEX=$power HGM=$hgm CHANNEL=$channel REPORT=$report USE_LONG_IPI=$useLongIpi HAS_FE=$hasFe
+  make bacon IS_SENDER=$isSender POWER_INDEX=$power HGM=$hgm CHANNEL=$channel REPORT=$report USE_LONG_IPI=$useLongIpi HAS_FE=$hasFe TEST_NUM=$testNum TEST_DESC=$testDesc
 }
 
 function blink(){
@@ -30,7 +38,7 @@ function blink(){
     shift 1
   done
   popd
-  sleep 30
+  sleep 10
 }
 
 function install(){
@@ -54,7 +62,8 @@ do
 
       if [ "$sender" == "$rtx" ]
       then
-        echo "PROGRESS FE HGM TX"
+        testNum=$(($testNum + 1))
+        echo "PROGRESS FE HGM TX: $testNum"
         blink $ltx $lrx $rtx $rrx
         prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
         install $lrx 
@@ -64,7 +73,8 @@ do
         install $sender
         sleep $testDuration
         
-        echo "PROGRESS FE standard TX"
+        testNum=$(($testNum + 1))
+        echo "PROGRESS FE standard TX: $testNum"
         blink $ltx $lrx $rtx $rrx
         prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
         install $lrx 
@@ -75,7 +85,8 @@ do
         sleep $testDuration
 
       else
-        echo "PROGRESS ANT standard TX"
+        testNum=$(($testNum + 1))
+        echo "PROGRESS ANT standard TX: $testNum"
         blink $ltx $lrx $rtx $rrx
         prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
         install $lrx 
@@ -90,3 +101,4 @@ do
   done
 done
 blink $ltx $lrx $rtx $rrx
+echo $testNum > lastTestNum

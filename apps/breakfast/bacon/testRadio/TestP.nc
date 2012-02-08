@@ -37,7 +37,10 @@ module TestP{
 
   rf1a_metadata_t metadata;
 
+  const char* test_desc= TEST_DESC;
+
   void printSettings(test_settings_t* s){
+    printf(" (testNum, %u)", s->testNum);
     printf(" (seqNum, %u)", s->seqNum);
     printf(" (isSender, %x)", s->isSender);
     printf(" (power, %d)", POWER_LEVELS[s->powerIndex]);
@@ -50,8 +53,8 @@ module TestP{
   }
 
   void printMinimal(test_settings_t* s){
-    printf("%u %d %x %d %x\n", s->seqNum, POWER_LEVELS[s->powerIndex],
-      s->hgm, s->channel, s->hasFe);
+    printf("%u %u %d %x %d %x\n", s->testNum, s->seqNum,
+      POWER_LEVELS[s->powerIndex], s->hgm, s->channel, s->hasFe);
   }
 
   task void printSettingsTask(){
@@ -61,6 +64,16 @@ module TestP{
 
   event void Boot.booted(){
     call SerialControl.start();
+    printf("FLUSH\n");
+    printf("SETUP %d %d %x %x %x %d %d %s\n", 
+      TEST_NUM, 
+      TOS_NODE_ID, 
+      IS_SENDER, 
+      HGM,
+      HAS_FE, 
+      CHANNEL,
+      POWER_LEVELS[POWER_INDEX],
+      TEST_DESC);
     #ifndef QUIET
     printf("Radio Test app\n\r t: toggle RX/TX mode\n\r p: increment TX power\n\r h: toggle cc1190 HGM\n\r c: increment channel\n\r i: toggle IPI (cont. v. report-able)\n\r r: toggle serial reporting\n\r q: reset\n\r");
     #endif
@@ -76,6 +89,7 @@ module TestP{
       settings.ipi = SHORT_IPI;
     }
     settings.hasFe = HAS_FE;
+    settings.testNum = TEST_NUM;
 
     //memset(prrBuf, 0, PRR_BUF_LEN);
 

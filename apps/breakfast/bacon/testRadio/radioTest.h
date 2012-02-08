@@ -12,6 +12,7 @@ typedef nx_struct test_settings_t {
   nx_uint8_t report;
   nx_uint16_t ipi;
   nx_uint8_t hasFe;
+  nx_uint16_t testNum;
 } test_settings_t;
 
 
