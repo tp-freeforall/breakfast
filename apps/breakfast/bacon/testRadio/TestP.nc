@@ -45,12 +45,13 @@ module TestP{
     printf(" (channel, %d)", s->channel);
     printf(" (report, %x)", s->report);
     printf(" (ipi, %u)", s->ipi);
+    printf(" (hasFe, %x)", s->hasFe);
     printf("\n\r");
   }
 
   void printMinimal(test_settings_t* s){
-    printf("%u %d %x %d\n", s->seqNum, POWER_LEVELS[s->powerIndex],
-      s->hgm, s->channel);
+    printf("%u %d %x %d %x\n", s->seqNum, POWER_LEVELS[s->powerIndex],
+      s->hgm, s->channel, s->hasFe);
   }
 
   task void printSettingsTask(){
@@ -74,6 +75,7 @@ module TestP{
     } else{
       settings.ipi = SHORT_IPI;
     }
+    settings.hasFe = HAS_FE;
 
     //memset(prrBuf, 0, PRR_BUF_LEN);
 
@@ -275,9 +277,10 @@ module TestP{
       printf("RX ");
       #ifdef QUIET
       printf("%d ", TOS_NODE_ID);
+      printf("%x ", settings.hgm);
       printf("%d ", call Rf1aPhysicalMetadata.rssi(&metadata));
       printf("%d ", call Rf1aPhysicalMetadata.lqi(&metadata));
-      printf("%x ", settings.hgm);
+      printf("%x ", HAS_FE);
       printf("%d ", call AMPacket.source(msg_));
       printMinimal(pkt);
       #else

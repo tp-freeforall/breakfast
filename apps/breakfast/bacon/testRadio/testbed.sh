@@ -1,7 +1,8 @@
 #!/bin/bash
 set -x 
 #around 800 packets per minute, 150 seconds is about 2000 packets
-testDuration=1600
+#testDuration=1600
+testDuration=30
 
 ltx=62
 lrx=71
@@ -15,7 +16,8 @@ function prepareBinary(){
   useLongIpi=$4
   channel=$5
   power=$6
-  make bacon IS_SENDER=$isSender POWER_INDEX=$power HGM=$hgm CHANNEL=$channel REPORT=$report USE_LONG_IPI=$useLongIpi
+  hasFe=$7
+  make bacon IS_SENDER=$isSender POWER_INDEX=$power HGM=$hgm CHANNEL=$channel REPORT=$report USE_LONG_IPI=$useLongIpi HAS_FE=$hasFe
 }
 
 function blink(){
@@ -28,7 +30,7 @@ function blink(){
     shift 1
   done
   popd
-  sleep 60
+  sleep 30
 }
 
 function install(){
@@ -40,8 +42,8 @@ function install(){
   done
 }
 
-for power in 0 1 2 3
-#for power in 0 3
+#for power in 0 1 2 3
+for power in 0 
 do
   for rxHgm in "TRUE" "FALSE"
   #for rxHgm in "TRUE"
@@ -49,25 +51,41 @@ do
     for sender in $rtx $ltx
     do 
       echo "PROGRESS Power $power RXHgm $rxHgm sender $sender"
+
       if [ "$sender" == "$rtx" ]
-      then 
-        echo "PROGRESS HGM TX"
+      then
+        echo "PROGRESS FE HGM TX"
         blink $ltx $lrx $rtx $rrx
-        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power
-        install $lrx $rrx
-        prepareBinary TRUE TRUE TRUE TRUE 0 $power
+        prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
+        install $lrx 
+        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power TRUE
+        install $rrx
+        prepareBinary TRUE TRUE TRUE TRUE 0 $power TRUE
         install $sender
         sleep $testDuration
-      fi
-
-      echo "PROGRESS standard TX"
-      blink $ltx $lrx $rtx $rrx
-      prepareBinary FALSE $rxHgm TRUE TRUE 0 $power
-      install $lrx $rrx
-      prepareBinary TRUE FALSE TRUE TRUE 0 $power
-      install $sender
-      sleep $testDuration
         
+        echo "PROGRESS FE standard TX"
+        blink $ltx $lrx $rtx $rrx
+        prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
+        install $lrx 
+        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power TRUE
+        install $rrx
+        prepareBinary TRUE FALSE TRUE TRUE 0 $power TRUE
+        install $sender
+        sleep $testDuration
+
+      else
+        echo "PROGRESS ANT standard TX"
+        blink $ltx $lrx $rtx $rrx
+        prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
+        install $lrx 
+        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power TRUE
+        install $rrx
+        prepareBinary TRUE FALSE TRUE TRUE 0 $power FALSE
+        install $sender
+        sleep $testDuration
+
+      fi
     done
   done
 done

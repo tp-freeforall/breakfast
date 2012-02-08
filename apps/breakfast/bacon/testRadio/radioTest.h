@@ -11,6 +11,7 @@ typedef nx_struct test_settings_t {
   nx_uint8_t channel;
   nx_uint8_t report;
   nx_uint16_t ipi;
+  nx_uint8_t hasFe;
 } test_settings_t;
 
 
@@ -26,9 +27,10 @@ int8_t POWER_SETTINGS[NUM_POWER_LEVELS] = {0x25, 0x2d, 0x8d, 0xc3 };
 
 #define MAX_RX_COUNTER 100
 
-#define SHORT_IPI 16
+#define SHORT_IPI 32
 //32 looks good (reporting OK + SA shows smooth output)
-#define LONG_IPI 32
+//nope, 32 triggers some TOO FAST at transmitter.
+#define LONG_IPI 64
 
 
 #endif
