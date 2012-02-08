@@ -23,34 +23,47 @@ ch <- odbcDriverConnect(connString)
 #TODO: plot RSSI vs. time  (moving average + raw)
 #TODO: plot moving average of PRR vs. time (left join TX to RX)
 
-txSetupsQuery <- "SELECT DISTINCT sender,power,channel,txHGM,txFE FROM TX"
+testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup")
 
-txSetups <- sqlQuery(ch, txSetupsQuery)
-for (txSetupIndex in seq_along(txSetups[,1])){
-  txSetup <- txSetups[txSetupIndex,]
-  print(txSetup)
+for (testNum in testNums$testNum){
+  #print(testNum)
+  txInfoQuery <- paste('SELECT * FROM setup WHERE',
+    ' testNum=', testNum, ' AND isSender=1', sep='')
+  testDurationQuery <- paste('SELECT min(unixTS) as start, max(unixTS)-min(unixTS) AS duration', 
+    ' FROM TX WHERE testNum=', testNum, sep='')
+  rssiLimitsQuery <- paste('SELECT max(rssi) as rssiMax,',
+   ' min(rssi) as rssiMin FROM RX WHERE testNum=', testNum, sep='')
+  rxInfoQuery <- paste('SELECT * FROM setup WHERE testNum=', 
+    testNum,' AND isSender=0', sep="")
 
-  rxSetupsQuery <- paste("SELECT DISTINCT receiver,rxHGM,rxFE ",
-    "FROM RX WHERE (",
-    " RX.sender=", txSetup$sender,
-    " AND RX.power=", txSetup$power,
-    " AND RX.txFE=", txSetup$txFE,
-    " AND RX.txHGM=", txSetup$txHGM,
-    " )", sep="")
-  rxSetups <- sqlQuery(ch, rxSetupsQuery)
+  txInfo <- sqlQuery(ch, txInfoQuery)
+  testDuration <- sqlQuery(ch, testDurationQuery)
+  rssiLimits <- sqlQuery(ch, rssiLimitsQuery)
+  rxInfos <- sqlQuery(ch, rxInfoQuery)
 
-  for (rxSetupIndex in seq_along(rxSetups[,1])){
-    rxSetup <- rxSetups[rxSetupIndex,]
-    rssiQuery <- paste("SELECT unixTS, rssi FROM RX WHERE (",
-      "RX.receiver=", rxSetup$receiver,
-      " AND RX.rxHGM=", rxSetup$rxHGM,
-      " AND RX.rxFE=", rxSetup$rxFE,
-      " AND RX.sender=", txSetup$sender,
-      " AND RX.power=", txSetup$power,
-      " AND RX.txFE=", txSetup$txFE,
-      " AND RX.txHGM=", txSetup$txHGM,
-      ") ORDER BY unixTS", sep="")
-    print(rssiQuery)
+  #TODO: set up plot
+  #TODO: label with TX info
+  #print(txInfoQuery)
+  #print(txInfo)
+
+  #print(testDurationQuery)
+  #print(testDuration)
+  
+  #print(rssiLimitsQuery)
+  #print(rssiLimits)
+
+  #print(rxInfoQuery)
+  #print(rxInfos)
+  for (rxInfoIndex in seq_along(rxInfos[,1])){
+    rxInfo <- rxInfos[rxInfoIndex,]
+    #TODO: record RX setup for legend
+    rssiQuery <- paste('SELECT unixTS - ', testDuration$start, ',',
+      ' rssi',
+      ' FROM RX WHERE testNum=', testNum,
+      ' AND receiver=', rxInfo$nodeId,
+      sep='')
+    #TODO: plot rssi vs. t
+    #print(rssiQuery)
   }
 }
 close(ch)
