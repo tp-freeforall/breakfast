@@ -9,7 +9,7 @@ do
 #unixts RX receiver rx_fe rssi lqi hgm_rx sender sn power hgm_tx channel tx_fe
 #EOF
 
-  awk '/^[0-9]+\.[0-9]+ RX [0-9]+ (0|1) (-)[0-9]+ [0-9]+ [0-9]+ [0-9]+ [0-9]+ [0-9]+ (-)[0-9]+ (0|1) [0-9]+ (0|1)$/{print $0}' $1 | cut -d ' ' -f 2 --complement >> $rxFile
+  awk '/^[0-9]+\.[0-9]+ RX [0-9]+ (0|1) (-)[0-9]+ [0-9]+ [0-9]+ [0-9]+ [0-9]+ [0-9]+ (-)[0-9]+ (0|1) [0-9]+ (0|1)$/{print $0,1}' $1 | cut -d ' ' -f 2 --complement >> $rxFile
 
 #cat >$txFile <<EOF
 #unixts TX sender sn power hgm_tx channel tx_fe
@@ -47,7 +47,8 @@ CREATE TABLE RX (
   power INTEGER,
   txHGM INTEGER,
   channel INTEGER,
-  txFE INTEGER
+  txFE INTEGER,
+  received INTEGER
 );
 CREATE TABLE SETUP (
   unixTS REAL,
@@ -65,6 +66,8 @@ CREATE TABLE SETUP (
 .import $txFile TX
 .import $setupFile SETUP
 EOF
+#TODO: it looks like sometims the SETUP message doesn't get recorded.
+# when this happens, we can recover it from the TX/RX messages.
   rm $txFile
   rm $rxFile
   rm $setupFile
