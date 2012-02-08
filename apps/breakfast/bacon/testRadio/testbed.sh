@@ -28,6 +28,7 @@ function blink(){
     shift 1
   done
   popd
+  sleep 60
 }
 
 function install(){
@@ -42,15 +43,15 @@ function install(){
 for power in 0 1 2 3
 #for power in 0 3
 do
-  for rxHgm in "FALSE" "TRUE"
+  for rxHgm in "TRUE" "FALSE"
   #for rxHgm in "TRUE"
   do
     for sender in $rtx $ltx
     do 
-      echo "Power $power RXHgm $rxHgm sender $sender"
+      echo "PROGRESS Power $power RXHgm $rxHgm sender $sender"
       if [ "$sender" == "$rtx" ]
       then 
-        echo "HGM TX"
+        echo "PROGRESS HGM TX"
         blink $ltx $lrx $rtx $rrx
         prepareBinary FALSE $rxHgm TRUE TRUE 0 $power
         install $lrx $rrx
@@ -59,7 +60,7 @@ do
         sleep $testDuration
       fi
 
-      echo "standard TX"
+      echo "PROGRESS standard TX"
       blink $ltx $lrx $rtx $rrx
       prepareBinary FALSE $rxHgm TRUE TRUE 0 $power
       install $lrx $rrx

@@ -24,11 +24,11 @@ int8_t POWER_SETTINGS[NUM_POWER_LEVELS] = {0x25, 0x2d, 0x8d, 0xc3 };
 
 #define LED_DOWNSAMPLE 128
 
-#define MAX_RX_COUNTER 200
+#define MAX_RX_COUNTER 100
 
-//TODO: refine this
-#define SHORT_IPI 6
-//32 looks good, 16 too fast
-#define LONG_IPI 64
+#define SHORT_IPI 16
+//32 looks good (reporting OK + SA shows smooth output)
+#define LONG_IPI 32
+
 
 #endif
