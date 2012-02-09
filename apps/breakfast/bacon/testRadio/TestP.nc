@@ -53,7 +53,7 @@ module TestP{
   }
 
   void printMinimal(test_settings_t* s){
-    printf("%u %u %d %x %d %x\n", s->testNum, s->seqNum,
+    printf("%u %u %d %x %d %x", s->testNum, s->seqNum,
       POWER_LEVELS[s->powerIndex], s->hgm, s->channel, s->hasFe);
   }
 
@@ -240,6 +240,7 @@ module TestP{
       #ifdef QUIET
       printf("%d ", TOS_NODE_ID);
       printMinimal(pkt);
+      printf("\n");
       #else
       printSettings(pkt);
       #endif
@@ -297,9 +298,11 @@ module TestP{
       printf("%x ", HAS_FE);
       printf("%d ", call AMPacket.source(msg_));
       printMinimal(pkt);
+      printf("%x\n", call Rf1aPhysicalMetadata.crcPassed(&metadata));
       #else
       printf(" (rssi, %d)", call Rf1aPhysicalMetadata.rssi(&metadata));
       printf(" (lqi, %d)", call Rf1aPhysicalMetadata.lqi(&metadata));
+      printf(" (crcPassed, %x)" call Rf1aPhysicalMetadata.crcPassed(&metadata));
       printSettings(pkt);
       #endif
     }

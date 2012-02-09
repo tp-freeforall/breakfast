@@ -30,6 +30,9 @@ CFLAGS+=-DHAS_FE=$(HAS_FE)
 CFLAGS+=-DTEST_DESC=$(TEST_DESC)
 CFLAGS+=-DTEST_NUM=$(TEST_NUM)
 
+#uncomment to receive packets with failed CRCs (or if rf1a config is
+# set up to filter on CRC
+#CFLAGS+=-DRF1A_NO_CRC
 
 CFLAGS+=-DQUIET
 

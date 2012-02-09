@@ -94,9 +94,17 @@ implementation {
   {
     uint8_t* payload = (uint8_t*)payload_ + sizeof(layer_header_t);
     len -= sizeof(layer_header_t);
+    #ifdef RF1A_NO_CRC
+    #warning Skipping SW CRC Check!
+    #else
+    if (! call Rf1aPacket.crcPassed(msg)){
+      return msg;
+    }
+    #endif
     if (call AMPacket.isForMe(msg)) {
       return signal Receive.receive[call AMPacket.type(msg)](msg, payload, len);
     }
+
     return signal Snoop.receive[call AMPacket.type(msg)](msg, payload, len);
   }
 
