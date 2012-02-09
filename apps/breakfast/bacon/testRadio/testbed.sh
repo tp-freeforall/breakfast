@@ -1,8 +1,8 @@
 #!/bin/bash
 set -x 
 #around 800 packets per minute, 150 seconds is about 2000 packets
-#testDuration=1600
-testDuration=150
+testDuration=1600
+#testDuration=150
 
 ltx=62
 lrx=71
@@ -50,12 +50,13 @@ function install(){
   done
 }
 
-for power in 0 1 2 3
-#for power in 0 
+#for power in 0 1 2 3
+for power in 3
 do
-  for rxHgm in "TRUE" "FALSE"
-  #for rxHgm in "TRUE"
+  #for rxHgm in "TRUE" "FALSE"
+  for rxHgm in "TRUE"
   do
+    #for sender in $rtx $ltx
     for sender in $rtx $ltx
     do 
       echo "PROGRESS Power $power RXHgm $rxHgm sender $sender"
