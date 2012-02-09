@@ -28,6 +28,7 @@ for (split(/\n/, <<'EOText'
   %P/hardware/leds
   %P/hardware/cc1190
   %P/chips/stm25p
+  %P/hardware/radio
 
   %T/platforms/bacon/hardware/usci
   %T/platforms/surf/hardware/usci
