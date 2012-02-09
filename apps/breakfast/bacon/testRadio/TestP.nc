@@ -298,11 +298,11 @@ module TestP{
       printf("%x ", HAS_FE);
       printf("%d ", call AMPacket.source(msg_));
       printMinimal(pkt);
-      printf("%x\n", call Rf1aPhysicalMetadata.crcPassed(&metadata));
+      printf(" %x\n", (call Rf1aPhysicalMetadata.crcPassed(&metadata))?1:0);
       #else
       printf(" (rssi, %d)", call Rf1aPhysicalMetadata.rssi(&metadata));
       printf(" (lqi, %d)", call Rf1aPhysicalMetadata.lqi(&metadata));
-      printf(" (crcPassed, %x)" call Rf1aPhysicalMetadata.crcPassed(&metadata));
+      printf(" (crcPassed, %x)", (call Rf1aPhysicalMetadata.crcPassed(&metadata))?1:0);
       printSettings(pkt);
       #endif
     }

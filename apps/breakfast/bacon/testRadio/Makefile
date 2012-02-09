@@ -32,7 +32,7 @@ CFLAGS+=-DTEST_NUM=$(TEST_NUM)
 
 #uncomment to receive packets with failed CRCs (or if rf1a config is
 # set up to filter on CRC
-#CFLAGS+=-DRF1A_NO_CRC
+CFLAGS+=-DRF1A_NO_CRC
 
 CFLAGS+=-DQUIET
 
