@@ -51,7 +51,7 @@ function install(){
 }
 
 #for power in 0 1 2 3
-for power in 3
+for power in 2 3
 do
   #for rxHgm in "TRUE" "FALSE"
   for rxHgm in "TRUE"
@@ -74,16 +74,16 @@ do
         install $sender
         sleep $testDuration
         
-        testNum=$(($testNum + 1))
-        echo "PROGRESS FE standard TX: $testNum"
-        blink $ltx $lrx $rtx $rrx
-        prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
-        install $lrx 
-        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power TRUE
-        install $rrx
-        prepareBinary TRUE FALSE TRUE TRUE 0 $power TRUE
-        install $sender
-        sleep $testDuration
+#        testNum=$(($testNum + 1))
+#        echo "PROGRESS FE standard TX: $testNum"
+#        blink $ltx $lrx $rtx $rrx
+#        prepareBinary FALSE FALSE TRUE TRUE 0 $power FALSE
+#        install $lrx 
+#        prepareBinary FALSE $rxHgm TRUE TRUE 0 $power TRUE
+#        install $rrx
+#        prepareBinary TRUE FALSE TRUE TRUE 0 $power TRUE
+#        install $sender
+#        sleep $testDuration
 
       else
         testNum=$(($testNum + 1))

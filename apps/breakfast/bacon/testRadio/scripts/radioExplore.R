@@ -33,11 +33,12 @@ linkStability <- function(dbName, rssiMin=0, rssiMax=0, maS=0, ipi=64){
     ylabText <- 'RSSI'
   }
    
-  testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup")
+  testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup WHERE isSender=1 AND ((fe=1 AND hgm=1) OR (fe=0))")
   for (testNum in testNums$testNum){
     #print(testNum)
     txInfoQuery <- paste('SELECT * FROM setup WHERE',
-      ' testNum=', testNum, ' AND isSender=1', sep='')
+      ' testNum=', testNum, ' AND isSender=1', 
+      ' AND ((fe=1 AND hgm=1) OR (fe=0))', sep='')
     testDurationQuery <- paste('SELECT min(unixTS) as start, max(unixTS)-min(unixTS) AS duration', 
       ' FROM TX WHERE testNum=', testNum, sep='')
     rssiLimitsQuery <- paste('SELECT max(rssi) as rssiMax,',
@@ -57,7 +58,7 @@ linkStability <- function(dbName, rssiMin=0, rssiMax=0, maS=0, ipi=64){
       ylim=yLimits,
       xlab="Time(s)",
       ylab="RSSI")
-    title(paste(txInfo$testDesc,': ', txInfo$power, 
+    title(paste(txInfo$testNum,' ',txInfo$testDesc,': ', txInfo$power, 
       'dBm FE: ', txInfo$fe))
     
     for (rxInfoIndex in seq_along(rxInfos[,1])){
@@ -86,20 +87,55 @@ linkStability <- function(dbName, rssiMin=0, rssiMax=0, maS=0, ipi=64){
     legend('bottomleft',legend=c('FE','ANT'),
       lty=c(1,1), col=c('blue','red'))
     devAskNewPage(T)
+    #print(rssiDeltaQuery)
+
   }
   close(ch)
 }
 
+rssiDelta <- function(dbName, feReceiver=66, antReceiver=71){
+  connString <- paste("Driver=SQLite3;Database=", dbName, sep="")
+  ch <- odbcDriverConnect(connString)
+  devAskNewPage(T)
+  testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup WHERE isSender=1 AND ((fe=1 AND hgm=1) OR (fe=0))")
+  for (testNum in testNums$testNum){
+    txInfoQuery <- paste('SELECT * FROM setup WHERE',
+      ' testNum=', testNum, ' AND isSender=1', 
+      ' AND ((fe=1 AND hgm=1) OR (fe=0))',sep='')
+    testDurationQuery <- paste('SELECT min(unixTS) as start, max(unixTS)-min(unixTS) AS duration', 
+      ' FROM TX WHERE testNum=', testNum, sep='')
 
-#TODO: plot moving average of PRR vs. time (left join TX to RX)
+    txInfo <- sqlQuery(ch, txInfoQuery)
+    testDuration <- sqlQuery(ch, testDurationQuery)
+
+    rssiDeltaQuery <- paste('SELECT feRX.unixTS - ',
+      testDuration$start,' as time,',
+      ' feRX.rssi - antRX.rssi as delta',
+      ' FROM RX feRX JOIN RX antRX ON feRX.sn=antRX.sn',
+      ' WHERE feRX.testNum=', testNum,
+      ' AND antRX.testNum=', testNum,
+      ' AND feRX.receiver=', feReceiver,
+      ' AND antRX.receiver=', antReceiver,
+      ' ORDER by feRX.unixTS - ',testDuration$start,
+      sep='')
+    rssiDelta <- sqlQuery(ch, rssiDeltaQuery)
+    #plot(rssiDelta$time, rssiDelta$delta, ylim=c(-30,10), type='l')
+    boxplot(rssiDelta$delta, ylim=c(-40, 40))
+    title(paste(txInfo$testNum,' ',txInfo$testDesc, ' ',txInfo$power,
+      ' dBm fe:',txInfo$fe, sep=' '))
+  }
+  close(ch)
+}
+
 prr <- function(dbName, maS, ipi){
   maWindow <- maS*(1024/ipi)
   connString <- paste("Driver=SQLite3;Database=", dbName, sep="")
   ch <- odbcDriverConnect(connString)
-  testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup")
+  testNums <- sqlQuery(ch, "SELECT DISTINCT testNum FROM setup WHERE isSender=1 AND ((fe=1 AND hgm=1) OR (fe=0))")
   for (testNum in testNums$testNum){
     txInfoQuery <- paste('SELECT * FROM setup WHERE',
-      ' testNum=', testNum, ' AND isSender=1', sep='')
+      ' testNum=', testNum, ' AND isSender=1', 
+      ' AND ((fe=1 AND hgm=1) OR (fe=0))',sep='')
     testDurationQuery <- paste('SELECT min(unixTS) as start, max(unixTS)-min(unixTS) AS duration', 
       ' FROM TX WHERE testNum=', testNum, sep='')
     rxInfoQuery <- paste('SELECT * FROM setup WHERE testNum=', 
@@ -113,7 +149,7 @@ prr <- function(dbName, maS, ipi){
       ylim=c(-0.1, 1.1), 
       xlab="Time(s)",
       ylab=paste("PRR (window: ", maS, ' s )', sep=''))
-    title(paste(txInfo$testDesc,': ', txInfo$power, 
+    title(paste(txInfo$testNum,' ',txInfo$testDesc,': ', txInfo$power, 
       'dBm HGM: ', txInfo$hgm, ' FE: ', txInfo$fe))
     for (rxInfoIndex in seq_along(rxInfos[,1])){
       rxInfo <- rxInfos[rxInfoIndex,]
@@ -145,6 +181,6 @@ prr <- function(dbName, maS, ipi){
   close(ch)
 }
 
-prr(dbName, 5, 64)
-linkStability(dbName, maS=5)
+#prr(dbName, 5, 64)
+#linkStability(dbName, maS=5)
 devAskNewPage(F)

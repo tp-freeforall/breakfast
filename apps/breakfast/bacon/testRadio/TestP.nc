@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "radioTest.h"
-
+//TODO: include watchdog timer? sometimes receiver seems to freeze?
 module TestP{
   uses interface Boot;
   uses interface Leds;
@@ -90,6 +90,7 @@ module TestP{
     }
     settings.hasFe = HAS_FE;
     settings.testNum = TEST_NUM;
+    settings.seqNum = 0;
 
     //memset(prrBuf, 0, PRR_BUF_LEN);
 
@@ -109,6 +110,7 @@ module TestP{
 
   event void SplitControl.startDone(error_t error){
     needsRestart = FALSE;
+    radioBusy = FALSE;
     #ifndef QUIET
     printf("Radio on\n\r");
     #endif
@@ -118,7 +120,7 @@ module TestP{
     call Leds.led1Off();
     call Leds.led2Off();
     if (settings.isSender){
-      settings.seqNum = 0;
+      //settings.seqNum = 0;
       memcpy(call AMSend.getPayload(msg, sizeof(test_settings_t)),
         &settings, sizeof(test_settings_t));
       call CC1190.TXMode(settings.hgm);
@@ -211,7 +213,9 @@ module TestP{
           call AMSend.send(AM_BROADCAST_ADDR, msg,
             sizeof(test_settings_t));
         }else{
-          printf("TOO FAST\n\r");
+          printf("TOO FAST-RESTART RADIO\n");
+          call Timer.stop();
+          post restartRadio();
         }
       }else{
         lastSN++;
@@ -254,6 +258,7 @@ module TestP{
       call Leds.led2Toggle();
     }
     pkt->seqNum++;
+    settings.seqNum++;
 
     if (needsRestart){
       needsRestart = FALSE;

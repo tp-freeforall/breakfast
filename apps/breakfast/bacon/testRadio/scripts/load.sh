@@ -1,25 +1,27 @@
 #!/bin/bash
 while [ $# -gt 0 ]
 do
-  rxFile=$(tempfile)
-  txFile=$(tempfile)
-  setupFile=$(tempfile)
+#  rxFile=$(tempfile)
+#  txFile=$(tempfile)
+#  setupFile=$(tempfile)
+  rxFile=$1.rx
+  txFile=$1.tx
+  setupFile=$1.setup
   dbName=$1.db
 #cat > $rxFile <<EOF
 #unixts RX receiver rx_fe rssi lqi hgm_rx sender sn power hgm_tx channel tx_fe
 #EOF
-
-  awk '/^[0-9]+\.[0-9]+ RX [0-9]+ (0|1) (-)[0-9]+ [0-9]+ (0|1) [0-9]+ [0-9]+ [0-9]+ (-)[0-9]+ (0|1) [0-9]+ (0|1) (0|1)$/{print $0,1}' $1 | cut -d ' ' -f 2 --complement >> $rxFile
+  awk '/^[0-9]+\.[0-9]+ RX [0-9]+ (0|1) (-)?[0-9]+ [0-9]+ (0|1) [0-9]+ [0-9]+ [0-9]+ (-)?[0-9]+ (0|1) [0-9]+ (0|1) (0|1)$/{print $0,1}' $1 | cut -d ' ' -f 2 --complement >> $rxFile
 
 #cat >$txFile <<EOF
 #unixts TX sender sn power hgm_tx channel tx_fe
 #EOF
 
 
-  awk '/^[0-9]+\.[0-9]+ TX [0-9]+ [0-9]+ [0-9]+ (-)[0-9]+ (0|1) [0-9]+ (0|1)$/{print $0}' $1 | cut -d ' ' -f 2 --complement >> $txFile
+  awk '/^[0-9]+\.[0-9]+ TX [0-9]+ [0-9]+ [0-9]+ (-)?[0-9]+ (0|1) [0-9]+ (0|1)$/{print $0}' $1 | cut -d ' ' -f 2 --complement >> $txFile
 
 
-  awk '/^[0-9]+\.[0-9]+ SETUP [0-9]+ [0-9]+ (0|1) (0|1) (0|1) [0-9]+ (-)[0-9]+ .+$/{print $0}' $1 | cut -d ' ' -f 2 --complement > $setupFile
+  awk '/^[0-9]+\.[0-9]+ SETUP [0-9]+ [0-9]+ (0|1) (0|1) (0|1) [0-9]+ (-)?[0-9]+ .+$/{print $0}' $1 | cut -d ' ' -f 2 --complement > $setupFile
 
 #delete if it already exists
 [ -f $dbName ] && rm $dbName
@@ -111,9 +113,9 @@ CREATE TEMP TABLE txTestSetups as
 --append to setup table
 INSERT INTO setup SELECT * FROM txTestSetups;
 EOF
-  rm $txFile
-  rm $rxFile
-  rm $setupFile
+#  rm $txFile
+#  rm $rxFile
+#  rm $setupFile
   shift 1
 done
 
