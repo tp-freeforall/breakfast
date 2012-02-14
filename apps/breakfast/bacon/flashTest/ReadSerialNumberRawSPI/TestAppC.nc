@@ -19,7 +19,7 @@ configuration TestAppC{
 
   components new Msp430GpioC() as Power;
   components HplMsp430GeneralIOC;
-  Power -> HplMsp430GeneralIOC.Port37;
+  Power -> HplMsp430GeneralIOC.Port21;
   
   TestP.Power -> Power;
 }

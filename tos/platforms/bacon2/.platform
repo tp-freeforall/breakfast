@@ -24,7 +24,7 @@ for (split(/\n/, <<'EOText'
   %T/platforms/bacon/hardware/adc
 
   %T/platforms/bacon/hardware/batteryVoltage
-  %T/platforms/bacon/hardware/apds9007
+  %P/hardware/apds9007
   %T/platforms/bacon/hardware/mcp9700
   %T/platforms/bacon/hardware/leds
   %T/platforms/bacon/hardware/cc1190
