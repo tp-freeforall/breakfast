@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include "radioTest.h"
-//TODO: include watchdog timer? sometimes receiver seems to freeze?
 module TestP{
   uses interface Boot;
   uses interface Leds;
   uses interface Timer<TMilli>;
   uses interface Timer<TMilli> as IndicatorTimer;
+  uses interface Timer<TMilli> as WDTResetTimer;
 
   uses interface StdControl as SerialControl;
   uses interface UartStream;
@@ -41,7 +41,7 @@ module TestP{
 
   void printSettings(test_settings_t* s){
     printf(" (testNum, %u)", s->testNum);
-    printf(" (seqNum, %u)", s->seqNum);
+    printf(" (seqNum, %lu)", s->seqNum);
     printf(" (isSender, %x)", s->isSender);
     printf(" (power, %d)", POWER_LEVELS[s->powerIndex]);
     printf(" (hgm, %x)", s->hgm);
@@ -53,7 +53,7 @@ module TestP{
   }
 
   void printMinimal(test_settings_t* s){
-    printf("%u %u %d %x %d %x", s->testNum, s->seqNum,
+    printf("%u %lu %d %x %d %x", s->testNum, s->seqNum,
       POWER_LEVELS[s->powerIndex], s->hgm, s->channel, s->hasFe);
   }
 
@@ -96,6 +96,14 @@ module TestP{
 
     //post printSettingsTask();
     call SplitControl.start();
+    call WDTResetTimer.startPeriodic(500);
+    //set WDT to reset at 1 second
+    WDTCTL =  WDT_ARST_1000;
+  }
+
+  event void WDTResetTimer.fired(){
+    //re-up the wdt
+    WDTCTL =  WDT_ARST_1000;
   }
 
   task void restartRadio(){

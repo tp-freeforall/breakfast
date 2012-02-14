@@ -1,4 +1,4 @@
-dbName <- 'data/0209.hwlab.db'
+dbName <- 'data/0211.hwlab.db'
 
 library(RODBC)
 
@@ -6,11 +6,15 @@ ma <- function(series, width){
   filter(series, rep(1/width, width), sides=1)
 }
 
-rssiTimeSeries <- function(dbName, txPower, testLabel='Untitled', pdfOutput=F, maS=30,
-    ipi=64, feLwd=3, antLwd=1, feCol='blue', antCol='red'){
+rssiTimeSeries <- function(dbName, txPower, testLabel='Untitled',
+    pdfOutput='', pngOutput='', maS=30, ipi=64, 
+    feLwd=3, antLwd=1, feCol='blue', antCol='red'){
   if (pdfOutput != ''){
     pdf(pdfOutput)
+  } else if(pngOutput != ''){
+    png(pngOutput)
   }
+
   connString <- paste("Driver=SQLite3;Database=", dbName, sep="")
   ch <- odbcDriverConnect(connString)
   maWindow <- maS*(1024/ipi)
@@ -56,12 +60,17 @@ rssiTimeSeries <- function(dbName, txPower, testLabel='Untitled', pdfOutput=F, m
   if(pdfOutput != ''){
     garbage<-dev.off()
   }
+  if(pngOutput != ''){
+    garbage<-dev.off()
+  }
 }
 
 prrTimeSeries <- function(dbName, txPower, testLabel='Untitled', 
-    pdfOutput='', maS=30, ipi=64, feLwd=3, antLwd=1, feCol='blue', antCol='red'){
+    pdfOutput='', pngOutput='', maS=30, ipi=64, feLwd=3, antLwd=1, feCol='blue', antCol='red'){
   if (pdfOutput != ''){
     pdf(pdfOutput)
+  } else if(pngOutput != ''){
+    png(pngOutput)
   }
   connString <- paste("Driver=SQLite3;Database=", dbName, sep="")
   ch <- odbcDriverConnect(connString)
@@ -110,13 +119,18 @@ prrTimeSeries <- function(dbName, txPower, testLabel='Untitled',
   if(pdfOutput != ''){
     garbage<-dev.off()
   }
+  if(pngOutput != ''){
+    garbage<-dev.off()
+  }
 }
 
 
 rssiGain <- function(dbName, txPower, testLabel='Untitled',
-    pdfOutput=''){
+    pdfOutput='', pngOutput=''){
   if (pdfOutput != ''){
     pdf(pdfOutput)
+  } else if(pngOutput != ''){
+    png(pngOutput)
   }
   connString <- paste("Driver=SQLite3;Database=", dbName, sep="")
   ch <- odbcDriverConnect(connString)
@@ -134,17 +148,20 @@ rssiGain <- function(dbName, txPower, testLabel='Untitled',
   if(pdfOutput != ''){
     garbage<-dev.off()
   }
+  if(pngOutput != ''){
+    garbage<-dev.off()
+  }
 }
 
-rssiTimeSeries(dbName, testLabel='HW Lab', txPower=0,
-  pdfOutput=paste('figures/', dbName,'.rssi.0.pdf', sep=''))
-rssiTimeSeries(dbName, testLabel='HW Lab', txPower=10,
-  pdfOutput=paste('figures/', dbName,'.rssi.10.pdf', sep=''))
-rssiGain(dbName, testLabel='HW Lab', txPower=0,
-  pdfOutput=paste('figures/', dbName,'.gain.0.pdf', sep=''))
-rssiGain(dbName, testLabel='HW Lab', txPower=10,
-  pdfOutput=paste('figures/', dbName,'.gain.10.pdf', sep=''))
-prrTimeSeries(dbName, testLabel='HW Lab', txPower=0,
-  pdfOutput=paste('figures/', dbName,'.prr.0.pdf', sep=''))
-prrTimeSeries(dbName, testLabel='HW Lab', txPower=10,
-  pdfOutput=paste('figures/', dbName,'.prr.10.pdf', sep=''))
+rssiTimeSeries(dbName, testLabel='HW Lab', txPower=0, maS=60,
+  pngOutput=paste('figures/', dbName,'.rssi.0.png', sep=''))
+rssiTimeSeries(dbName, testLabel='HW Lab', txPower=10, maS=60,
+  pngOutput=paste('figures/', dbName,'.rssi.10.png', sep=''))
+rssiGain(dbName, testLabel='HW Lab', txPower=0, 
+  pngOutput=paste('figures/', dbName,'.gain.0.png', sep=''))
+rssiGain(dbName, testLabel='HW Lab', txPower=10, 
+  pngOutput=paste('figures/', dbName,'.gain.10.png', sep=''))
+prrTimeSeries(dbName, testLabel='HW Lab', txPower=0, maS=60,
+  pngOutput=paste('figures/', dbName,'.prr.0.png', sep=''))
+prrTimeSeries(dbName, testLabel='HW Lab', txPower=10, maS=60,
+  pngOutput=paste('figures/', dbName,'.prr.10.png', sep=''))

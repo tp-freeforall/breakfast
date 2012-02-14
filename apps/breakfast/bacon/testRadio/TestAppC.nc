@@ -10,6 +10,8 @@ configuration TestAppC{
   TestP.Timer -> TimerMilliC;
   components new TimerMilliC() as IndicatorTimer;
   TestP.IndicatorTimer -> IndicatorTimer;
+  components new TimerMilliC() as WDTResetTimer;
+  TestP.WDTResetTimer -> WDTResetTimer;
 
   components PlatformSerialC;
   components SerialPrintfC;

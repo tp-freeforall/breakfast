@@ -4,7 +4,7 @@
 #define AM_RADIO_TEST 0x01
 
 typedef nx_struct test_settings_t {
-  nx_uint16_t seqNum;
+  nx_uint32_t seqNum;
   nx_uint8_t isSender;
   nx_uint8_t powerIndex;
   nx_uint8_t hgm;

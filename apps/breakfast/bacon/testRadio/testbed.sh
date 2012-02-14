@@ -1,8 +1,9 @@
 #!/bin/bash
 set -x 
 #around 800 packets per minute, 150 seconds is about 2000 packets
-testDuration=1600
+#testDuration=1600
 #testDuration=150
+testDuration=21600
 
 ltx=62
 lrx=71
