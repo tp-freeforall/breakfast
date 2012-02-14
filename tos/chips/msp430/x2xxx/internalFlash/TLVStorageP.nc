@@ -61,11 +61,11 @@ module TLVStorageP{
     version_entry_t e;
     memcpy(tlvs, IFLASH_A_START, IFLASH_SEGMENT_SIZE);
     if (!verifyChecksum(tlvs)){
-      printf("invalid TLV checksum in A, clearing\n\r");
-      printf("In A:\n\r");
-      debugTLV(IFLASH_A_START);
-      printf("In buffer:\n\r");
-      debugTLV(tlvs);
+//      printf("invalid TLV checksum in A, clearing\n\r");
+//      printf("In A:\n\r");
+//      debugTLV(IFLASH_A_START);
+//      printf("In buffer:\n\r");
+//      debugTLV(tlvs);
       memset(tlvs, 0xff, IFLASH_SEGMENT_SIZE);
       e.version = 0;
       ba[TLV_CHECKSUM_LENGTH] = TAG_EMPTY;
@@ -84,11 +84,11 @@ module TLVStorageP{
     tlv_entry_t* vb;
     call TLVUtils.findEntry(TAG_VERSION, 0, &va, tlvsA);
     call TLVUtils.findEntry(TAG_VERSION, 0, &vb, tlvsB);
-    printf("copy if dirty\n\r");
-    printf("TLV in A\n\r");
-    debugTLV(tlvsA);
-    printf("TLV in B\n\r");
-    debugTLV(tlvsB);
+//    printf("copy if dirty\n\r");
+//    printf("TLV in A\n\r");
+//    debugTLV(tlvsA);
+//    printf("TLV in B\n\r");
+//    debugTLV(tlvsB);
     //check 
     if (vb == NULL){
       //TODO: error condition
@@ -99,7 +99,7 @@ module TLVStorageP{
     //B's version = A's version + 1
     if ((va == NULL && vb != NULL) 
       || (vb->data.w[0]  == 1 + va->data.w[0])){
-      printf("copying from B to A\n\r");
+//      printf("copying from B to A\n\r");
       unlockInternalFlash(IFLASH_A_START);
       FCTL1 = FWKEY+ERASE;
       *((uint8_t*)IFLASH_A_START) = 0;
@@ -107,12 +107,12 @@ module TLVStorageP{
       memcpy(IFLASH_A_START, IFLASH_B_START, IFLASH_SEGMENT_SIZE);
       FCTL1 = FWKEY;
       lockInternalFlash(IFLASH_A_START);
-      printf("copy done\n\r");
+//      printf("copy done\n\r");
     }else{
-      printf("no copy needed: va %p vb %p.\n\r", va, vb);
-      if (vb != NULL && va != NULL){ 
-        printf("vb: %d, va: %d\n\r", vb->data.w[0], va->data.w[0]);
-      }
+//      printf("no copy needed: va %p vb %p.\n\r", va, vb);
+//      if (vb != NULL && va != NULL){ 
+//        printf("vb: %d, va: %d\n\r", vb->data.w[0], va->data.w[0]);
+//      }
     }
   }
 
@@ -121,8 +121,8 @@ module TLVStorageP{
   }
 
   void writeToB(void* tlvs){
-    printf("Writing to B\n\r");
-    debugTLV(tlvs);
+//    printf("Writing to B\n\r");
+//    debugTLV(tlvs);
     unlockInternalFlash(IFLASH_B_START);
     FCTL1 = FWKEY + ERASE;
     *((uint8_t*)IFLASH_B_START) = 0;
@@ -130,8 +130,8 @@ module TLVStorageP{
     memcpy(IFLASH_B_START, tlvs, IFLASH_SEGMENT_SIZE);
     FCTL1 = FWKEY;
     lockInternalFlash(IFLASH_B_START);
-    printf("Done. Now in B:\n\r");
-    debugTLV(IFLASH_B_START);
+//    printf("Done. Now in B:\n\r");
+//    debugTLV(IFLASH_B_START);
   }
 
   //persist TLV structure (to internal flash)
@@ -141,7 +141,7 @@ module TLVStorageP{
     uint8_t versionOffset = call TLVUtils.findEntry(TAG_VERSION, 0,
       &versionTag, tlvs);
     if (0 == versionOffset ){
-      printf("No TAG_VERSION found, not persisting\n\r");
+//      printf("No TAG_VERSION found, not persisting\n\r");
       //there should always be a TAG_VERSION in here if tlvs was
       //loaded via this component.
       return FAIL; 
