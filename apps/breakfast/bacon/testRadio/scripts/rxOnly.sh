@@ -8,6 +8,7 @@ fi
 duration=$1
 prefix=$2
 numMotes=$(motelist | grep -c "/dev/ttyUSB")
+mkdir -p $(dirname $prefix)
 echo "Logging for $numMotes devices for $duration seconds"
 
 if [ -f logjobs ]
