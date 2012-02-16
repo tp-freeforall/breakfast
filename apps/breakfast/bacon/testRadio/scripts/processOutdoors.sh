@@ -9,10 +9,14 @@ rssiFile=$prefix.rssi
 receptionFile=$prefix.reception
 shift 1
 
+[ -f $rssiFile ] && rm $rssiFile
+[ -f $receptionFile ] && rm $receptionFile
+
+#set -x
 while [ $# -gt 0 ]
 do
   dir=$1
-  if [ $(ls *.ia | wc -l) -ne 1 ]
+  if [ $(ls $dir/*.ia | wc -l) -ne 1 ]
   then
     echo "more or fewer than one .ia file in $dir" 1>&2
     shift 1
@@ -39,9 +43,11 @@ do
   awk --assign lat=$latDec --assign lon=$lonDec \
     --assign power=$txPower --assign txFe=$txFe \
     '{print lon, lat, $3, txFe, power, $4}' $rxFile >> $rssiFile
-  awk --assign lat=$latDec --assign lon=$lonDec \
+  dos2unix < $iaFile | \
+    awk --assign lat=$latDec --assign lon=$lonDec \
     --assign power=$txPower --assign txFe=$txFe \
-    '{print lon, lat, 2,  txFe, power, $2}' $rxFile >> $rssiFile
+    -F '=' \
+    '/^P_/{print lon, lat, 2,  txFe, power, $2}' >> $rssiFile
   awk --assign lat=$latDec --assign lon=$lonDec \
     --assign power=$txPower --assign txFe=$txFe \
     '{print lon, lat, $3, txFe, power, $9}' $rxFile >> $receptionFile
@@ -49,19 +55,23 @@ do
   shift 1
 done
 
-sqlite3 $prefix.db <<EOF
+dbName=$prefix.db
+[ -f $dbName ] && rm $dbName
+sqlite3 $dbName <<EOF
 CREATE TABLE RSSI (
   lon REAL,
   lat REAL,
   rxType INTEGER,
   txType INTEGER,
-  rssi INTEGER);
+  power INTEGER,
+  rssi REAL);
 CREATE TABLE RECEPTION(
    lon REAL,
    lat REAL,
    rxType INTEGER,
    txType INTEGER,
-   sn INTEGER);
+   power INTEGER,
+   sn REAL);
 .separator ' '
 .import $rssiFile RSSI
 .import $receptionFile RECEPTION
