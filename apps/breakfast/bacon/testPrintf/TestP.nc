@@ -17,7 +17,7 @@ module TestP{
   }
 
   event void Timer.fired(){
-    printf("F: %lu\n\r", call Timer.getNow());
+    printf("F: %lu\n", call Timer.getNow());
     counter++;
     //printf("Test: %d\r\n", counter++);
     call Leds.set(counter);

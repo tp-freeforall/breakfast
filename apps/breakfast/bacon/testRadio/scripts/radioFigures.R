@@ -1,4 +1,21 @@
-dbName <- 'data/0211.hwlab.db'
+args <- c()
+
+#This iterates through the stuff on the command line after --args and
+# for every key=value pair, assigns value to key (multiple appearances
+# get stored as list)
+for (e in commandArgs()[(which(commandArgs() == "--args")+1):length(commandArgs())]){
+  ep = strsplit(e,"=",fixed=TRUE)
+  name=ep[[1]][1]
+  val=ep[[1]][2]
+  if(exists(name)){
+      assign(name, c(get(name), val))
+  } else{
+      assign(name, val)
+  }
+  args <- c(args, name)
+}
+
+#dbName <- 'data/0211.hwlab.db'
 
 library(RODBC)
 
@@ -153,15 +170,15 @@ rssiGain <- function(dbName, txPower, testLabel='Untitled',
   }
 }
 
-rssiTimeSeries(dbName, testLabel='HW Lab', txPower=0, maS=60,
+rssiTimeSeries(dbName, testLabel=testLabel, txPower=0, maS=60,
   pngOutput=paste('figures/', dbName,'.rssi.0.png', sep=''))
-rssiTimeSeries(dbName, testLabel='HW Lab', txPower=10, maS=60,
+rssiTimeSeries(dbName, testLabel=testLabel, txPower=10, maS=60,
   pngOutput=paste('figures/', dbName,'.rssi.10.png', sep=''))
-rssiGain(dbName, testLabel='HW Lab', txPower=0, 
+rssiGain(dbName, testLabel=testLabel, txPower=0, 
   pngOutput=paste('figures/', dbName,'.gain.0.png', sep=''))
-rssiGain(dbName, testLabel='HW Lab', txPower=10, 
+rssiGain(dbName, testLabel=testLabel, txPower=10, 
   pngOutput=paste('figures/', dbName,'.gain.10.png', sep=''))
-prrTimeSeries(dbName, testLabel='HW Lab', txPower=0, maS=60,
+prrTimeSeries(dbName, testLabel=testLabel, txPower=0, maS=60,
   pngOutput=paste('figures/', dbName,'.prr.0.png', sep=''))
-prrTimeSeries(dbName, testLabel='HW Lab', txPower=10, maS=60,
+prrTimeSeries(dbName, testLabel=testLabel, txPower=10, maS=60,
   pngOutput=paste('figures/', dbName,'.prr.10.png', sep=''))

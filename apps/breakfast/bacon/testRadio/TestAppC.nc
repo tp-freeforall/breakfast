@@ -34,7 +34,10 @@ configuration TestAppC{
   components CC1190C;
   TestP.AmpControl -> CC1190C;
   TestP.CC1190 -> CC1190C;
-
+  
+  //TODO: swap settings at compile time. Include in settings (for
+  //  logging)
+  //SRFS6_868_xxx_CUR_HC.nc
   components PDERf1aSettingsP as TestConfigP;
   Rf1aActiveMessageC.Rf1aConfigure -> TestConfigP.Rf1aConfigure;
 

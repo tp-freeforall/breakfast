@@ -10,7 +10,7 @@ CHANNEL?=0
 USE_LONG_IPI?=TRUE
 PRR_BUF_LEN?=200
 REPORT?=TRUE
-HAS_FE?=FALSE
+HAS_FE=3
 
 #NOTE: to specify from command line:
 # TEST_DESC=\\\"TEST_INFO\\\"

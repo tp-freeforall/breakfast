@@ -1,12 +1,12 @@
 #!/bin/bash
 while [ $# -gt 0 ]
 do
-#  rxFile=$(tempfile)
-#  txFile=$(tempfile)
-#  setupFile=$(tempfile)
-  rxFile=$1.rx
-  txFile=$1.tx
-  setupFile=$1.setup
+  rxFile=$(tempfile)
+  txFile=$(tempfile)
+  setupFile=$(tempfile)
+#  rxFile=$1.rx
+#  txFile=$1.tx
+#  setupFile=$1.setup
   dbName=$1.db
 #cat > $rxFile <<EOF
 #unixts RX receiver rx_fe rssi lqi hgm_rx sender sn power hgm_tx channel tx_fe
@@ -209,9 +209,9 @@ CREATE TABLE rssiGainBoxplot AS
   JOIN txSetup ON txSetup.testNum=rssiGain.testNum;
 
 EOF
-#  rm $txFile
-#  rm $rxFile
-#  rm $setupFile
+  rm $txFile
+  rm $rxFile
+  rm $setupFile
   shift 1
 done
 
