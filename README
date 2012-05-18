@@ -1,3 +1,42 @@
+
+Breakfast (tp-freeforall) integration repository.
+
+Breakfast is are modifications made to the TinyOS develoment trunk
+done at John Hopkins University by Doug Carlson et. al.
+
+In particular, Breakfast reimplemented I2C drivers and other USCI
+code for the x2 family.  They then ported those drivers over to
+the X5.  They also have done extensive testing of the I2C and other
+USCI drivers and there are various programs to support this testing.
+
+The tp-freeforall/breakfast(breakfast-master) repository is a live copy
+of the John Hopkins breakfast git repository.  It records all the
+history of breakfast and directly supports the port of the breakfast
+usci code into the msp430-int branch of tp-freeforall and eventually
+tinyprod.
+
+See README.breakfast.txt.
+
+Breakfast started with the same OSIAN cc430f5137 msp430 tinyos code that
+TinyProd (msp430-int) started with.  In other words they are two forks
+starting from the same code.   Breakfast duplicated much of the integration
+work that has all ready been done on msp430-int.
+
+The intent is to merge into the main msp430-int work, code from breakfast
+that is reasonable and of general use.  In particular, this includes but
+isn't limited to...   usci_gen1 -> x2xxx/usci-int and will eventually
+become mainline x2xxx/usci.   msp430xv2/usci -> x5xxx/usci-int and
+eventually x5xxx/usci.
+
+==========================================================================
+
+This README originally said it contained source for TinyOS 2.0
+but that hasn't been true for quite some time.  A while back
+this became the source for TinyOS 2.1.1 and is currently
+beyond that.   Development TinyOS trunk (git version).
+
+==========================================================================
+
 This contains the TinyOS 2.0 source code as of
 
 $Date: 2007-07-30 07:18:52 $
